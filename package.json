@@ -1,0 +1,9 @@
+{
+  "name": "emergence-harmony",
+  "scripts": {
+    "test": "ava"
+  },
+  "devDependencies": {
+    "ava": "^0.14.0"
+  }
+}
