@@ -22,7 +22,10 @@ test('git module exports constructor and static methods', function(t) {
 
 test.cb('get git dir from environment', function(t) {
     Git.getGitDirFromEnvironment(function(error, gitDir) {
-        t.ifError(error);
+        if (error) {
+            return t.end(error);
+        }
+
         t.is(gitDir, repo1Dir);
         t.end();
     });
@@ -30,7 +33,10 @@ test.cb('get git dir from environment', function(t) {
 
 test.cb('get work tree from environment', function(t) {
     Git.getWorkTreeFromEnvironment(function(error, workTree) {
-        t.ifError(error);
+        if (error) {
+            return t.end(error);
+        }
+
         t.is(workTree, repo1Dir);
         t.end();
     });
@@ -46,10 +52,15 @@ test('instances have correct gitDir', function(t) {
 
 test.cb('cwd git executes with correct git dir', function(t) {
     cwdGit.exec('rev-parse', { 'git-dir': true }, function(error, output) {
-        t.ifError(error);
+        if (error) {
+            return t.end(error);
+        }
 
         fs.realpath(output, function(error, gitDir) {
-            t.ifError(error);
+            if (error) {
+                return t.end(error);
+            }
+
             t.is(gitDir, repo1Dir);
             t.end();
         });
@@ -58,10 +69,15 @@ test.cb('cwd git executes with correct git dir', function(t) {
 
 test.cb('other git executes with correct git dir', function(t) {
     otherGit.exec('rev-parse', { 'git-dir': true }, function(error, output) {
-        t.ifError(error);
+        if (error) {
+            return t.end(error);
+        }
 
         fs.realpath(output, function(error, gitDir) {
-            t.ifError(error);
+            if (error) {
+                return t.end(error);
+            }
+
             t.is(gitDir, repo2Dir);
             t.end();
         });
@@ -70,10 +86,15 @@ test.cb('other git executes with correct git dir', function(t) {
 
 test.cb('other git executes with correct git dir with override', function(t) {
     otherGit.exec({ git: { 'git-dir': repo1Dir } }, 'rev-parse', { 'git-dir': true }, function(error, output) {
-        t.ifError(error);
+        if (error) {
+            return t.end(error);
+        }
 
         fs.realpath(output, function(error, gitDir) {
-            t.ifError(error);
+            if (error) {
+                return t.end(error);
+            }
+
             t.is(gitDir, repo1Dir);
             t.end();
         });
