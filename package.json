@@ -8,7 +8,7 @@
     "test": "ava"
   },
   "dependencies": {
-    "flatiron": "0.4.3"
+    "flatiron": "^0.4.3"
   },
   "devDependencies": {
     "ava": "^0.14.0"
