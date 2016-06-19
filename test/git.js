@@ -132,7 +132,28 @@ test.cb('clone git repo to temporary directory', function(t) {
 
                         t.truthy(stats);
                         t.true(stats.isFile());
-                        t.end();
+
+                        cwdGit.workTree = tmpWorkTree;
+                        cwdGit.exec('rev-parse', { 'show-toplevel': true }, function(error, effectiveWorkTree) {
+                            if (error) {
+                                t.end(error);
+                            }
+
+                            fs.realpath(effectiveWorkTree, function(error, realEffectiveWorkTree) {
+                                if (error) {
+                                    return t.end(error);
+                                }
+
+                                fs.realpath(tmpWorkTree, function(error, realTmpWorkTree) {
+                                    if (error) {
+                                        return t.end(error);
+                                    }
+
+                                    t.is(realEffectiveWorkTree, realTmpWorkTree);
+                                    t.end();
+                                });
+                            });
+                        });
                     })
                 }
             );
