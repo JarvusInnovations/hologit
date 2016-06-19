@@ -67,3 +67,15 @@ test.cb('other git executes with correct git dir', function(t) {
         });
     });
 });
+
+test.cb('other git executes with correct git dir with override', function(t) {
+    otherGit.exec({ git: { 'git-dir': repo1Dir } }, 'rev-parse', { 'git-dir': true }, function(error, output) {
+        t.ifError(error);
+
+        fs.realpath(output, function(error, gitDir) {
+            t.ifError(error);
+            t.is(gitDir, repo1Dir);
+            t.end();
+        });
+    });
+});
