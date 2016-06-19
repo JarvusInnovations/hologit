@@ -1,0 +1,69 @@
+var test = require('ava'),
+    fs = require('fs'),
+    path = require('path'),
+    Git = require('../lib/git'),
+
+    fixtureDir = path.join(__dirname, 'fixture'),
+    repo1Dir = path.join(fixtureDir, 'repo1'),
+    repo2Dir = path.join(fixtureDir, 'repo2');
+
+process.chdir(repo1Dir);
+
+test('cwd is repo1 fixture', function(t) {
+    t.is(process.cwd(), repo1Dir);
+});
+
+test('git module exports constructor and static methods', function(t) {
+    t.is(typeof Git, 'function');
+    t.is(typeof Git.getGitDirFromEnvironment, 'function');
+    t.is(typeof Git.getWorkTreeFromEnvironment, 'function');
+});
+
+test.cb('get git dir from environment', function(t) {
+    Git.getGitDirFromEnvironment(function(error, gitDir) {
+        t.ifError(error);
+        t.is(gitDir, repo1Dir);
+        t.end();
+    });
+});
+
+test.cb('get work tree from environment', function(t) {
+    Git.getWorkTreeFromEnvironment(function(error, workTree) {
+        console.log('workTree', workTree);
+        t.ifError(error);
+        t.is(workTree, repo1Dir);
+        t.end();
+    });
+});
+
+var cwdGit = new Git();
+var otherGit = new Git(repo2Dir);
+
+test('instances have correct gitDir', function(t) {
+    t.is(cwdGit.gitDir, null);
+    t.is(otherGit.gitDir, repo2Dir);
+});
+
+test.cb('cwd git executes with correct git dir', function(t) {
+    cwdGit.exec('rev-parse', { 'git-dir': true }, function(error, output) {
+        t.ifError(error);
+
+        fs.realpath(output, function(error, gitDir) {
+            t.ifError(error);
+            t.is(gitDir, repo1Dir);
+            t.end();
+        });
+    });
+});
+
+test.cb('other git executes with correct git dir', function(t) {
+    otherGit.exec('rev-parse', { 'git-dir': true }, function(error, output) {
+        t.ifError(error);
+
+        fs.realpath(output, function(error, gitDir) {
+            t.ifError(error);
+            t.is(gitDir, repo2Dir);
+            t.end();
+        });
+    });
+});
