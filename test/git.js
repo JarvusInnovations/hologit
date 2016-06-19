@@ -30,7 +30,6 @@ test.cb('get git dir from environment', function(t) {
 
 test.cb('get work tree from environment', function(t) {
     Git.getWorkTreeFromEnvironment(function(error, workTree) {
-        console.log('workTree', workTree);
         t.ifError(error);
         t.is(workTree, repo1Dir);
         t.end();
