@@ -81,25 +81,40 @@ test.cb('other git executes with correct git dir with override', function(t) {
 });
 
 test.cb('clone git repo to temporary directory', function(t) {
-    tmp.dir(function(error, tmpPath) {
+    tmp.dir(function(error, tmpWorkTree) {
         if (error) {
             return t.end(error);
         }
 
-        cwdGit.exec({ git: { 'work-tree': tmpPath } }, 'checkout', { force: true }, 'HEAD', function(error, output) {
+        tmp.tmpName(function(error, tmpIndexFile) {
             if (error) {
                 return t.end(error);
             }
 
-            fs.stat(path.join(tmpPath, 'README.md'), function(error, stats) {
-                if (error) {
-                    return t.end(error);
-                }
+            cwdGit.exec(
+                {
+                    git: { 'work-tree': tmpWorkTree },
+                    env: { GIT_INDEX_FILE: tmpIndexFile }
+                },
+                'checkout',
+                { force: true },
+                'HEAD',
+                function(error, output) {
+                    if (error) {
+                        return t.end(error);
+                    }
 
-                t.truthy(stats);
-                t.true(stats.isFile());
-                t.end();
-            })
-        })
+                    fs.stat(path.join(tmpWorkTree, 'README.md'), function(error, stats) {
+                        if (error) {
+                            return t.end(error);
+                        }
+
+                        t.truthy(stats);
+                        t.true(stats.isFile());
+                        t.end();
+                    })
+                }
+            );
+        });
     });
 });
