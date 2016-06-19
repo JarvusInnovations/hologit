@@ -1,8 +1,14 @@
 {
   "name": "emergence-harmony",
   "version": "0.0.0",
+  "bin": {
+    "git-harmony": "./cli.js"
+  },
   "scripts": {
     "test": "ava"
+  },
+  "dependencies": {
+    "flatiron": "0.4.3"
   },
   "devDependencies": {
     "ava": "^0.14.0"
