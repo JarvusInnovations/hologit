@@ -9,7 +9,8 @@
     "test": "ava"
   },
   "dependencies": {
-    "flatiron": "^0.4.3"
+    "flatiron": "^0.4.3",
+    "async": "^2.0.0-rc.6"
   },
   "devDependencies": {
     "ava": "^0.15.2",
