@@ -1,5 +1,6 @@
 {
   "name": "emergence-harmony",
+  "preferGlobal": true,
   "version": "0.0.0",
   "bin": {
     "git-harmony": "./cli.js"
