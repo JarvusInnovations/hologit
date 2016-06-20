@@ -13,7 +13,7 @@ app.config.env();
 // configure flatiron cli plugin
 app.use(flatiron.plugins.cli, {
     source: path.join(__dirname, 'commands'),
-    usage: 'Empty Flatiron Application, please fill out commands',
+    usage: 'Usage: init',
     argv: {
         debug: {
             alias: 'd',

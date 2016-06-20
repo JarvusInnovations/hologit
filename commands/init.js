@@ -6,7 +6,7 @@ var log = require('../lib/log'),
  * Initialize a harmony repository
  * - If local subrepo doesn't exist, move current repo there and initialize fresh repository with a commit of local merged into master with a tagged commit
  */
-module.exports = function(callback) {
+module.exports = function(topBranch, virtualBranch, callback) {
     log.info('emergence-harmony-init');
 
     var git = new Git();
@@ -22,3 +22,7 @@ module.exports = function(callback) {
 
     callback();
 };
+
+module.exports.usage = [
+    'Usage: init topBranch virtualBranch'
+];
