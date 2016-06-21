@@ -1,8 +1,9 @@
-var cli = require('../cli'),
-    lib = require('../lib');
+var logger = require('../lib/logger');
 
-module.exports = function(callback) {
-    console.log('Hello from pull!');
-    console.log('lib.name =', lib.name);
-    callback();
-};
+module.exports = (cli) => cli
+    .command('pull <virtual-branch>')
+    .description('update a given virtual branch from its sources')
+    .action(function(cmd, options) {
+        logger.info('info from pull!');
+        logger.debug('debug from pull!');
+    });
