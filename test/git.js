@@ -101,7 +101,7 @@ test.cb('other git executes with correct git dir with override', function(t) {
     });
 });
 
-test.cb('clone git repo to temporary directory', function(t) {
+test.cb('checkout git repo to temporary directory', function(t) {
     tmp.dir(function(error, tmpWorkTree) {
         if (error) {
             return t.end(error);
