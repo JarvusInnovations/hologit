@@ -39,12 +39,12 @@ function init(topBranch, virtualBranch, options) {
             };
 
         if (!gitData.topBranch) {
-            return callback('branch ' + topBranch + ' not found');
+            throw 'branch ' + topBranch + ' not found';
         }
 
         if (gitData.virtualBranch) {
             // TODO: allow and apply merge instead
-            return callback('branch ' + virtualBranch + ' already exists');
+            throw 'branch ' + virtualBranch + ' already exists';
         }
 
         debugger;
