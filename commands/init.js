@@ -34,8 +34,8 @@ function init(topBranch, virtualBranch, options) {
         var git = new Git(),
             gitData = yield {
                 dir: git.exec('rev-parse', { 'git-dir': true }),
-                topBranch: git.exec({ errorOk: true }, 'show-ref', { s: true }, 'refs/heads/' + topBranch),
-                virtualBranch: git.exec({ errorOk: true }, 'show-ref', { s: true }, 'refs/heads/' + virtualBranch)
+                topBranch: git.exec('show-ref', { s: true }, 'refs/heads/' + topBranch, { $nullOnError: true }),
+                virtualBranch: git.exec('show-ref', { s: true }, 'refs/heads/' + virtualBranch, { $nullOnError: true })
             };
 
         if (!gitData.topBranch) {
