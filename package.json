@@ -11,10 +11,12 @@
   "dependencies": {
     "co": "^4.6.0",
     "commander": "^2.9.0",
+    "mz": "^2.4.0",
     "winston": "^2.2.0"
   },
   "devDependencies": {
     "ava": "^0.15.2",
-    "tmp": "0.0.28"
+    "tmp-promise": "^1.0.2",
+    "rimraf-promise": "^2.0.0"
   }
 }

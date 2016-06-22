@@ -1,7 +1,8 @@
 var test = require('ava'),
-    fs = require('fs'),
+    fs = require('mz/fs'),
     path = require('path'),
-    tmp = require('tmp'),
+    tmp = require('tmp-promise'),
+    rimraf = require('rimraf-promise'),
     Git = require('../lib/git'),
 
     fixtureDir = path.join(__dirname, 'fixture'),
@@ -20,25 +21,15 @@ test('git module exports constructor and static methods', function(t) {
     t.is(typeof Git.getWorkTreeFromEnvironment, 'function');
 });
 
-test.cb('get git dir from environment', function(t) {
-    Git.getGitDirFromEnvironment(function(error, gitDir) {
-        if (error) {
-            return t.end(error);
-        }
-
+test('get git dir from environment', function(t) {
+    return Git.getGitDirFromEnvironment().then(function(gitDir) {
         t.is(gitDir, repo1Dir);
-        t.end();
     });
 });
 
-test.cb('get work tree from environment', function(t) {
-    Git.getWorkTreeFromEnvironment(function(error, workTree) {
-        if (error) {
-            return t.end(error);
-        }
-
-        t.is(workTree, repo1Dir);
-        t.end();
+test('get work tree from environment', function(t) {
+    return Git.getWorkTreeFromEnvironment().then(function(workTree) {
+        t.is(workTree, null);
     });
 });
 
@@ -50,113 +41,65 @@ test('instances have correct gitDir', function(t) {
     t.is(otherGit.gitDir, repo2Dir);
 });
 
-test.cb('cwd git executes with correct git dir', function(t) {
-    cwdGit.exec('rev-parse', { 'git-dir': true }, function(error, output) {
-        if (error) {
-            return t.end(error);
-        }
-
-        fs.realpath(output, function(error, gitDir) {
-            if (error) {
-                return t.end(error);
-            }
-
-            t.is(gitDir, repo1Dir);
-            t.end();
+test('cwd git executes with correct git dir', function(t) {
+    return cwdGit.exec('rev-parse', { 'git-dir': true }).then(function(gitDir) {
+        return fs.realpath(gitDir).then(function(realGitDir) {
+            t.is(realGitDir, repo1Dir);
         });
     });
 });
 
-test.cb('other git executes with correct git dir', function(t) {
-    otherGit.exec('rev-parse', { 'git-dir': true }, function(error, output) {
-        if (error) {
-            return t.end(error);
-        }
-
-        fs.realpath(output, function(error, gitDir) {
-            if (error) {
-                return t.end(error);
-            }
-
-            t.is(gitDir, repo2Dir);
-            t.end();
+test('other git executes with correct git dir', function(t) {
+    return otherGit.exec('rev-parse', { 'git-dir': true }).then(function(gitDir) {
+        return fs.realpath(gitDir).then(function(realGitDir) {
+            t.is(realGitDir, repo2Dir);
         });
     });
 });
 
-test.cb('other git executes with correct git dir with override', function(t) {
-    otherGit.exec({ git: { 'git-dir': repo1Dir } }, 'rev-parse', { 'git-dir': true }, function(error, output) {
-        if (error) {
-            return t.end(error);
-        }
-
-        fs.realpath(output, function(error, gitDir) {
-            if (error) {
-                return t.end(error);
-            }
-
-            t.is(gitDir, repo1Dir);
-            t.end();
+test('other git executes with correct git dir with override', function(t) {
+    return otherGit.exec({ $gitDir: repo1Dir }, 'rev-parse', { 'git-dir': true }).then(function(gitDir) {
+        return fs.realpath(gitDir).then(function(realGitDir) {
+            t.is(realGitDir, repo1Dir);
         });
     });
 });
 
-test.cb('checkout git repo to temporary directory', function(t) {
-    tmp.dir(function(error, tmpWorkTree) {
-        if (error) {
-            return t.end(error);
-        }
+test('checkout git repo to temporary directory', function(t) {
 
-        tmp.tmpName(function(error, tmpIndexFile) {
-            if (error) {
-                return t.end(error);
-            }
+    return tmp.dir().then(function(tmpWorkTree) {
 
-            cwdGit.exec(
-                {
-                    git: { 'work-tree': tmpWorkTree },
-                    env: { GIT_INDEX_FILE: tmpIndexFile }
-                },
-                'checkout',
-                { force: true },
-                'HEAD',
-                function(error, output) {
-                    if (error) {
-                        return t.end(error);
-                    }
+        return tmp.tmpName().then(function(tmpIndexFilePath) {
 
-                    fs.stat(path.join(tmpWorkTree, 'README.md'), function(error, stats) {
-                        if (error) {
-                            return t.end(error);
-                        }
+            return cwdGit.exec(
+                { $workTree: tmpWorkTree.path, $indexFile: tmpIndexFilePath },
+                'checkout', { force: true }, 'HEAD'
+            ).then(function() {
 
-                        t.truthy(stats);
-                        t.true(stats.isFile());
+                return fs.stat(path.join(tmpWorkTree.path, 'README.md')).then(function(stats) {
 
-                        cwdGit.workTree = tmpWorkTree;
-                        cwdGit.exec('rev-parse', { 'show-toplevel': true }, function(error, effectiveWorkTree) {
-                            if (error) {
-                                t.end(error);
-                            }
+                    t.truthy(stats);
+                    t.true(stats.isFile());
 
-                            fs.realpath(effectiveWorkTree, function(error, realEffectiveWorkTree) {
-                                if (error) {
-                                    return t.end(error);
-                                }
+                    cwdGit.workTree = tmpWorkTree.path;
 
-                                fs.realpath(tmpWorkTree, function(error, realTmpWorkTree) {
-                                    if (error) {
-                                        return t.end(error);
-                                    }
+                    return cwdGit.exec('rev-parse', { 'show-toplevel': true }).then(function(effectiveWorkTree) {
 
-                                    t.is(realEffectiveWorkTree, realTmpWorkTree);
-                                    t.end();
-                                });
+                        return fs.realpath(effectiveWorkTree).then(function(realEffectiveWorkTree) {
+
+                            return fs.realpath(tmpWorkTree.path).then(function(realTmpWorkTree) {
+                                t.is(realEffectiveWorkTree, realTmpWorkTree);
                             });
+
                         });
-                    })
-                }
-            );
+
+                    });
+
+                });
+            });
+        }).finally(function() {
+            return rimraf(tmpWorkTree.path);
         });
     });
+
 });
