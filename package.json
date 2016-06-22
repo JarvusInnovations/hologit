@@ -9,7 +9,7 @@
     "test": "ava"
   },
   "dependencies": {
-    "async": "^2.0.0-rc.6",
+    "co": "^4.6.0",
     "commander": "^2.9.0",
     "winston": "^2.2.0"
   },

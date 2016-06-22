@@ -1,6 +1,6 @@
 var logger = require('../lib/logger'),
     Git = require('../lib/git'),
-    async = require('async');
+    co = require('co');
 
 
 /**
@@ -16,62 +16,38 @@ module.exports = (cli) => cli
     .description('initialize a new virtual branch based on given top branch')
     .action(function(topBranch, virtualBranch, options) {
         debugger;
+    co(function*() {
+
         if (!topBranch) {
-            logger.error('topBranch required');
-            process.exit(1);
+            throw 'topBranch required';
         }
 
         if (!virtualBranch) {
-            logger.error('virtualBranch required');
-            process.exit(1);
+            throw 'virtualBranch required';
         }
 
         logger.info('emergence-harmony-init', { topBranch: topBranch, virtualBranch: virtualBranch });
 
-        var git = new Git();
+        var git = new Git(),
+            gitData = yield {
+                dir: git.exec('rev-parse', { 'git-dir': true }),
+                topBranch: git.exec({ errorOk: true }, 'show-ref', { s: true }, 'refs/heads/' + topBranch),
+                virtualBranch: git.exec({ errorOk: true }, 'show-ref', { s: true }, 'refs/heads/' + virtualBranch)
+            };
 
-        async.auto({
-            getTopBranch: function(callback) {
-                git.exec('show-ref', { s: true }, 'refs/heads/' + topBranch, function(error, sha) {
-                    callback(null, sha || null);
-                });
-            },
-            getVirtualBranch: function(callback) {
-                git.exec('show-ref', { s: true }, 'refs/heads/' + virtualBranch, function(error, sha) {
-                    callback(null, sha || null);
-                });
-            },
-            getGitDir: function(callback) {
-                git.exec('rev-parse', { 'git-dir': true }, callback);
-            },
-            getSomethingElse: [
-                'getTopBranch',
-                'getVirtualBranch',
-                'getGitDir',
-                function(results, callback) {
-                    var topBranchSha = results.getTopBranch,
-                        virtualBranchSha = results.getVirtualBranch;
+        if (!gitData.topBranch) {
+            return callback('branch ' + topBranch + ' not found');
+        }
 
-                    if (!topBranchSha) {
-                        return callback('branch ' + topBranch + ' not found');
-                    }
+        if (gitData.virtualBranch) {
+            // TODO: allow and apply merge instead
+            return callback('branch ' + virtualBranch + ' already exists');
+        }
 
-                    if (virtualBranchSha) {
-                        // TODO: allow and apply merge instead
-                        return callback('branch ' + virtualBranch + ' already exists');
-                    }
+        debugger;
 
-                    debugger;
-                    callback();
-                }
-            ]
-        }, function(error, results) {
-            if (error) {
-                logger.error(error);
-                process.exit(1);
-            }
+    }).catch(function(error) {
+        logger.error('command failed', error);
+    });
 
-            logger.info('results', results);
-            debugger;
-        });
     });
