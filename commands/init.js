@@ -1,3 +1,9 @@
+module.exports = (cli) => cli
+    .command('init <top-branch> <virtual-branch>')
+    .description('initialize a new virtual branch based on given top branch')
+    .action(init);
+
+
 var logger = require('../lib/logger'),
     Git = require('../lib/git'),
     co = require('co');
@@ -11,11 +17,8 @@ var logger = require('../lib/logger'),
  * - Loop sources and generate commit for each
  * - Merge new commit onto virtualBranch
  */
-module.exports = (cli) => cli
-    .command('init <top-branch> <virtual-branch>')
-    .description('initialize a new virtual branch based on given top branch')
-    .action(function(topBranch, virtualBranch, options) {
-        debugger;
+function init(topBranch, virtualBranch, options) {
+
     co(function*() {
 
         if (!topBranch) {
@@ -50,4 +53,4 @@ module.exports = (cli) => cli
         logger.error('command failed', error);
     });
 
-    });
+}
