@@ -1,0 +1,3 @@
+#!/bin/bash
+
+# TODO: given hash for package.json, output sources+mounts for all node_modules (see .holo/mounts/node_modules/* samples)
