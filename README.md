@@ -48,3 +48,9 @@ git holobranch project master holo/production production
 ### Shorter/broader name -- `git-holo`?
 
 Then the command `git holobranch project [source-branch] [holo-branch]` might just be `git holo branch [source-branch] [holo-branch]`
+
+### Make holo-branch name optional
+
+Default to `holo/[source-branch]` so someone could just run `git holo project master`.
+
+Maybe `master` could be the default `source-branch` so jsut running `git holo project` gets your `master` branch projected to `holo/master`
