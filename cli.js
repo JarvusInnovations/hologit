@@ -5,6 +5,7 @@ var path = require('path'),
 
     logger = require('winston'),
     cli = require('commander'),
+    co = require('co'),
 
     commandsDir = path.join(__dirname, 'commands'),
     commandRe = /^[a-z][a-z\-]*[a-z]\.js$/;
@@ -24,6 +25,22 @@ cli
     .on('debug', function() {
         logger.level = 'debug';
     });
+
+
+// provide co-powered handler for commands
+Object.getPrototypeOf(cli).coHandler = function(fn) {
+    this.action(function() {
+        co(fn.apply(this, arguments))
+            .catch(function(error) {
+                logger.error(error);
+                process.exit(error.code || 1);
+            })
+            .then(function() {
+                process.exit(0);
+            });
+    });
+};
+
 
 
 // load available commands
