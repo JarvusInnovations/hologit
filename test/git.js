@@ -103,3 +103,27 @@ test('checkout git repo to temporary directory', function(t) {
     });
 
 });
+
+test('js-git repo can read master', function(t) {
+    var masterHash = 'a33bba39aed6d9ecc35b91c96b547937040574f4';
+
+    return cwdGit.exec('show-ref', { s: true }, 'refs/heads/master').then(execHash => {
+        t.is(execHash, masterHash);
+
+        return cwdGit.getRepo().then(repo => {
+            t.truthy(repo);
+
+            return new Promise((resolve, reject) => {
+                repo.readRef('refs/heads/master', (error, repoHash) => {
+                    if (error) {
+                        return reject(error);
+                    }
+
+                    t.is(repoHash, masterHash);
+
+                    resolve(repoHash);
+                });
+            });
+        });
+    });
+});
