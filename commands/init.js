@@ -10,7 +10,7 @@ var logger = require('../lib/logger'),
 
 
 /**
- * Initialize a harmony branch
+ * Initialize a holobranch
  * - [X] Check if branch exists already (die for now, merge on top of later)
  * - [ ] Try loading repo with js-git and loading a tree
  * - Load sources and mounts from topBranch
@@ -29,7 +29,7 @@ function init(topBranch, virtualBranch, options) {
             throw 'virtualBranch required';
         }
 
-        logger.info('emergence-harmony-init', { topBranch: topBranch, virtualBranch: virtualBranch });
+        logger.info('git-holobranch-init', { topBranch: topBranch, virtualBranch: virtualBranch });
 
         var git = new Git(),
             gitData = yield {

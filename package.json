@@ -1,9 +1,9 @@
 {
-  "name": "emergence-harmony",
+  "name": "git-holobranch",
   "preferGlobal": true,
   "version": "0.0.0",
   "bin": {
-    "git-harmony": "./cli.js"
+    "git-holobranch": "./cli.js"
   },
   "scripts": {
     "test": "ava"
