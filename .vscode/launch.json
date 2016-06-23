@@ -2,12 +2,34 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "cli init",
+            "name": "git-holobranch-test",
             "type": "node",
             "request": "launch",
             "program": "${workspaceRoot}/cli.js",
             "stopOnEntry": false,
-            "args": ["--debug", "init", "development", "site"],
+            "args": ["--debug", "test", "development", "site"],
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": null,
+            "runtimeExecutable": null,
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "env": {
+                "NODE_ENV": "development",
+                "GIT_WORK_TREE": "/tmp/laddr/",
+                "GIT_DIR": "/tmp/laddr/.git/"
+            },
+            "externalConsole": false,
+            "sourceMaps": false,
+            "outDir": null
+        },
+        {
+            "name": "git-holobranch-project",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceRoot}/cli.js",
+            "stopOnEntry": false,
+            "args": ["--debug", "project", "development", "site"],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
             "runtimeExecutable": null,
