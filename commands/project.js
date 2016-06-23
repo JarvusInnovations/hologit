@@ -11,7 +11,7 @@ var logger = require('../lib/logger'),
 /**
  * Initialize a holobranch
  * - [X] Check if branch exists already (die for now, merge on top of later)
- * - [ ] Try loading repo with js-git and loading a tree
+ * - [X] Try loading repo with js-git and loading a tree
  * - Load sources and mounts from topBranch
  * - Loop sources and generate commit for each
  * - Merge new commit onto virtualBranch
@@ -30,20 +30,24 @@ function* project(sourceBranch, holoBranch, options) {
     logger.info('git-holobranch-init', { sourceBranch: sourceBranch, holoBranch: holoBranch });
 
     var git = new Git(),
-        gitData = yield {
-            dir: git.exec('rev-parse', { 'git-dir': true }),
-            sourceBranch: git.exec('show-ref', { s: true }, 'refs/heads/' + sourceBranch, { $nullOnError: true }),
-            holoBranch: git.exec('show-ref', { s: true }, 'refs/heads/' + holoBranch, { $nullOnError: true })
+        repo = yield git.getRepo(),
+        refs = yield {
+            sourceBranch: repo.readRef('refs/heads/' + sourceBranch),
+            holoBranch: repo.readRef('refs/heads/' + holoBranch)
         };
 
-    if (!gitData.sourceBranch) {
+    // check state of refs
+    if (!refs.sourceBranch) {
         throw 'branch ' + sourceBranch + ' not found';
     }
 
-    if (gitData.holoBranch) {
+    if (refs.holoBranch) {
         // TODO: allow and apply merge instead
         throw 'branch ' + holoBranch + ' already exists';
     }
+
+    var sourceCommit = yield repo.loadAs('commit', refs.sourceBranch),
+        sourceTree = yield repo.loadAs('tree', sourceCommit.tree);
 
     debugger;
 }
