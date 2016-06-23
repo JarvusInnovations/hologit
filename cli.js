@@ -42,9 +42,9 @@ Object.getPrototypeOf(cli).coHandler = function(fn) {
 };
 
 
-
 // load available commands
 fs.readdir(commandsDir, function(error, files) {
+
     files.filter(fileName => commandRe.test(fileName)).forEach(fileName => {
         require(path.join(commandsDir, fileName))(cli);
     });
@@ -52,4 +52,5 @@ fs.readdir(commandsDir, function(error, files) {
 
     // parse CLI arguments against loaded commands
     cli.parse(process.argv);
+
 });
