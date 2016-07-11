@@ -12,7 +12,7 @@ Code virtual git branches that get assembled automatically from any number of so
 
 ## Holo hooks
 
-- `.holo/hooks[/mount/path]/[myhook].[pre-project|post-project]`: A hook run when a source changes at an optional source subpath
+- `.holo/hooks[/mount/path]/[myhook].[pre-project|post-project]`: A hook run against from and to hashes at any effective path either before or after projection
 
 
 
