@@ -30,7 +30,7 @@ function* project(sourceBranch, holoBranch, options) {
     logger.info('git-holobranch-init', { sourceBranch: sourceBranch, holoBranch: holoBranch });
 
     var git = new Git(),
-        repo = yield git.getRepo(),
+        repo = yield git.getRepo('js-git/mixins/create-tree'),
         refs = yield {
             sourceBranch: repo.readRef('refs/heads/' + sourceBranch),
             holoBranch: repo.readRef('refs/heads/' + holoBranch)
@@ -49,5 +49,39 @@ function* project(sourceBranch, holoBranch, options) {
     var sourceCommit = yield repo.loadAs('commit', refs.sourceBranch),
         sourceTree = yield repo.loadAs('tree', sourceCommit.tree);
 
+    var myTreeHash = yield repo.createTree({
+        'php-classes': sourceTree['php-classes'],
+        'php-config': sourceTree['php-config']
+    });
+
     debugger;
+
+    var myTree = yield repo.loadAs('tree', myTreeHash[0]);
+
+    var myOtherTreeChanges = [
+        {
+            path: 'foo-classes',
+            mode: sourceTree['php-classes'].mode,
+            hash: sourceTree['php-classes'].hash
+        },
+        {
+            path: 'foo-config',
+            mode: sourceTree['php-config'].mode,
+            hash: sourceTree['php-config'].hash
+        }
+    ];
+
+    myOtherTreeChanges.base = myTreeHash[0];
+
+    var myOtherTreeHash = yield repo.createTree(myOtherTreeChanges);
+    var myOtherTree = yield repo.loadAs('tree', myOtherTreeHash[0]);
+
+    debugger;
+
+    // var treeStream = yield repo.treeWalk(sourceCommit.tree),
+    //     object;
+
+    // while (object = yield treeStream.read(), object !== undefined) {
+    //     console.log(object.hash + "\t" + object.path);
+    // }
 }
