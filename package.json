@@ -5,9 +5,6 @@
   "bin": {
     "git-holobranch": "./cli.js"
   },
-  "scripts": {
-    "test": "ava"
-  },
   "dependencies": {
     "co": "^4.6.0",
     "commander": "^2.9.0",
@@ -15,10 +12,5 @@
     "js-git": "^0.7.7",
     "mz": "^2.4.0",
     "winston": "^2.2.0"
-  },
-  "devDependencies": {
-    "ava": "^0.15.2",
-    "tmp-promise": "^1.0.2",
-    "rimraf-promise": "^2.0.0"
   }
 }
