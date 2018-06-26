@@ -2,48 +2,68 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "git-holobranch-test",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceRoot}/cli.js",
-            "stopOnEntry": false,
-            "args": ["--debug", "test", "development", "site"],
+            "name": "git-holobranch-test",
             "cwd": "${workspaceRoot}",
-            "preLaunchTask": null,
-            "runtimeExecutable": null,
-            "runtimeArgs": [
-                "--nolazy"
-            ],
             "env": {
-                "NODE_ENV": "development",
+                "DEBUG": true,
                 "GIT_WORK_TREE": "/tmp/laddr/",
                 "GIT_DIR": "/tmp/laddr/.git/"
             },
-            "externalConsole": false,
-            "sourceMaps": false,
-            "outDir": null
+            "program": "${workspaceRoot}/bin/cli.js",
+            "args": [
+                "test",
+
+                // holo-branch
+                "site"
+            ]
         },
         {
-            "name": "git-holobranch-project",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceRoot}/cli.js",
-            "stopOnEntry": false,
-            "args": ["--debug", "project", "development", "site"],
+            "name": "git-holobranch-project",
             "cwd": "${workspaceRoot}",
-            "preLaunchTask": null,
-            "runtimeExecutable": null,
-            "runtimeArgs": [
-                "--nolazy"
-            ],
             "env": {
-                "NODE_ENV": "development",
+                "DEBUG": true,
                 "GIT_WORK_TREE": "/tmp/laddr/",
                 "GIT_DIR": "/tmp/laddr/.git/"
             },
-            "externalConsole": false,
-            "sourceMaps": false,
-            "outDir": null
+            "program": "${workspaceRoot}/bin/cli.js",
+            "args": [
+                "project",
+
+                // source-branch
+                "develop",
+
+                // holo-branch
+                "site"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "git-holobranch-watch",
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "DEBUG": true
+            },
+            "program": "${workspaceRoot}/bin/cli.js",
+            "args": [
+                "watch"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Run AVA test",
+            "program": "${workspaceRoot}/node_modules/ava/profile.js",
+            "args": [
+              "${file}"
+            ],
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ]
         }
     ]
 }
