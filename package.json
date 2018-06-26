@@ -1,16 +1,29 @@
 {
-  "name": "git-holobranch",
+  "name": "@emergence/hologit",
+  "version": "0.2.0",
+  "description": "Hologit automates the projection of layered composite file trees based on flat, declarative plans",
+  "repository": "https://github.com/EmergencePlatform/hologit",
+  "main": "bin/cli.js",
   "preferGlobal": true,
-  "version": "0.0.0",
-  "bin": {
-    "git-holobranch": "./cli.js"
-  },
+  "author": "Chris Alfano <chris@jarv.us>",
+  "license": "MIT",
   "dependencies": {
-    "co": "^4.6.0",
-    "commander": "^2.9.0",
-    "git-node-fs": "^1.0.0",
-    "js-git": "^0.7.7",
+    "@es-git/core": "^0.9.0",
+    "fb-watchman": "^2.0.0",
+    "git-client": "^1.0.2",
     "mz": "^2.4.0",
-    "winston": "^2.2.0"
-  }
+    "winston": "^2.4.3",
+    "yargs": "^11.0.0"
+  },
+  "bin": {
+    "holo": "./bin/cli.js"
+  },
+  "keywords": [
+    "emergence",
+    "git",
+    "holo",
+    "hologit",
+    "holograph",
+    "projection"
+  ]
 }
