@@ -1,0 +1,1 @@
+hab pkg install -b core/node jarvus/watchman
