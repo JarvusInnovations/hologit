@@ -17,7 +17,7 @@
     "yargs": "^11.0.0"
   },
   "bin": {
-    "holo": "./bin/cli.js"
+    "git-holo": "./bin/cli.js"
   },
   "keywords": [
     "emergence",
