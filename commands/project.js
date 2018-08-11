@@ -42,7 +42,7 @@ async function project ({ sourceBranch, holoBranch }) {
         throw new Error('holoBranch required');
     }
 
-    logger.info('git-holobranch-init', { sourceBranch: sourceBranch, holoBranch: holoBranch });
+    logger.info('hologit-init', { sourceBranch: sourceBranch, holoBranch: holoBranch });
 
     // var repo = yield git.getRepo('js-git/mixins/create-tree'),
     //     refs = yield {

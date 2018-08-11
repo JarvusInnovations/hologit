@@ -1,4 +1,4 @@
-# git-holobranch
+# hologit
 
 Code virtual git branches that get assembled automatically from any number of source branches and remote repositories!
 
