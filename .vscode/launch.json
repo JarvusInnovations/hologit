@@ -64,6 +64,23 @@
             "skipFiles": [
                 "<node_internals>/**/*.js"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "add source",
+            "cwd": "${workspaceRoot}/../gatekeeper",
+            "env": {
+                "DEBUG": true
+            },
+            "program": "${workspaceRoot}/bin/cli.js",
+            "args": [
+                "source",
+                "add",
+                "--branch=skeleton",
+                "skeleton-v1",
+                "https://github.com/JarvusInnovations/emergence-skeleton.git"
+            ]
         }
     ]
 }
