@@ -83,6 +83,23 @@
                 "skeleton-v1",
                 "https://github.com/JarvusInnovations/emergence-skeleton.git"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "checkout source",
+            "cwd": "${workspaceRoot}/../gatekeeper",
+            "env": {
+                "DEBUG": true,
+                "PATH": "/hab/bin"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceRoot}/bin/cli.js",
+            "args": [
+                "source",
+                "checkout",
+                "skeleton-v1"
+            ]
         }
     ]
 }
