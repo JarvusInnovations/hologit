@@ -29,7 +29,7 @@ async function addSource ({ name, url, branch }) {
 
 
     // load .holo info
-    const { holoPath } = await hololib.getInfo();
+    const { gitDir, holoPath } = await hololib.getInfo();
 
 
     // locate key paths
@@ -63,7 +63,7 @@ async function addSource ({ name, url, branch }) {
 
 
     // fetch objects
-    logger.info(`fetching ${remoteRef}`);
+    logger.info(`fetching ${remoteRef} ${hash}`);
     await git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
 
 
@@ -75,6 +75,18 @@ async function addSource ({ name, url, branch }) {
 
     logger.debug(`writing ${configPath}`);
     await fs.writeFile(configPath, TOML.stringify({ holosource: { url, ref: remoteRef } }));
+
+
+    // initialize repository
+    await git.init(repoPath);
+    await fs.writeFile(`${repoPath}/.git/objects/info/alternates`, '../../../../../.git/objects');
+
+
+    // add to index
+    logger.debug(`staging source`);
+    await git.add(configPath);
+    await git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
+
 
     logger.info(`added source ${name} at ${url}`);
 }
