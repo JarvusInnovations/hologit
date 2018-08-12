@@ -23,8 +23,8 @@ exports.handler = async argv => {
 
 async function addSource ({name, url, branch}) {
     const hololib = require('../../lib/holo.js');
+    const git = await hololib.getGit();
     const fs = require('mz/fs');
-    // const git = require('git-client');
     const TOML = require('@iarna/toml');
 
 
