@@ -73,20 +73,19 @@ async function addSource ({ name, url, branch }) {
         await fs.mkdir(sourcesPath);
     }
 
-    logger.debug(`writing ${configPath}`);
+    logger.info(`writing ${configPath}`);
     await fs.writeFile(configPath, TOML.stringify({ holosource: { url, ref: remoteRef } }));
 
 
     // initialize repository
-    await git.init(repoPath);
-    await fs.writeFile(`${repoPath}/.git/objects/info/alternates`, '../../../../../.git/objects');
+    await hololib.initSourceRepo(name);
 
 
     // add to index
-    logger.debug(`staging source`);
+    logger.info(`staging source @ ${hash}`);
     await git.add(configPath);
     await git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
 
 
-    logger.info(`added source ${name} at ${url}`);
+    logger.info(`added source ${name} from ${url}`);
 }
