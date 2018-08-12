@@ -29,22 +29,22 @@ async function addSource ({ name, url, branch }) {
 
 
     // load .holo info
-    const { gitDir, holoPath } = await hololib.getRepoInfo();
+    const { gitDir, holoDir } = await hololib.getRepoInfo();
 
 
     // locate key paths
-    const sourcesPath = `${holoPath}/sources`;
-    const configPath = `${sourcesPath}/${name}.toml`;
-    const repoPath = `${sourcesPath}/${name}`;
+    const sourcesDir = `${holoDir}/sources`;
+    const configFile = `${sourcesDir}/${name}.toml`;
+    const workTree = `${sourcesDir}/${name}`;
 
 
     // check that nothing conflicting already exists
-    if (await fs.exists(configPath)) {
-        throw new Error(`source config path already exists: ${configPath}`);
+    if (await fs.exists(configFile)) {
+        throw new Error(`source config path already exists: ${configFile}`);
     }
 
-    if (await fs.exists(repoPath)) {
-        throw new Error(`source repository path already exists ${repoPath} already exists`);
+    if (await fs.exists(workTree)) {
+        throw new Error(`${workTree} already exists`);
     }
 
 
@@ -68,13 +68,13 @@ async function addSource ({ name, url, branch }) {
 
 
     // write config
-    if (!await fs.exists(sourcesPath)) {
-        logger.debug(`creating ${sourcesPath}`);
-        await fs.mkdir(sourcesPath);
+    if (!await fs.exists(sourcesDir)) {
+        logger.debug(`creating ${sourcesDir}`);
+        await fs.mkdir(sourcesDir);
     }
 
-    logger.info(`writing ${configPath}`);
-    await fs.writeFile(configPath, TOML.stringify({ holosource: { url, ref: remoteRef } }));
+    logger.info(`writing ${configFile}`);
+    await fs.writeFile(configFile, TOML.stringify({ holosource: { url, ref: remoteRef } }));
 
 
     // initialize repository
@@ -83,7 +83,7 @@ async function addSource ({ name, url, branch }) {
 
     // add to index
     logger.info(`staging source @ ${hash}`);
-    await git.add(configPath);
+    await git.add(configFile);
     await git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
 
 
