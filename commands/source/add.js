@@ -48,7 +48,7 @@ async function addSource ({ name, url, branch }) {
 
 
     // examine remote repo/branch
-    logger.info(`listing ${url}#${branch}`);
+    logger.info(`listing ${url}#${branch||''}`);
     const lsRemoteOutput = await git.lsRemote({ symref: true }, url, branch || 'HEAD');
     const match = lsRemoteOutput.match(/^(ref: (refs\/heads\/\S+)\tHEAD\n)?([0-9a-f]{40})\t(\S+)$/m);
 
