@@ -48,6 +48,25 @@ async function addSource ({name, url, branch}) {
     }
 
 
+    // examine remote repo/branch
+    logger.info(`listing ${url}#${branch}`);
+    const lsRemoteOutput = await git.lsRemote({ symref: true }, url, branch || 'HEAD');
+    const match = lsRemoteOutput.match(/^(ref: (refs\/heads\/\S+)\tHEAD\n)?([0-9a-f]{40})\t(\S+)$/m);
+
+    if (!match) {
+        throw new Error('could not find remote ref for '+(branch||'HEAD'));
+    }
+
+    const hash = match[3];
+    const remoteRef = match[2] || match[4];
+    const localRef = `refs/sources/${name}/${remoteRef.substr(5)}`;
+
+
+    // fetch objects
+    logger.info(`fetching ${remoteRef}`);
+    await git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
+
+
     // write config
     if (!await fs.exists(sourcesPath)) {
         logger.debug(`creating ${sourcesPath}`);
@@ -55,7 +74,7 @@ async function addSource ({name, url, branch}) {
     }
 
     logger.debug(`writing ${configPath}`);
-    await fs.writeFile(configPath, TOML.stringify({ holosource: { url, branch } }));
+    await fs.writeFile(configPath, TOML.stringify({ holosource: { url, ref: remoteRef } }));
 
     logger.info(`added source ${name} at ${url}`);
 }

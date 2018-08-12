@@ -71,13 +71,15 @@
             "name": "add source",
             "cwd": "${workspaceRoot}/../gatekeeper",
             "env": {
-                "DEBUG": true
+                "DEBUG": true,
+                "PATH": "/hab/bin"
             },
+            "outputCapture": "std",
             "program": "${workspaceRoot}/bin/cli.js",
             "args": [
                 "source",
                 "add",
-                "--branch=skeleton",
+                "--branch=master",
                 "skeleton-v1",
                 "https://github.com/JarvusInnovations/emergence-skeleton.git"
             ]
