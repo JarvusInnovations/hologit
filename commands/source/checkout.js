@@ -1,7 +1,12 @@
 const logger = require('../../lib/logger.js');
 
 exports.command = 'checkout <name>';
-exports.desc = 'Checkout working tree for a source';
+exports.desc = 'Check out working tree for a source';
+exports.builder = {
+    all: {
+        describe: 'COMING SOON: Check out working trees for all defined sources'
+    }
+};
 
 exports.handler = async argv => {
     // execute command
