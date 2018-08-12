@@ -41,5 +41,9 @@ async function checkoutSource ({ name }) {
 
     // checkout HEAD
     logger.info(`checking out ${source.head}` + (branch ? ` to ${branch}` : ''));
-    logger.info(await source.git.checkout(checkoutOptions, source.head));
+    const checkoutOutput = await source.git.checkout(checkoutOptions, source.head);
+
+    if (checkoutOutput) {
+        logger.info(checkoutOutput);
+    }
 }
