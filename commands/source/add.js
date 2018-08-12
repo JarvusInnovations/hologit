@@ -29,7 +29,7 @@ async function addSource ({ name, url, branch }) {
 
 
     // load .holo info
-    const { gitDir, holoDir } = await hololib.getRepoInfo();
+    const { gitDir, holoDir } = await hololib.getRepo();
 
 
     // locate key paths
@@ -78,7 +78,7 @@ async function addSource ({ name, url, branch }) {
 
 
     // initialize repository
-    await hololib.initSourceRepo(name);
+    await hololib.initSource(name);
 
 
     // add to index
