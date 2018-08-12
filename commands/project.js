@@ -19,7 +19,7 @@ exports.handler = async argv => {
         console.log(hash);
         process.exit(0);
     } catch (err) {
-        console.error('Failed to project:', err);
+        console.error('Command failed:', err);
         process.exit(1);
     }
 };

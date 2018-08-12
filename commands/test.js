@@ -14,7 +14,7 @@ exports.handler = async argv => {
         await test(argv);
         process.exit(0);
     } catch (err) {
-        console.error('Failed to test:', err);
+        console.error('Command failed:', err);
         process.exit(1);
     }
 };

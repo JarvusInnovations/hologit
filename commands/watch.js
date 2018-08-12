@@ -9,7 +9,7 @@ exports.handler = async argv => {
         await watch(argv);
         process.exit(0);
     } catch (err) {
-        console.error('Failed to watch:', err);
+        console.error('Command failed:', err);
         process.exit(1);
     }
 };

@@ -14,14 +14,14 @@ exports.handler = async argv => {
         await addSource(argv);
         process.exit(0);
     } catch (err) {
-        console.error('Failed to add:', err);
+        console.error('Command failed:', err);
         process.exit(1);
     }
 };
 
 
 
-async function addSource ({name, url, branch}) {
+async function addSource ({ name, url, branch }) {
     const hololib = require('../../lib/holo.js');
     const git = await hololib.getGit();
     const fs = require('mz/fs');
