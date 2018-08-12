@@ -79,7 +79,6 @@
             "args": [
                 "source",
                 "add",
-                "--branch=master",
                 "skeleton-v1",
                 "https://github.com/JarvusInnovations/emergence-skeleton.git"
             ]
