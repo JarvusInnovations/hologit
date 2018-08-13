@@ -10,6 +10,12 @@ if (process.env.DEBUG) {
 }
 
 
+// all logger output to STDERR
+for (const level in logger.levels) {
+    logger.default.transports.console.stderrLevels[level] = true;
+}
+
+
 // route command line
 require('yargs')
     .version(require('../package.json').version)
