@@ -1,17 +1,29 @@
 {
     "version": "0.2.0",
     "configurations": [
+        // {
+        //     "type": "node",
+        //     "request": "launch",
+        //     "name": "Run AVA test",
+        //     "program": "${workspaceFolder}/node_modules/ava/profile.js",
+        //     "args": [
+        //       "${file}"
+        //     ],
+        //     "skipFiles": [
+        //         "<node_internals>/**/*.js"
+        //     ]
+        // },
         {
             "type": "node",
             "request": "launch",
-            "name": "hologit-project",
-            "cwd": "${workspaceRoot}",
+            "name": "project",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": true,
-                "GIT_WORK_TREE": "/tmp/laddr/",
-                "GIT_DIR": "/tmp/laddr/.git/"
+                "PATH": "/hab/bin"
             },
-            "program": "${workspaceRoot}/bin/cli.js",
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
             "args": [
                 "project",
 
@@ -25,12 +37,14 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "hologit-watch",
-            "cwd": "${workspaceRoot}",
+            "name": "watch",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
-                "DEBUG": true
+                "DEBUG": true,
+                "PATH": "/hab/bin"
             },
-            "program": "${workspaceRoot}/bin/cli.js",
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
             "args": [
                 "watch"
             ]
@@ -38,26 +52,14 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Run AVA test",
-            "program": "${workspaceRoot}/node_modules/ava/profile.js",
-            "args": [
-              "${file}"
-            ],
-            "skipFiles": [
-                "<node_internals>/**/*.js"
-            ]
-        },
-        {
-            "type": "node",
-            "request": "launch",
             "name": "add source",
-            "cwd": "${workspaceRoot}/../gatekeeper",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": true,
                 "PATH": "/hab/bin"
             },
             "outputCapture": "std",
-            "program": "${workspaceRoot}/bin/cli.js",
+            "program": "${workspaceFolder}/bin/cli.js",
             "args": [
                 "source",
                 "add",
@@ -69,13 +71,13 @@
             "type": "node",
             "request": "launch",
             "name": "checkout source",
-            "cwd": "${workspaceRoot}/../gatekeeper",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": true,
                 "PATH": "/hab/bin"
             },
             "outputCapture": "std",
-            "program": "${workspaceRoot}/bin/cli.js",
+            "program": "${workspaceFolder}/bin/cli.js",
             "args": [
                 "source",
                 "checkout",
