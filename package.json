@@ -8,7 +8,6 @@
   "author": "Chris Alfano <chris@jarv.us>",
   "license": "MIT",
   "dependencies": {
-    "@es-git/core": "^0.9.0",
     "@iarna/toml": "^2.0.0",
     "fb-watchman": "^2.0.0",
     "git-client": "^1.0.3",
