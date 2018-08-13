@@ -1,0 +1,65 @@
+pkg_name="hologit"
+pkg_origin="emergence"
+pkg_description="Command-line utility-belt for hacking JSON and Javascript."
+pkg_upstream_url="https://github.com/EmergencePlatform/hologit"
+pkg_license=("MIT")
+pkg_maintainer="Chris Alfano <chris@jarv.us>"
+pkg_build_deps=(
+  jarvus/underscore
+)
+
+pkg_deps=(
+  core/git
+  core/node
+)
+
+pkg_bin_dirs=(bin)
+
+
+pkg_version() {
+  underscore extract version --outfmt text --in package.json
+}
+
+# implement build workflow
+do_before() {
+  do_default_before
+  update_pkg_version
+}
+
+do_build() {
+  pushd "${CACHE_PATH}" > /dev/null
+
+  build_line "Copying application to ${CACHE_PATH}"
+  cp "${PLAN_CONTEXT}/LICENSE" "${PLAN_CONTEXT}/package.json" ./
+  cp -r "${PLAN_CONTEXT}/commands" "${PLAN_CONTEXT}/lib" ./
+  cp -r "${PLAN_CONTEXT}/bin" ./node-bin
+
+  build_line "Installing dependencies with NPM"
+  npm install
+
+  build_line "Fixing interpreter"
+  sed -e "s#\#\!/usr/bin/env node#\#\!$(pkg_path_for node)/bin/node#" --in-place "node-bin/cli.js"
+
+  popd > /dev/null
+}
+
+do_install() {
+  pushd "${CACHE_PATH}" > /dev/null
+
+  cp -r ./* "${pkg_prefix}/"
+
+build_line "Creating git-holo command"
+    cat > "${pkg_prefix}/bin/git-holo" <<- EOM
+#!/bin/sh
+export PATH="$(_assemble_runtime_path)"
+exec ${pkg_prefix}/node-bin/cli.js \$@
+EOM
+  chmod +x "${pkg_prefix}/bin/git-holo"
+
+  popd > /dev/null
+}
+
+do_strip() {
+  return 0
+}
+
