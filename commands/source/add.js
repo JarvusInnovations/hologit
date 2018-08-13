@@ -27,6 +27,16 @@ async function addSource ({ name, url, branch }) {
     const TOML = require('@iarna/toml');
 
 
+    // check inputs
+    if (!name) {
+        throw new Error('name required');
+    }
+
+    if (!url) {
+        throw new Error('url required');
+    }
+
+
     // load .holo info
     const { git, holoDir } = await hololib.getRepo();
 

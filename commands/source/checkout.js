@@ -25,6 +25,12 @@ async function checkoutSource ({ name }) {
     const hololib = require('../../lib/holo.js');
 
 
+    // check inputs
+    if (!name) {
+        throw new Error('name required');
+    }
+
+
     // load .holo info
     const repo = await hololib.getRepo();
     const source = await hololib.getSource(name, repo);
