@@ -27,11 +27,11 @@
             "args": [
                 "project",
 
-                // source-branch
-                "develop",
+                // holobranch
+                "site",
 
-                // holo-branch
-                "site"
+                // target-branch
+                // "site"
             ]
         },
         {
