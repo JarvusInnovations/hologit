@@ -4,24 +4,6 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "hologit-test",
-            "cwd": "${workspaceRoot}",
-            "env": {
-                "DEBUG": true,
-                "GIT_WORK_TREE": "/tmp/laddr/",
-                "GIT_DIR": "/tmp/laddr/.git/"
-            },
-            "program": "${workspaceRoot}/bin/cli.js",
-            "args": [
-                "test",
-
-                // holo-branch
-                "site"
-            ]
-        },
-        {
-            "type": "node",
-            "request": "launch",
             "name": "hologit-project",
             "cwd": "${workspaceRoot}",
             "env": {
