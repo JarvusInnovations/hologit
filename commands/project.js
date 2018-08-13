@@ -27,6 +27,8 @@ async function project ({ holobranch, targetBranch }) {
     const hololib = require('../lib/holo.js');
     const TOML = require('@iarna/toml');
     const toposort = require('toposort');
+    const minimatch = require('minimatch');
+    const path = require('path');
 
     // check inputs
     if (!holobranch) {
@@ -35,14 +37,14 @@ async function project ({ holobranch, targetBranch }) {
 
 
     // load .holo info
-    const { git, holoDir } = await hololib.getRepo();
+    const { git, gitDir } = await hololib.getRepo();
 
 
     // read holobranch tree
     let treeOutput;
 
     try {
-        treeOutput = (await git.lsTree({ r: true }, `HEAD:.holo/branches/${holobranch}`)).split('\n');
+        treeOutput = (await git.lsTree({ 'full-tree': true, r: true }, `HEAD:.holo/branches/${holobranch}`)).split('\n');
     } catch (err) {
         treeOutput = [];
     }
@@ -55,28 +57,26 @@ async function project ({ holobranch, targetBranch }) {
 
     for (const treeLine of treeOutput) {
         const matches = hololib.treeLineRe.exec(treeLine);
+        const specPath = matches[4];
         const spec = {
-            path: matches[4],
-            hash: matches[3]
+            config: TOML.parse(await git.catFile({ p: true },  matches[3]))
         };
-
-        spec.config = TOML.parse(await git.catFile({ p: true }, spec.hash));
         const holospec = spec.config.holospec;
 
         if (!holospec) {
-            throw new Error(`invalid holospec ${spec.path}`);
+            throw new Error(`invalid holospec ${specPath}`);
         }
 
         if (!holospec.src) {
-            throw new Error(`holospec has no src defined ${spec.path}`);
+            throw new Error(`holospec has no src defined ${specPath}`);
         }
 
         // parse holospec and apply defaults
         spec.src = holospec.src;
-        spec.holosource = holospec.holosource || spec.path.replace(layerFromPathRe, '$3$4');
+        spec.holosource = holospec.holosource || specPath.replace(layerFromPathRe, '$3$4');
         spec.layer = holospec.layer || spec.holosource;
-        spec.cwd = holospec.cwd || '.';
-        spec.dest = holospec.dest || '.';
+        spec.inputPrefix = holospec.cwd || '.';
+        spec.outputPrefix = path.join(path.dirname(specPath), holospec.dest || '.');
 
         if (holospec.before) {
             spec.before = typeof holospec.before == 'string' ? [holospec.before] : holospec.before;
@@ -121,7 +121,71 @@ async function project ({ holobranch, targetBranch }) {
     // sort specs by before/after requirements
     const sortedSpecs = toposort.array(specs, specEdges);
 
+
     logger.info('sorted specs:\n', require('util').inspect(sortedSpecs, { showHidden: false, depth: null, colors: true }));
+
+
+    const outputTree = {};
+    const sources = {};
+
+    for (const spec of sortedSpecs) {
+
+        // load source
+        let source = sources[spec.holosource];
+
+        if (!source) {
+            source = sources[spec.holosource] = await hololib.getSource(spec.holosource);
+        }
+
+
+        // load tree
+        const treeOutput = (await git.lsTree({ 'full-tree': true, r: true }, `${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`)).split('\n');
+
+
+        // load matches from tree
+        const srcMatcher = new minimatch.Minimatch(spec.src, { dot: true });
+
+
+        // process each blob entry in tree
+        for (const treeLine of treeOutput) {
+            const matches = hololib.treeLineRe.exec(treeLine);
+            const blobPath = matches[4];
+
+            // exclude .holo/**
+            if (blobPath.substr(0, 5) == '.holo') {
+                continue;
+            }
+
+            // apply src matcher
+            if (srcMatcher.match(blobPath)) {
+                outputTree[spec.outputPrefix == '.' ? blobPath : path.join(spec.outputPrefix, blobPath)] = new git.BlobObject(matches[3], matches[1]);
+            }
+        }
+    }
+
+
+    logger.info('used sources:\n', require('util').inspect(sources, { showHidden: false, depth: null, colors: true }));
+
+    // TODO: build outputTree into git tree using code from emergence-source-http-legacy
+
+
+    /**
+     * es-git does not yet work with packfiles :'(
+     *
+     * See https://github.com/es-git/es-git/issues/15
+     */
+    // const { mix } = esgit;
+    // const Repo = mix(require('@es-git/node-fs-repo').default)
+    //     .with(require('@es-git/zlib-mixin').default)
+    //     .with(require('@es-git/object-mixin').default)
+    //     .with(require('@es-git/load-as-mixin').default);
+
+    // const repo = new Repo(gitDir);
+    // const refs = await repo.listRefs();
+    // const ref = await repo.getRef('refs/sources/skeleton-v2/heads/develop');
+    // const blob = await repo.hasObject(ref);
+    // const subtext = await repo.loadBlob(subtreeHash);
+    // const subtree = await repo.loadTree(subtreeHash);
 
 
 
