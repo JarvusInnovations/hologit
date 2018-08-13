@@ -3,10 +3,16 @@ const logger = require('../lib/logger.js');
 exports.command = 'project <holobranch> [target-branch]';
 exports.desc = 'Projects holobranch named <holobranch>, optionally writing result to [target-branch]';
 
+exports.builder = {
+    'target-branch': {
+        describe: 'Target branch'
+    }
+}
+
 exports.handler = async argv => {
     // execute command
     try {
-        await project(argv);
+        console.log(await project(argv));
         process.exit(0);
     } catch (err) {
         console.error('Command failed:', err);
@@ -41,6 +47,7 @@ async function project ({ holobranch, targetBranch }) {
 
 
     // read holobranch tree
+    logger.info('reading holobranch spec tree...');
     let treeOutput;
 
     try {
@@ -49,8 +56,6 @@ async function project ({ holobranch, targetBranch }) {
         treeOutput = [];
     }
 
-
-    // read holobranch tree
     const specs = [];
     const specsByLayer = {};
     const layerFromPathRe = /^(.*\/)?(([^\/]+)\/_|_?([^_\/][^\/]+))\.toml$/;
@@ -122,19 +127,18 @@ async function project ({ holobranch, targetBranch }) {
     const sortedSpecs = toposort.array(specs, specEdges);
 
 
-    logger.info('sorted specs:\n', require('util').inspect(sortedSpecs, { showHidden: false, depth: null, colors: true }));
-
-
+    // composite output tree
+    logger.info('compositing tree...');
     const outputTree = {};
-    const sources = {};
+    const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
 
         // load source
-        let source = sources[spec.holosource];
+        let source = sourcesCache[spec.holosource];
 
         if (!source) {
-            source = sources[spec.holosource] = await hololib.getSource(spec.holosource);
+            source = sourcesCache[spec.holosource] = await hololib.getSource(spec.holosource);
         }
 
 
@@ -164,85 +168,49 @@ async function project ({ holobranch, targetBranch }) {
     }
 
 
-    logger.info('used sources:\n', require('util').inspect(sources, { showHidden: false, depth: null, colors: true }));
+    // assemble tree
+    logger.info('assembling tree...');
 
-    // TODO: build outputTree into git tree using code from emergence-source-http-legacy
+    const rootTree = new git.TreeObject();
 
+    for (const treePath of Object.keys(outputTree).sort()) {
+        let pathParts = treePath.split('/');
+        let parentNode = rootTree;
+        let nodeName;
 
-    /**
-     * es-git does not yet work with packfiles :'(
-     *
-     * See https://github.com/es-git/es-git/issues/15
-     */
-    // const { mix } = esgit;
-    // const Repo = mix(require('@es-git/node-fs-repo').default)
-    //     .with(require('@es-git/zlib-mixin').default)
-    //     .with(require('@es-git/object-mixin').default)
-    //     .with(require('@es-git/load-as-mixin').default);
+        while ((nodeName = pathParts.shift()) && pathParts.length > 0) {
+            parentNode = parentNode[nodeName] || (parentNode[nodeName] = new git.TreeObject());
+        }
 
-    // const repo = new Repo(gitDir);
-    // const refs = await repo.listRefs();
-    // const ref = await repo.getRef('refs/sources/skeleton-v2/heads/develop');
-    // const blob = await repo.hasObject(ref);
-    // const subtext = await repo.loadBlob(subtreeHash);
-    // const subtree = await repo.loadTree(subtreeHash);
+        parentNode[nodeName] = outputTree[treePath];
+    }
 
 
+    // write tree
+    logger.info('writing tree...');
+    const rootTreeHash = await git.TreeObject.write(rootTree, git);
 
 
+    // update targetBranch
+    if (targetBranch) {
+        logger.info('committing new tree to target branch %s', targetBranch);
 
-    // var repo = yield git.getRepo('js-git/mixins/create-tree'),
-    //     refs = yield {
-    //         sourceBranch: repo.readRef('refs/heads/' + sourceBranch),
-    //         holoBranch: repo.readRef('refs/heads/' + holoBranch)
-    //     };
+        const targetRef = `refs/heads/${targetBranch}`;
+        const sourceDescription = await git.describe({ always: true, tags: true });
 
-    // // check state of refs
-    // if (!refs.sourceBranch) {
-    //     throw 'branch ' + sourceBranch + ' not found';
-    // }
+        let parentHash;
+        try {
+            parentHash = await git.revParse(targetRef);
+        } catch (err) {
+            parentHash = null;
+        }
 
-    // if (refs.holoBranch) {
-    //     // TODO: allow and apply merge instead
-    //     throw 'branch ' + holoBranch + ' already exists';
-    // }
+        const commitHash = await git.commitTree({ p: parentHash, m: `Projected ${holobranch} from ${sourceDescription}` }, rootTreeHash);
 
-    // var sourceCommit = yield repo.loadAs('commit', refs.sourceBranch),
-    //     sourceTree = yield repo.loadAs('tree', sourceCommit.tree);
+        await git.updateRef(targetRef, commitHash);
+    }
 
-    // var myTreeHash = yield repo.createTree({
-    //     'php-classes': sourceTree['php-classes'],
-    //     'php-config': sourceTree['php-config']
-    // });
 
-    // debugger;
-
-    // var myTree = yield repo.loadAs('tree', myTreeHash[0]);
-
-    // var myOtherTreeChanges = [
-    //     {
-    //         path: 'foo-classes',
-    //         mode: sourceTree['php-classes'].mode,
-    //         hash: sourceTree['php-classes'].hash
-    //     },
-    //     {
-    //         path: 'foo-config',
-    //         mode: sourceTree['php-config'].mode,
-    //         hash: sourceTree['php-config'].hash
-    //     }
-    // ];
-
-    // myOtherTreeChanges.base = myTreeHash[0];
-
-    // var myOtherTreeHash = yield repo.createTree(myOtherTreeChanges);
-    // var myOtherTree = yield repo.loadAs('tree', myOtherTreeHash[0]);
-
-    // debugger;
-
-    // // var treeStream = yield repo.treeWalk(sourceCommit.tree),
-    // //     object;
-
-    // // while (object = yield treeStream.read(), object !== undefined) {
-    // //     console.log(object.hash + "\t" + object.path);
-    // // }
+    // finished
+    return rootTreeHash;
 }
