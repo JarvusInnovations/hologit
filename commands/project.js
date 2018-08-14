@@ -147,12 +147,17 @@ async function project ({ holobranch, targetBranch }) {
         const treeOutput = (await git.lsTree({ 'full-tree': true, r: true }, `${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`)).split('\n');
 
 
-        // load matches from tree
-        const srcMatcher = new minimatch.Minimatch(spec.src, { dot: true });
+        // build matchers
+        const minimatchOptions = { dot: true };
+        const matchers = [];
+
+        for (const pattern of typeof spec.src == 'string' ? [spec.src] : spec.src) {
+            matchers.push(new minimatch.Minimatch(pattern, minimatchOptions));
+        }
 
 
         // process each blob entry in tree
-        for (const treeLine of treeOutput) {
+        treeLoop: for (const treeLine of treeOutput) {
             const matches = hololib.treeLineRe.exec(treeLine);
             const blobPath = matches[4];
 
@@ -161,10 +166,23 @@ async function project ({ holobranch, targetBranch }) {
                 continue;
             }
 
-            // apply src matcher
-            if (srcMatcher.match(blobPath)) {
-                outputTree[spec.outputPrefix == '.' ? blobPath : path.join(spec.outputPrefix, blobPath)] = new git.BlobObject(matches[3], matches[1]);
+            // apply positive matchers--must match at least one
+            let matched = false;
+
+            for (const matcher of matchers) {
+                if (matcher.match(blobPath)) {
+                    matched = true;
+                } else if (matcher.negate) {
+                    continue treeLoop;
+                }
             }
+
+            if (!matched) {
+                continue;
+            }
+
+            // add blob to output tree
+            outputTree[spec.outputPrefix == '.' ? blobPath : path.join(spec.outputPrefix, blobPath)] = new git.BlobObject(matches[3], matches[1]);
         }
     }
 
