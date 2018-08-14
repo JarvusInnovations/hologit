@@ -133,6 +133,7 @@ async function project ({ holobranch, targetBranch }) {
     const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
+        logger.info(`merging ${spec.layer}:${spec.inputPrefix != '.' ? spec.inputPrefix+'/' : ''}${spec.src} -> /${spec.outputPrefix != '.' ? spec.outputPrefix+'/' : ''}`);
 
         // load source
         let source = sourcesCache[spec.holosource];
@@ -193,7 +194,7 @@ async function project ({ holobranch, targetBranch }) {
 
     // update targetBranch
     if (targetBranch) {
-        logger.info('committing new tree to target branch %s', targetBranch);
+        logger.info(`committing new tree to "${targetBranch}"...`);
 
         const targetRef = `refs/heads/${targetBranch}`;
         const sourceDescription = await git.describe({ always: true, tags: true });
@@ -212,5 +213,6 @@ async function project ({ holobranch, targetBranch }) {
 
 
     // finished
+    logger.info('projection ready:');
     return rootTreeHash;
 }
