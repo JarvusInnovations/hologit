@@ -79,6 +79,22 @@
                 "checkout",
                 "skeleton-v1"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "fetch source",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                "DEBUG": true
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
+            "args": [
+                "source",
+                "fetch",
+                "skeleton-v1"
+            ]
         }
     ]
 }
