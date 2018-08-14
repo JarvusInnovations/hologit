@@ -63,7 +63,7 @@ async function addSource ({ name, url, branch }) {
     const match = lsRemoteOutput.match(/^(ref: (refs\/heads\/\S+)\tHEAD\n)?([0-9a-f]{40})\t(\S+)$/m);
 
     if (!match) {
-        throw new Error('could not find remote ref for '+(branch||'HEAD'));
+        throw new Error(`could not find remote ref for ${branch||'HEAD'}`);
     }
 
     const hash = match[3];
