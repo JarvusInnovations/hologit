@@ -17,7 +17,7 @@ pkg_bin_dirs=(bin)
 
 
 pkg_version() {
-  underscore extract version --outfmt text --in package.json
+  underscore extract version --outfmt text --in "${PLAN_CONTEXT}/package.json"
 }
 
 # implement build workflow
