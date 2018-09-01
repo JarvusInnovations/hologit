@@ -7,7 +7,7 @@ exports.builder = {
     'target-branch': {
         describe: 'Target branch'
     }
-}
+};
 
 exports.handler = async argv => {
     // execute command
@@ -43,7 +43,7 @@ async function project ({ holobranch, targetBranch }) {
 
 
     // load .holo info
-    const { git, gitDir } = await hololib.getRepo();
+    const repo = await hololib.getRepo();
 
 
     // read holobranch tree
@@ -51,7 +51,7 @@ async function project ({ holobranch, targetBranch }) {
     let treeOutput;
 
     try {
-        treeOutput = (await git.lsTree({ 'full-tree': true, r: true }, `HEAD:.holo/branches/${holobranch}`)).split('\n');
+        treeOutput = (await repo.git.lsTree({ 'full-tree': true, r: true }, `HEAD:.holo/branches/${holobranch}`)).split('\n');
     } catch (err) {
         treeOutput = [];
     }
@@ -64,7 +64,7 @@ async function project ({ holobranch, targetBranch }) {
         const matches = hololib.treeLineRe.exec(treeLine);
         const specPath = matches[4];
         const spec = {
-            config: TOML.parse(await git.catFile({ p: true },  matches[3]))
+            config: TOML.parse(await repo.git.catFile({ p: true },  matches[3]))
         };
         const holospec = spec.config.holospec;
 
@@ -139,12 +139,12 @@ async function project ({ holobranch, targetBranch }) {
         let source = sourcesCache[spec.holosource];
 
         if (!source) {
-            source = sourcesCache[spec.holosource] = await hololib.getSource(spec.holosource);
+            source = sourcesCache[spec.holosource] = await repo.getSource(spec.holosource);
         }
 
 
         // load tree
-        const treeOutput = (await git.lsTree({ 'full-tree': true, r: true }, `${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`)).split('\n');
+        const treeOutput = (await repo.git.lsTree({ 'full-tree': true, r: true }, `${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`)).split('\n');
 
 
         // build matchers
@@ -182,7 +182,7 @@ async function project ({ holobranch, targetBranch }) {
             }
 
             // add blob to output tree
-            outputTree[spec.outputPrefix == '.' ? blobPath : path.join(spec.outputPrefix, blobPath)] = new git.BlobObject(matches[3], matches[1]);
+            outputTree[spec.outputPrefix == '.' ? blobPath : path.join(spec.outputPrefix, blobPath)] = new repo.git.BlobObject(matches[3], matches[1]);
         }
     }
 
@@ -190,7 +190,7 @@ async function project ({ holobranch, targetBranch }) {
     // assemble tree
     logger.info('assembling tree...');
 
-    const rootTree = new git.TreeObject();
+    const rootTree = new repo.git.TreeObject();
 
     for (const treePath of Object.keys(outputTree).sort()) {
         let pathParts = treePath.split('/');
@@ -198,7 +198,7 @@ async function project ({ holobranch, targetBranch }) {
         let nodeName;
 
         while ((nodeName = pathParts.shift()) && pathParts.length > 0) {
-            parentNode = parentNode[nodeName] || (parentNode[nodeName] = new git.TreeObject());
+            parentNode = parentNode[nodeName] || (parentNode[nodeName] = new repo.git.TreeObject());
         }
 
         parentNode[nodeName] = outputTree[treePath];
@@ -207,7 +207,7 @@ async function project ({ holobranch, targetBranch }) {
 
     // write tree
     logger.info('writing tree...');
-    const rootTreeHash = await git.TreeObject.write(rootTree, git);
+    const rootTreeHash = await repo.git.TreeObject.write(rootTree, repo.git);
 
 
     // update targetBranch
@@ -215,18 +215,18 @@ async function project ({ holobranch, targetBranch }) {
         logger.info(`committing new tree to "${targetBranch}"...`);
 
         const targetRef = `refs/heads/${targetBranch}`;
-        const sourceDescription = await git.describe({ always: true, tags: true });
+        const sourceDescription = await repo.git.describe({ always: true, tags: true });
 
         let parentHash;
         try {
-            parentHash = await git.revParse(targetRef);
+            parentHash = await repo.git.revParse(targetRef);
         } catch (err) {
             parentHash = null;
         }
 
-        const commitHash = await git.commitTree({ p: parentHash, m: `Projected ${holobranch} from ${sourceDescription}` }, rootTreeHash);
+        const commitHash = await repo.git.commitTree({ p: parentHash, m: `Projected ${holobranch} from ${sourceDescription}` }, rootTreeHash);
 
-        await git.updateRef(targetRef, commitHash);
+        await repo.git.updateRef(targetRef, commitHash);
     }
 
 

@@ -22,7 +22,7 @@ exports.handler = async argv => {
 
 
 async function fetch ({ name }) {
-    const hololib = require('../../lib/holo.js');
+    const hololib = require('../../lib');
 
 
     // check inputs
@@ -33,7 +33,7 @@ async function fetch ({ name }) {
 
     // load .holo info
     const repo = await hololib.getRepo();
-    const source = await hololib.getSource(name, repo);
+    const source = await repo.getSource(name);
 
 
     // examine source
@@ -44,7 +44,7 @@ async function fetch ({ name }) {
     // fetch current head first
     logger.info(`fetching head ${ref} ${source.head}`);
     await repo.git.fetch({ depth: 1 }, url, `+${source.head}:${localRef}`);
-;
+
 
     // examine remote repo/branch
     logger.info(`listing ${url}#${ref}`);

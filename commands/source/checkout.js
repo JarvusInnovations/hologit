@@ -33,7 +33,7 @@ async function checkoutSource ({ name }) {
 
     // load .holo info
     const repo = await hololib.getRepo();
-    const source = await hololib.getSource(name, repo);
+    const source = await repo.getSource(name);
 
 
     // initialize repo if needed
