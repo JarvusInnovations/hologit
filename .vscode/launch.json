@@ -19,7 +19,7 @@
             "name": "project",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
-                "DEBUG": true
+                "DEBUG": "1"
             },
             "outputCapture": "std",
             "program": "${workspaceFolder}/bin/cli.js",
@@ -39,7 +39,7 @@
             "name": "watch",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
-                "DEBUG": true
+                "DEBUG": "1"
             },
             "outputCapture": "std",
             "program": "${workspaceFolder}/bin/cli.js",
@@ -53,7 +53,7 @@
             "name": "add source",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
-                "DEBUG": true
+                "DEBUG": "1"
             },
             "outputCapture": "std",
             "program": "${workspaceFolder}/bin/cli.js",
@@ -70,7 +70,7 @@
             "name": "checkout source",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
-                "DEBUG": true
+                "DEBUG": "1"
             },
             "outputCapture": "std",
             "program": "${workspaceFolder}/bin/cli.js",
@@ -86,7 +86,7 @@
             "name": "fetch source",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
-                "DEBUG": true
+                "DEBUG": "1"
             },
             "outputCapture": "std",
             "program": "${workspaceFolder}/bin/cli.js",
