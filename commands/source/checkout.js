@@ -37,8 +37,8 @@ async function checkoutSource ({ name }) {
 
 
     // initialize repo if needed
-    if (!source.workTree) {
-        source.workTree = await hololib.initSource(name);
+    if (!source.git) {
+        await source.init();
     }
 
 
