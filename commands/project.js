@@ -30,7 +30,7 @@ exports.handler = async argv => {
  * - Merge new commit onto virtualBranch
  */
 async function project ({ holobranch, targetBranch }) {
-    const hololib = require('../lib/holo.js');
+    const hololib = require('../lib');
     const TOML = require('@iarna/toml');
     const toposort = require('toposort');
     const minimatch = require('minimatch');

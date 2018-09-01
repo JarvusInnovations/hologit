@@ -22,7 +22,7 @@ exports.handler = async argv => {
 
 
 async function addSource ({ name, url, branch }) {
-    const hololib = require('../../lib/holo.js');
+    const hololib = require('../../lib');
     const fs = require('mz/fs');
     const TOML = require('@iarna/toml');
 

@@ -22,7 +22,7 @@ exports.handler = async argv => {
 
 
 async function checkoutSource ({ name }) {
-    const hololib = require('../../lib/holo.js');
+    const hololib = require('../../lib');
 
 
     // check inputs
