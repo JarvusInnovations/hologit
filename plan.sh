@@ -1,7 +1,7 @@
 pkg_name="hologit"
-pkg_origin="emergence"
+pkg_origin="jarvus"
 pkg_description="Command-line utility-belt for hacking JSON and Javascript."
-pkg_upstream_url="https://github.com/EmergencePlatform/hologit"
+pkg_upstream_url="https://github.com/JarvusInnovations/hologit"
 pkg_license=("MIT")
 pkg_maintainer="Chris Alfano <chris@jarv.us>"
 pkg_build_deps=(
