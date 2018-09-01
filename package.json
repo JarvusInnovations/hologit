@@ -10,7 +10,7 @@
   "dependencies": {
     "@iarna/toml": "^2.0.0",
     "fb-watchman": "^2.0.0",
-    "git-client": "^1.0.3",
+    "git-client": "^1.0.4",
     "minimatch": "^3.0.4",
     "mz": "^2.4.0",
     "toposort": "^2.0.2",
