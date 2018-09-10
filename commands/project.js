@@ -48,23 +48,15 @@ async function project ({ holobranch, targetBranch }) {
 
     // read holobranch tree
     logger.info('reading holobranch spec tree...');
-    let treeOutput;
-
-    try {
-        treeOutput = (await repo.git.lsTree({ 'full-tree': true, r: true }, `HEAD:.holo/branches/${holobranch}`)).split('\n');
-    } catch (err) {
-        treeOutput = [];
-    }
+    const specTree = await repo.git.TreeRoot.read(`HEAD:.holo/branches/${holobranch}`, repo.git);
 
     const specs = [];
     const specsByLayer = {};
     const layerFromPathRe = /^(.*\/)?(([^\/]+)\/_|_?([^_\/][^\/]+))\.toml$/;
 
-    for (const treeLine of treeOutput) {
-        const matches = hololib.treeLineRe.exec(treeLine);
-        const specPath = matches[4];
+    for (const specPath in specTree) {
         const spec = {
-            config: TOML.parse(await repo.git.catFile({ p: true },  matches[3]))
+            config: TOML.parse(await repo.git.catFile({ p: true },  specTree[specPath].hash))
         };
         const holospec = spec.config.holospec;
 
@@ -144,7 +136,7 @@ async function project ({ holobranch, targetBranch }) {
 
 
         // load tree
-        const treeOutput = (await repo.git.lsTree({ 'full-tree': true, r: true }, `${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`)).split('\n');
+        const sourceTree = await repo.git.TreeRoot.read(`${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`, repo.git);
 
 
         // build matchers
@@ -157,12 +149,11 @@ async function project ({ holobranch, targetBranch }) {
 
 
         // process each blob entry in tree
-        treeLoop: for (const treeLine of treeOutput) {
-            const matches = hololib.treeLineRe.exec(treeLine);
-            const blobPath = matches[4];
+        treeLoop: for (const sourcePath in sourceTree) {
+            const sourceObject = sourceTree[sourcePath];
 
             // exclude .holo/**
-            if (blobPath.substr(0, 5) == '.holo') {
+            if (sourcePath.substr(0, 5) == '.holo') {
                 continue;
             }
 
@@ -170,7 +161,7 @@ async function project ({ holobranch, targetBranch }) {
             let matched = false;
 
             for (const matcher of matchers) {
-                if (matcher.match(blobPath)) {
+                if (matcher.match(sourcePath)) {
                     matched = true;
                 } else if (matcher.negate) {
                     continue treeLoop;
@@ -182,7 +173,7 @@ async function project ({ holobranch, targetBranch }) {
             }
 
             // add blob to output tree
-            outputTree[spec.outputPrefix == '.' ? blobPath : path.join(spec.outputPrefix, blobPath)] = new repo.git.BlobObject(matches[3], matches[1]);
+            outputTree[spec.outputPrefix == '.' ? sourcePath : path.join(spec.outputPrefix, sourcePath)] = new repo.git.BlobObject(sourceObject.hash, sourceObject.mode);
         }
     }
 
@@ -190,19 +181,7 @@ async function project ({ holobranch, targetBranch }) {
     // assemble tree
     logger.info('assembling tree...');
 
-    const rootTree = new repo.git.TreeObject();
-
-    for (const treePath of Object.keys(outputTree).sort()) {
-        let pathParts = treePath.split('/');
-        let parentNode = rootTree;
-        let nodeName;
-
-        while ((nodeName = pathParts.shift()) && pathParts.length > 0) {
-            parentNode = parentNode[nodeName] || (parentNode[nodeName] = new repo.git.TreeObject());
-        }
-
-        parentNode[nodeName] = outputTree[treePath];
-    }
+    const rootTree = repo.git.TreeRoot.buildTreeObject(outputTree);
 
 
     // write tree
