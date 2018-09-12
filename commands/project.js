@@ -33,6 +33,8 @@ exports.handler = async argv => {
  * - [ ] Initialize and fetch sources automatically if needed
  * - [ ] Ensure sources have recipricol alternates
  * - [ ] Move source repos to root .git/modules tree
+ *   - register as submodule under .git/config
+ * - [ ] Create shallow for submodules
  * - [ ] Load sources and mounts from topBranch
  * - [ ] Loop sources and generate commit for each
  * - [ ] Merge new commit onto virtualBranch
