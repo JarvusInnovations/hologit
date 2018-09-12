@@ -5,7 +5,12 @@ exports.desc = 'Projects holobranch named <holobranch>, optionally writing resul
 
 exports.builder = {
     'target-branch': {
-        describe: 'Target branch'
+        describe: 'Target branch',
+        type: 'string'
+    },
+    'ref': {
+        describe: 'Commit ref to read holobranch from',
+        default: 'HEAD'
     }
 };
 
@@ -32,7 +37,7 @@ exports.handler = async argv => {
  * - [ ] Loop sources and generate commit for each
  * - [ ] Merge new commit onto virtualBranch
  */
-async function project ({ holobranch, targetBranch }) {
+async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const hololib = require('../lib');
     const TOML = require('@iarna/toml');
     const toposort = require('toposort');
@@ -50,8 +55,8 @@ async function project ({ holobranch, targetBranch }) {
 
 
     // read holobranch tree
-    logger.info('reading holobranch spec tree...');
-    const specTree = await repo.git.TreeRoot.read(`HEAD:.holo/branches/${holobranch}`, repo.git);
+    logger.info(`reading holobranch spec tree from ${ref}`);
+    const specTree = await repo.git.TreeRoot.read(`${ref}:.holo/branches/${holobranch}`, repo.git);
 
     const specs = [];
     const specsByLayer = {};
