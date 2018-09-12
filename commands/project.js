@@ -145,7 +145,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
 
         // load tree
-        const sourceTree = await repo.git.TreeRoot.read(`${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`, source.git);
+        const sourceTree = await repo.git.TreeRoot.read(`${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`);
 
 
         // build matchers
