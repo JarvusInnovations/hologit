@@ -25,9 +25,12 @@ exports.handler = async argv => {
  * Initialize a holobranch
  * - [X] Check if branch exists already (die for now, merge on top of later)
  * - [X] Try loading repo with js-git and loading a tree
- * - Load sources and mounts from topBranch
- * - Loop sources and generate commit for each
- * - Merge new commit onto virtualBranch
+ * - [ ] Initialize and fetch sources automatically if needed
+ * - [ ] Ensure sources have recipricol alternates
+ * - [ ] Move source repos to root .git/modules tree
+ * - [ ] Load sources and mounts from topBranch
+ * - [ ] Loop sources and generate commit for each
+ * - [ ] Merge new commit onto virtualBranch
  */
 async function project ({ holobranch, targetBranch }) {
     const hololib = require('../lib');
@@ -122,6 +125,7 @@ async function project ({ holobranch, targetBranch }) {
     // composite output tree
     logger.info('compositing tree...');
     const outputTree = {};
+    const lensTree = {};
     const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
@@ -136,7 +140,7 @@ async function project ({ holobranch, targetBranch }) {
 
 
         // load tree
-        const sourceTree = await repo.git.TreeRoot.read(`${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`, repo.git);
+        const sourceTree = await repo.git.TreeRoot.read(`${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`, source.git);
 
 
         // build matchers
@@ -152,8 +156,8 @@ async function project ({ holobranch, targetBranch }) {
         treeLoop: for (const sourcePath in sourceTree) {
             const sourceObject = sourceTree[sourcePath];
 
-            // exclude .holo/**
-            if (sourcePath.substr(0, 5) == '.holo') {
+            // exclude .holo/**, except lenses
+            if (sourcePath.substr(0, 6) == '.holo/' && sourcePath.substr(6, 7) != 'lenses/') {
                 continue;
             }
 
@@ -172,8 +176,14 @@ async function project ({ holobranch, targetBranch }) {
                 continue;
             }
 
-            // add blob to output tree
-            outputTree[spec.outputPrefix == '.' ? sourcePath : path.join(spec.outputPrefix, sourcePath)] = new repo.git.BlobObject(sourceObject.hash, sourceObject.mode);
+            // add blob to output tree or lenses
+            const outputPath = spec.outputPrefix == '.' ? sourcePath : path.join(spec.outputPrefix, sourcePath);
+
+            if (outputPath.substr(0, 13) == '.holo/lenses/') {
+                lensTree[outputPath.substr(13)] = sourceObject;
+            } else {
+                outputTree[outputPath] = new repo.git.BlobObject(sourceObject.hash, sourceObject.mode);
+            }
         }
     }
 
@@ -187,6 +197,49 @@ async function project ({ holobranch, targetBranch }) {
     // write tree
     logger.info('writing tree...');
     const rootTreeHash = await repo.git.TreeObject.write(rootTree, repo.git);
+
+
+    // read lenses
+    lensTree;
+    for (const lensPath in lensTree) {
+        const lens = {
+            config: TOML.parse(await repo.git.catFile({ p: true },  lensTree[lensPath].hash))
+        };
+        const hololens = lens.config.hololens;
+
+        if (!hololens) {
+            throw new Error(`invalid hololens ${lensPath}`);
+        }
+
+        if (!hololens.src) {
+            throw new Error(`hololens has no src defined ${lensPath}`);
+        }
+
+        debugger;
+
+        // parse holospec and apply defaults
+        // spec.src = holospec.src;
+        // spec.holosource = holospec.holosource || lensPath.replace(layerFromPathRe, '$3$4');
+        // spec.layer = holospec.layer || spec.holosource;
+        // spec.inputPrefix = holospec.cwd || '.';
+        // spec.outputPrefix = path.join(path.dirname(spelensPathcPath), holospec.dest || '.');
+
+        // if (holospec.before) {
+        //     spec.before = typeof holospec.before == 'string' ? [holospec.before] : holospec.before;
+        // }
+
+        // if (holospec.after) {
+        //     spec.after = typeof holospec.after == 'string' ? [holospec.after] : holospec.after;
+        // }
+
+        // specs.push(spec);
+
+        // if (specsByLayer[spec.layer]) {
+        //     specsByLayer[spec.layer].push(spec);
+        // } else {
+        //     specsByLayer[spec.layer] = [spec];
+        // }
+    }
 
 
     // update targetBranch
