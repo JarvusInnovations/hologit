@@ -1,0 +1,4 @@
+[submodule "local_modules/git-client"]
+	path = local_modules/git-client
+	url = git@github.com:JarvusInnovations/git-client.git
+	branch = develop
