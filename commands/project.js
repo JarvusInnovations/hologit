@@ -32,8 +32,8 @@ exports.handler = async argv => {
  * - [X] Try loading repo with js-git and loading a tree
  * - [ ] Initialize and fetch sources automatically if needed
  * - [ ] Ensure sources have recipricol alternates
- * - [ ] Move source repos to root .git/modules tree
- *   - register as submodule under .git/config
+ * - [X] Move source repos to root .git/modules tree
+ * - [X] register as submodule under .git/config
  * - [ ] Create shallow for submodules
  * - [ ] Load sources and mounts from topBranch
  * - [ ] Loop sources and generate commit for each

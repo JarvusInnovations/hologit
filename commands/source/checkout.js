@@ -50,6 +50,7 @@ async function checkoutSource ({ name }) {
         checkoutOptions.B = branch;
     }
 
+
     // checkout HEAD
     logger.info(`checking out ${source.head}` + (branch ? ` to ${branch}` : ''));
     const checkoutOutput = await source.git.checkout(checkoutOptions, source.head);
@@ -57,4 +58,9 @@ async function checkoutSource ({ name }) {
     if (checkoutOutput) {
         logger.info(checkoutOutput);
     }
+
+
+    // configure submodule
+    const sourcePath = `.holo/sources/${name}`;
+    repo.git.config({ file: `${repo.workTree}/.gitmodules` }, `submodule.${sourcePath}.path`, sourcePath);
 }
