@@ -31,10 +31,10 @@ exports.handler = async argv => {
  * - [X] Check if branch exists already (die for now, merge on top of later)
  * - [X] Try loading repo with js-git and loading a tree
  * - [ ] Initialize and fetch sources automatically if needed
- * - [ ] Ensure sources have recipricol alternates
+ * - [X] Ensure sources have recipricol alternates
  * - [X] Move source repos to root .git/modules tree
  * - [X] register as submodule under .git/config
- * - [ ] Create shallow for submodules
+ * - [X] Create shallow for submodules
  * - [ ] Load sources and mounts from topBranch
  * - [ ] Loop sources and generate commit for each
  * - [ ] Merge new commit onto virtualBranch

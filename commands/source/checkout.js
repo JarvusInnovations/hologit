@@ -23,6 +23,7 @@ exports.handler = async argv => {
 
 async function checkoutSource ({ name }) {
     const hololib = require('../../lib');
+    const fs = require('mz/fs');
 
 
     // check inputs
@@ -57,6 +58,15 @@ async function checkoutSource ({ name }) {
 
     if (checkoutOutput) {
         logger.info(checkoutOutput);
+    }
+
+
+    // mark shallow if parent isn't reachable
+    try {
+        await source.git.catFile({ t: true }, 'HEAD^1');
+    } catch (err) {
+        logger.info(`marking source as shallow`);
+        await fs.writeFile(`${await source.git.getGitDir()}/shallow`, source.head);
     }
 
 
