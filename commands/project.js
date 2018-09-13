@@ -74,16 +74,16 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
             throw new Error(`invalid holospec ${specPath}`);
         }
 
-        if (!holospec.src) {
-            throw new Error(`holospec has no src defined ${specPath}`);
+        if (!holospec.files) {
+            throw new Error(`holospec has no files defined ${specPath}`);
         }
 
         // parse holospec and apply defaults
-        spec.src = holospec.src;
+        spec.files = holospec.files;
         spec.holosource = holospec.holosource || specPath.replace(layerFromPathRe, '$3$4');
         spec.layer = holospec.layer || spec.holosource;
-        spec.inputPrefix = holospec.cwd || '.';
-        spec.outputPrefix = path.join(path.dirname(specPath), holospec.dest || '.');
+        spec.inputPrefix = holospec.root || '.';
+        spec.outputPrefix = path.join(path.dirname(specPath), holospec.output || '.');
 
         if (holospec.before) {
             spec.before = typeof holospec.before == 'string' ? [holospec.before] : holospec.before;
@@ -136,7 +136,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
-        logger.info(`merging ${spec.layer}:${spec.inputPrefix != '.' ? spec.inputPrefix+'/' : ''}${spec.src} -> /${spec.outputPrefix != '.' ? spec.outputPrefix+'/' : ''}`);
+        logger.info(`merging ${spec.layer}:${spec.inputPrefix != '.' ? spec.inputPrefix+'/' : ''}${spec.files} -> /${spec.outputPrefix != '.' ? spec.outputPrefix+'/' : ''}`);
 
         // load source
         let source = sourcesCache[spec.holosource];
@@ -154,7 +154,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
         const minimatchOptions = { dot: true };
         const matchers = [];
 
-        for (const pattern of typeof spec.src == 'string' ? [spec.src] : spec.src) {
+        for (const pattern of typeof spec.files == 'string' ? [spec.files] : spec.files) {
             matchers.push(new minimatch.Minimatch(pattern, minimatchOptions));
         }
 
