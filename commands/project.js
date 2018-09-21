@@ -207,46 +207,79 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
 
     // read lenses
-    lensTree;
+    const lenses = [];
+    const lensesByName = {};
+    const lensNameFromPathRe = /^([^\/]+)\.toml$/;
+
     for (const lensPath in lensTree) {
-        const lens = {
-            config: TOML.parse(await repo.git.catFile({ p: true },  lensTree[lensPath].hash))
-        };
-        const hololens = lens.config.hololens;
+        const name = lensPath.replace(lensNameFromPathRe, '$1');
+        const config = TOML.parse(await repo.git.catFile({ p: true },  lensTree[lensPath].hash));
 
-        if (!hololens) {
-            throw new Error(`invalid hololens ${lensPath}`);
+        if (!config.hololens || !config.hololens.package) {
+            throw new Error(`lens config missing hololens.package: ${lensPath}`);
         }
 
-        if (!hololens.src) {
-            throw new Error(`hololens has no src defined ${lensPath}`);
+        if (!config.input || !config.input.files) {
+            throw new Error(`lens config missing input.files: ${lensPath}`);
         }
 
-        debugger;
 
-        // parse holospec and apply defaults
-        // spec.src = holospec.src;
-        // spec.holosource = holospec.holosource || lensPath.replace(layerFromPathRe, '$3$4');
-        // spec.layer = holospec.layer || spec.holosource;
-        // spec.inputPrefix = holospec.cwd || '.';
-        // spec.outputPrefix = path.join(path.dirname(spelensPathcPath), holospec.dest || '.');
+        // parse and normalize lens config
+        const hololens = config.hololens;
+        hololens.package = hololens.package;
+        hololens.command = hololens.command || 'lens-tree {{ input.hash }}';
 
-        // if (holospec.before) {
-        //     spec.before = typeof holospec.before == 'string' ? [holospec.before] : holospec.before;
-        // }
 
-        // if (holospec.after) {
-        //     spec.after = typeof holospec.after == 'string' ? [holospec.after] : holospec.after;
-        // }
+        // parse and normalize input config
+        const input = {};
+        input.files = typeof config.input.files == 'string' ? [config.input.files] : config.input.files;
+        input.root = config.input.root || '.';
 
-        // specs.push(spec);
+        if (config.input.before) {
+            input.before =
+                typeof config.input.before == 'string'
+                    ? [config.input.before]
+                    : config.input.before;
+        }
 
-        // if (specsByLayer[spec.layer]) {
-        //     specsByLayer[spec.layer].push(spec);
-        // } else {
-        //     specsByLayer[spec.layer] = [spec];
-        // }
+        if (config.input.after) {
+            input.after =
+                typeof config.input.after == 'string'
+                    ? [config.input.after]
+                    : config.input.after;
+        }
+
+
+        // parse and normalize output config
+        const output = {};
+        output.root = path.join(path.dirname(input.root), config.output && config.output.root || '.');
+        output.merge = config.output && config.output.merge || 'overlay';
+
+
+        lenses.push(lensesByName[name] = { name, hololens, input, output });
     }
+
+
+    // compile edges formed by before/after requirements
+    const lensEdges = [];
+
+    for (const lens of lenses) {
+        if (lens.input.after) {
+            for (const afterLens of lens.input.after) {
+                lensEdges.push([lensesByName[afterLens], lens]);
+            }
+        }
+
+        if (lens.input.before) {
+            for (const beforeLens of lens.input.before) {
+                lensEdges.push([lens, lensesByName[beforeLens]]);
+            }
+        }
+    }
+
+
+    // sort specs by before/after requirements
+    const sortedLenses = toposort.array(lenses, lensEdges);
 
 
     // update targetBranch
