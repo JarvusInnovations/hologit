@@ -136,7 +136,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
-        logger.info(`merging ${spec.layer}:${spec.inputPrefix != '.' ? spec.inputPrefix+'/' : ''}${spec.files} -> /${spec.outputPrefix != '.' ? spec.outputPrefix+'/' : ''}`);
+        logger.info(`merging ${spec.layer}:${spec.inputPrefix != '.' ? spec.inputPrefix+'/' : ''}{${spec.files}} -> /${spec.outputPrefix != '.' ? spec.outputPrefix+'/' : ''}`);
 
         // load source
         let source = sourcesCache[spec.holosource];
