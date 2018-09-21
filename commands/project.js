@@ -248,7 +248,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
         // parse and normalize output config
         const output = {};
-        output.root = path.join(path.dirname(input.root), config.output && config.output.root || '.');
+        output.root = config.output && config.output.root || input.root;
         output.merge = config.output && config.output.merge || 'overlay';
 
 
