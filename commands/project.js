@@ -79,7 +79,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
         }
 
         // parse holospec and apply defaults
-        spec.files = holospec.files;
+        spec.files = typeof holospec.files == 'string' ? [holospec.files] : holospec.files;
         spec.holosource = holospec.holosource || specPath.replace(layerFromPathRe, '$3$4');
         spec.layer = holospec.layer || spec.holosource;
         spec.inputPrefix = holospec.root || '.';
@@ -152,11 +152,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
         // build matchers
         const minimatchOptions = { dot: true };
-        const matchers = [];
-
-        for (const pattern of typeof spec.files == 'string' ? [spec.files] : spec.files) {
-            matchers.push(new minimatch.Minimatch(pattern, minimatchOptions));
-        }
+        const matchers = spec.files.map(pattern => new minimatch.Minimatch(pattern, minimatchOptions));
 
 
         // process each blob entry in tree
