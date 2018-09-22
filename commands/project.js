@@ -277,6 +277,73 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const sortedLenses = toposort.array(lenses, lensEdges);
 
 
+    // apply lenses
+    let tree = outputTree;
+
+    for (const lens of sortedLenses) {
+
+        // build matchers
+        const minimatchOptions = { dot: true };
+        const matchers = lens.input.files.map(pattern => new minimatch.Minimatch(pattern, minimatchOptions));
+
+
+        // build tree of matching files to input to lens
+        const inputRoot = lens.input.root == '.' ? null : path.join(lens.input.root, '.') + '/'; // normalize path
+        const inputRootLength = inputRoot && inputRoot.length;
+        const inputTree = {};
+
+        logger.info(`building input tree for lens ${lens.name} from ${inputRoot ? inputRoot : ''}{${lens.input.files}}`);
+
+        treeLoop: for (const treePath in tree) {
+            let inputPath = treePath;
+
+            if (inputRoot) {
+                if (treePath.startsWith(inputRoot)) {
+                    inputPath = treePath.substr(inputRootLength);
+                } else {
+                    continue;
+                }
+            }
+
+            // apply positive matchers--must match at least one
+            let matched = false;
+
+            for (const matcher of matchers) {
+                if (matcher.match(inputPath)) {
+                    matched = true;
+                } else if (matcher.negate) {
+                    continue treeLoop;
+                }
+            }
+
+            if (!matched) {
+                continue;
+            }
+
+            // add blob to output tree or lenses
+            // const outputPath = spec.outputPrefix == '.' ? sourcePath : path.join(spec.outputPrefix, sourcePath);
+
+            inputTree[inputPath] = tree[treePath];
+        }
+
+        logger.info('assembling tree...');
+        const inputTreeRoot = repo.git.TreeRoot.buildTreeObject(inputTree);
+
+        logger.info('writing tree...');
+        const inputTreeHash = await repo.git.TreeObject.write(inputTreeRoot, repo.git);
+
+        logger.info(`generated input tree: ${inputTreeHash}`);
+
+
+        // TODO: generate spec
+        // TODO: check for existing build
+        // TODO: pass through lens
+
+        logger.info(`merging lens output to /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
+        // TODO: apply to ${outputTree}
+    }
+
+
     // update targetBranch
     if (targetBranch) {
         logger.info(`committing new tree to "${targetBranch}"...`);
