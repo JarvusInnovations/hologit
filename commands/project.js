@@ -157,8 +157,6 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
         // process each blob entry in tree
         treeLoop: for (const sourcePath in sourceTree) {
-            const sourceObject = sourceTree[sourcePath];
-
             // exclude .holo/**, except lenses
             if (sourcePath.substr(0, 6) == '.holo/' && sourcePath.substr(6, 7) != 'lenses/') {
                 continue;
@@ -180,6 +178,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
             }
 
             // add blob to output tree or lenses
+            const sourceObject = sourceTree[sourcePath];
             const outputPath = spec.outputPrefix == '.' ? sourcePath : path.join(spec.outputPrefix, sourcePath);
 
             if (outputPath.substr(0, 13) == '.holo/lenses/') {
