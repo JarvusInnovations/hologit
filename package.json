@@ -11,6 +11,7 @@
     "@iarna/toml": "^2.0.0",
     "fb-watchman": "^2.0.0",
     "git-client": "file:local_modules/git-client",
+    "habitat-client": "file:local_modules/habitat-client",
     "minimatch": "^3.0.4",
     "mz": "^2.4.0",
     "mz-modules": "^2.1.0",

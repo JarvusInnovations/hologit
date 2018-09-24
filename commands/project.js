@@ -46,6 +46,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const minimatch = require('minimatch');
     const path = require('path');
     const sortKeys = require('sort-keys');
+    const hab = await require('habitat-client').requireVersion('>=0.62');
 
     // check inputs
     if (!holobranch) {
@@ -321,9 +322,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
                 continue;
             }
 
-            // add blob to output tree or lenses
-            // const outputPath = spec.outputPrefix == '.' ? sourcePath : path.join(spec.outputPrefix, sourcePath);
-
+            // add blob to lens input tree
             inputTree[inputPath] = tree[treePath];
         }
 
@@ -335,7 +334,22 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
         logger.info(`generated input tree: ${inputTreeHash}`);
 
+
+        // execute lens via habitat
+        let pkgIdent;
+        try {
+            pkgIdent = await hab.pkg('path', lens.hololens.package);
+        } catch (err) {
+            if (err.code != 1) {
+                throw err;
+            }
+
+            // try to install package
+            const installOutput = await hab.pkg('install', lens.hololens.package);
+        }
+
         // TODO: resolve lens version
+        logger.info('resolved lens pkg: ', pkgIdent);
 
         const specToml = TOML.stringify({
             hololens: sortKeys(lens.hololens, { deep: true }),
