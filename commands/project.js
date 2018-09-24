@@ -45,6 +45,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const toposort = require('toposort');
     const minimatch = require('minimatch');
     const path = require('path');
+    const sortKeys = require('sort-keys');
 
     // check inputs
     if (!holobranch) {
@@ -334,8 +335,17 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
         logger.info(`generated input tree: ${inputTreeHash}`);
 
+        // TODO: resolve lens version
 
-        // TODO: generate spec
+        const specToml = TOML.stringify({
+            hololens: sortKeys(lens.hololens, { deep: true }),
+            input: { tree: inputTreeHash }
+        });
+
+        const specHash = await repo.git.BlobObject.write(specToml, repo.git);
+
+        logger.info(`generated lens spec hash: ${specHash}`);
+
         // TODO: check for existing build
         // TODO: pass through lens
 

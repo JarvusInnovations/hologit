@@ -14,6 +14,7 @@
     "minimatch": "^3.0.4",
     "mz": "^2.4.0",
     "mz-modules": "^2.1.0",
+    "sort-keys": "^2.0.0",
     "toposort": "^2.0.2",
     "winston": "^2.4.3",
     "yargs": "^11.0.0"
