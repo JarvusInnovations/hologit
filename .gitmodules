@@ -2,3 +2,7 @@
 	path = local_modules/git-client
 	url = git@github.com:JarvusInnovations/git-client.git
 	branch = develop
+[submodule "local_modules/habitat-client"]
+	path = local_modules/habitat-client
+	url = git@github.com:JarvusInnovations/habitat-client.git
+	branch = develop
