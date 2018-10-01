@@ -40,14 +40,14 @@ exports.handler = async argv => {
  * - [ ] Merge new commit onto virtualBranch
  */
 async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
+    const hab = await require('habitat-client').requireVersion('>=0.62');
     const hololib = require('../lib');
-    const TOML = require('@iarna/toml');
-    const toposort = require('toposort');
     const minimatch = require('minimatch');
+    const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
     const sortKeys = require('sort-keys');
-    const mkdirp = require('mz-modules/mkdirp');
-    const hab = await require('habitat-client').requireVersion('>=0.62');
+    const TOML = require('@iarna/toml');
+    const toposort = require('toposort');
 
     // check inputs
     if (!holobranch) {
