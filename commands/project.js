@@ -336,21 +336,27 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
 
         // execute lens via habitat
-        let pkgIdent;
+        let pkgPath;
         try {
-            pkgIdent = await hab.pkg('path', lens.hololens.package);
+            pkgPath = await hab.pkg('path', lens.hololens.package);
         } catch (err) {
             if (err.code != 1) {
                 throw err;
             }
 
             // try to install package
-            const installOutput = await hab.pkg('install', lens.hololens.package);
+            await hab.pkg('install', lens.hololens.package);
+            pkgPath = await hab.pkg('path', lens.hololens.package);
         }
 
-        // TODO: resolve lens version
-        logger.info('resolved lens pkg: ', pkgIdent);
+        logger.info('resolved lens pkg: ', pkgPath);
 
+
+        // trim path to leave just fully-qualified ident
+        lens.hololens.package = pkgPath.substr(10);
+
+
+        // build and hash spec
         const specToml = TOML.stringify({
             hololens: sortKeys(lens.hololens, { deep: true }),
             input: inputTreeHash
