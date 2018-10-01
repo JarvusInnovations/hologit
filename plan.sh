@@ -31,6 +31,7 @@ do_build() {
 
   build_line "Copying application to ${CACHE_PATH}"
   cp "${PLAN_CONTEXT}/LICENSE" "${PLAN_CONTEXT}/package.json" ./
+  cp -r "${PLAN_CONTEXT}/local_modules" ./
   cp -r "${PLAN_CONTEXT}/commands" "${PLAN_CONTEXT}/lib" ./
   cp -r "${PLAN_CONTEXT}/bin" ./node-bin
 
@@ -48,8 +49,9 @@ do_install() {
 
   cp -r ./* "${pkg_prefix}/"
 
-build_line "Creating git-holo command"
-    cat > "${pkg_prefix}/bin/git-holo" <<- EOM
+  # TODO: remove this once habitat#4493 is resolved
+  build_line "Creating git-holo command"
+  cat > "${pkg_prefix}/bin/git-holo" <<- EOM
 #!/bin/sh
 export PATH="$(_assemble_runtime_path)"
 exec ${pkg_prefix}/node-bin/cli.js \$@
