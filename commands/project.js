@@ -353,7 +353,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
         const specToml = TOML.stringify({
             hololens: sortKeys(lens.hololens, { deep: true }),
-            input: { tree: inputTreeHash }
+            input: inputTreeHash
         });
 
         const specHash = await repo.git.BlobObject.write(specToml, repo.git);
