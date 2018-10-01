@@ -46,6 +46,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const minimatch = require('minimatch');
     const path = require('path');
     const sortKeys = require('sort-keys');
+    const mkdirp = require('mz-modules/mkdirp');
     const hab = await require('habitat-client').requireVersion('>=0.62');
 
     // check inputs
@@ -281,6 +282,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
     // apply lenses
     let tree = outputTree;
+    const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), holobranch);
 
     for (const lens of sortedLenses) {
 
@@ -368,6 +370,23 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
         // TODO: check for existing build
         // TODO: pass through lens
+        // assign scratch directory for lens
+        const scratchPath = `${scratchRoot}/${lens.name}`;
+        await mkdirp(scratchPath);
+
+        const lensedTreeHash = await hab.pkg('exec', lens.hololens.package, 'lens-tree', inputTreeHash, {
+            $env: {
+                HOLOLENS_INPUT: inputTreeHash,
+                HOLOLENS_SPEC: specHash,
+                GIT_DIR: repo.gitDir,
+                GIT_WORK_TREE: scratchPath,
+                GIT_INDEX_FILE: `${scratchPath}.index`
+            }
+        });
+
+        // TODO: template command line with specToml.* + specHash accessible
+        // TODO: pipe spec JSON into script? or expand into env?
+
 
         logger.info(`merging lens output to /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
         // TODO: apply to ${outputTree}
