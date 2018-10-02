@@ -41,10 +41,12 @@ exports.handler = async argv => {
  */
 async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const hab = await require('habitat-client').requireVersion('>=0.62');
+    const handlebars = require('handlebars');
     const hololib = require('../lib');
     const minimatch = require('minimatch');
     const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
+    const shellParse = require('shell-quote-word');
     const sortKeys = require('sort-keys');
     const squish = require('object-squish');
     const TOML = require('@iarna/toml');
@@ -226,7 +228,7 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
         // parse and normalize lens config
         const hololens = config.hololens;
         hololens.package = hololens.package;
-        hololens.command = hololens.command || 'lens-tree {{ input.hash }}';
+        hololens.command = hololens.command || 'lens-tree {{ input }}';
 
 
         // parse and normalize input config
@@ -360,24 +362,29 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
 
 
         // build and hash spec
-        const specToml = TOML.stringify({
+        const spec = {
             hololens: sortKeys(lens.hololens, { deep: true }),
             input: inputTreeHash
-        });
-
+        };
+        const specToml = TOML.stringify(spec);
         const specHash = await repo.git.BlobObject.write(specToml, repo.git);
-
         logger.info(`generated lens spec hash: ${specHash}`);
 
+
         // TODO: check for existing build
+
+
         // assign scratch directory for lens
         const scratchPath = `${scratchRoot}/${lens.name}`;
         await mkdirp(scratchPath);
 
-        const lensedTreeHash = await hab.pkg('exec', lens.hololens.package, 'lens-tree', inputTreeHash, {
+
+        // compile and execute command
+        const command = handlebars.compile(lens.hololens.command)(spec);
+        const lensedTreeHash = await hab.pkg('exec', lens.hololens.package, ...shellParse(command), {
             $env: Object.assign(
                 squish({
-                    hololens: lens.hololens
+                    hololens: spec.hololens
                 }, { seperator: '_', modifyKey: 'uppercase' }),
                 {
                     HOLOSPEC: specHash,
@@ -388,8 +395,6 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
             )
         });
 
-
-        // TODO: template command line with specToml.* + specHash accessible
 
         logger.info(`merging lens output to /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
         // TODO: apply to ${outputTree}
