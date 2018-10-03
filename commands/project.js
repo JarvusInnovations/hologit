@@ -14,18 +14,6 @@ exports.builder = {
     }
 };
 
-exports.handler = async argv => {
-    // execute command
-    try {
-        console.log(await project(argv));
-        process.exit(0);
-    } catch (err) {
-        console.error('Command failed:', err);
-        process.exit(1);
-    }
-};
-
-
 /**
  * Initialize a holobranch
  * - [X] Check if branch exists already (die for now, merge on top of later)
@@ -39,7 +27,7 @@ exports.handler = async argv => {
  * - [ ] Loop sources and generate commit for each
  * - [ ] Merge new commit onto virtualBranch
  */
-async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
+exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     const hab = await require('habitat-client').requireVersion('>=0.62');
     const handlebars = require('handlebars');
     const hololib = require('../lib');
@@ -424,4 +412,4 @@ async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
     // finished
     logger.info('projection ready:');
     return rootTreeHash;
-}
+};

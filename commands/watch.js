@@ -3,20 +3,7 @@ const logger = require('../lib/logger.js');
 exports.command = 'watch';
 exports.desc = 'Watch the current working tree and automatically update projection';
 
-exports.handler = async argv => {
-    // execute command
-    try {
-        await watch(argv);
-        process.exit(0);
-    } catch (err) {
-        console.error('Command failed:', err);
-        process.exit(1);
-    }
-};
-
-
-
-async function watch (options) {
+exports.handler = async function watch (options) {
     const fs = require('mz/fs');
     const watchman = require('fb-watchman');
     const watchmanClient = new watchman.Client();
@@ -107,4 +94,4 @@ async function watch (options) {
     return new Promise((resolve, reject) => {
 
     });
-}
+};

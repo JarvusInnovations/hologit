@@ -3,20 +3,7 @@ const logger = require('../../lib/logger.js');
 exports.command = 'export-tree <treeish>';
 exports.desc = 'Export given <treeish> to current index and working tree';
 
-exports.handler = async argv => {
-    // execute command
-    try {
-        await exportTree(argv);
-        process.exit(0);
-    } catch (err) {
-        console.error('Command failed:', err);
-        process.exit(1);
-    }
-};
-
-
-
-async function exportTree ({ treeish }) {
+exports.handler = async function exportTree ({ treeish }) {
     const hololib = require('../../lib');
 
 
@@ -40,4 +27,4 @@ async function exportTree ({ treeish }) {
 
     // delete anything on disk and not in index
     await git.clean({ d: true, force: true });
-}
+};

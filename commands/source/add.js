@@ -8,20 +8,7 @@ exports.builder = {
     }
 };
 
-exports.handler = async argv => {
-    // execute command
-    try {
-        await addSource(argv);
-        process.exit(0);
-    } catch (err) {
-        console.error('Command failed:', err);
-        process.exit(1);
-    }
-};
-
-
-
-async function addSource ({ name, url, branch }) {
+exports.handler = async function addSource ({ name, url, branch }) {
     const hololib = require('../../lib');
     const fs = require('mz/fs');
     const TOML = require('@iarna/toml');
@@ -97,4 +84,4 @@ async function addSource ({ name, url, branch }) {
 
 
     logger.info(`added source ${name} from ${url}`);
-}
+};

@@ -8,20 +8,7 @@ exports.builder = {
     }
 };
 
-exports.handler = async argv => {
-    // execute command
-    try {
-        await fetch(argv);
-        process.exit(0);
-    } catch (err) {
-        console.error('Command failed:', err);
-        process.exit(1);
-    }
-};
-
-
-
-async function fetch ({ name }) {
+exports.handler = async function fetch ({ name }) {
     const hololib = require('../../lib');
 
 
@@ -63,4 +50,4 @@ async function fetch ({ name }) {
         logger.info(`fetching remote ${ref} ${hash}`);
         await repo.git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
     }
-}
+};

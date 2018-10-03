@@ -40,6 +40,16 @@ require('yargs')
     })
     .commandDir('../commands')
     .demandCommand()
+    .showHelpOnFail(false, 'Specify --help for available options')
+    .fail((msg, err) => {
+        logger.error(msg || err.message);
+
+        if (err) {
+            logger.debug(err.stack);
+        }
+
+        process.exit(1);
+    })
     .strict()
     .help()
     .argv;
