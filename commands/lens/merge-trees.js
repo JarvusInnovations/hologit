@@ -23,12 +23,9 @@ exports.handler = async function mergeTrees ({ treeishBase, treeishInput, method
     const git = await hololib.getGit();
 
 
-    // TODO resolve tree ish if it doesn't look like a full hash
-
-
     // check inputs
-    const baseTree = git.createTree({hash: treeishBase });
-    const inputTree = git.createTree({hash: treeishInput });
+    const baseTree = await git.createTreeFromRef(treeishBase);
+    const inputTree = await git.createTreeFromRef(treeishInput);
 
 
     // apply merge
