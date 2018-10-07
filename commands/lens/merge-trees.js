@@ -30,7 +30,7 @@ exports.handler = async function mergeTrees ({ treeishBase, treeishInput, method
 
     // apply merge
     if (method == 'overlay') {
-        await baseTree.mergeOverlay(inputTree);
+        await baseTree.merge(inputTree);
     } else {
         throw new Error('unhandled merge method: '+method);
     }

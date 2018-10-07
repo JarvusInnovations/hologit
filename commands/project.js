@@ -73,11 +73,11 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         }
 
         // parse holospec and apply defaults
+        spec.root = path.join('.', holospec.root || '.', '.');
         spec.files = typeof holospec.files == 'string' ? [holospec.files] : holospec.files;
         spec.holosource = holospec.holosource || specPath.replace(layerFromPathRe, '$3$4');
         spec.layer = holospec.layer || spec.holosource;
-        spec.inputPrefix = holospec.root || '.';
-        spec.outputPrefix = path.join(path.dirname(specPath), holospec.output || '.');
+        spec.output = path.join(path.dirname(specPath), holospec.output || '.', '.');
 
         if (holospec.before) {
             spec.before = typeof holospec.before == 'string' ? [holospec.before] : holospec.before;
@@ -125,12 +125,12 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
     // composite output tree
     logger.info('compositing tree...');
-    const outputTree = {};
-    const lensTree = {};
+    const outputTree = repo.git.createTree();
+    const lensFiles = {};
     const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
-        logger.info(`merging ${spec.layer}:${spec.inputPrefix != '.' ? spec.inputPrefix+'/' : ''}{${spec.files}} -> /${spec.outputPrefix != '.' ? spec.outputPrefix+'/' : ''}`);
+        logger.info(`merging ${spec.layer}:${spec.root != '.' ? spec.root+'/' : ''}{${spec.files}} -> /${spec.output != '.' ? spec.output+'/' : ''}`);
 
         // load source
         let source = sourcesCache[spec.holosource];
@@ -141,46 +141,52 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
         // load tree
-        const sourceTree = await repo.git.TreeRoot.read(`${source.head}:${spec.inputPrefix == '.' ? '' : spec.inputPrefix}`);
+        const sourceTree = await repo.git.createTreeFromRef(`${source.head}:${spec.root == '.' ? '' : spec.root}`);
 
 
-        // build matchers
-        const minimatchOptions = { dot: true };
-        const matchers = spec.files.map(pattern => new minimatch.Minimatch(pattern, minimatchOptions));
+        // merge source into target
+        await (spec.output == '.' ? outputTree : outputTree.getSubtree(spec.output)).merge(sourceTree, {
+            files: spec.files
+        });
+
+        // // build matchers
+        // const minimatchOptions = { dot: true };
+        // const matchers = spec.files.map(pattern => new minimatch.Minimatch(pattern, minimatchOptions));
 
 
-        // process each blob entry in tree
-        treeLoop: for (const sourcePath in sourceTree) {
-            // exclude .holo/**, except lenses
-            if (sourcePath.substr(0, 6) == '.holo/' && sourcePath.substr(6, 7) != 'lenses/') {
-                continue;
-            }
+        // // process each blob entry in tree
+        // debugger; // TODO: this is all fucked
+        // treeLoop: for (const sourcePath in sourceTree) {
+        //     // exclude .holo/**, except lenses
+        //     if (sourcePath.substr(0, 6) == '.holo/' && sourcePath.substr(6, 7) != 'lenses/') {
+        //         continue;
+        //     }
 
-            // apply positive matchers--must match at least one
-            let matched = false;
+        //     // apply positive matchers--must match at least one
+        //     let matched = false;
 
-            for (const matcher of matchers) {
-                if (matcher.match(sourcePath)) {
-                    matched = true;
-                } else if (matcher.negate) {
-                    continue treeLoop;
-                }
-            }
+        //     for (const matcher of matchers) {
+        //         if (matcher.match(sourcePath)) {
+        //             matched = true;
+        //         } else if (matcher.negate) {
+        //             continue treeLoop;
+        //         }
+        //     }
 
-            if (!matched) {
-                continue;
-            }
+        //     if (!matched) {
+        //         continue;
+        //     }
 
-            // add blob to output tree or lenses
-            const sourceObject = sourceTree[sourcePath];
-            const outputPath = spec.outputPrefix == '.' ? sourcePath : path.join(spec.outputPrefix, sourcePath);
+        //     // add blob to output tree or lenses
+        //     const sourceObject = sourceTree[sourcePath];
+        //     const outputPath = spec.output == '.' ? sourcePath : path.join(spec.output, sourcePath);
 
-            if (outputPath.substr(0, 13) == '.holo/lenses/') {
-                lensTree[outputPath.substr(13)] = sourceObject;
-            } else {
-                outputTree[outputPath] = new repo.git.BlobObject(sourceObject.hash, sourceObject.mode);
-            }
-        }
+        //     if (outputPath.substr(0, 13) == '.holo/lenses/') {
+        //         lensFiles[outputPath.substr(13)] = sourceObject;
+        //     } else {
+        //         outputTree[outputPath] = new repo.git.BlobObject(sourceObject.hash, sourceObject.mode);
+        //     }
+        // }
     }
 
 
