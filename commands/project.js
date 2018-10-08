@@ -187,9 +187,15 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
     const lensesByName = {};
     const lensNameFromPathRe = /^([^\/]+)\.toml$/;
 
-    for (const lensPath in lensTree) {
+    for (const lensPath in lensFiles) {
+        const lensFile = lensFiles[lensPath];
+
+        if (!lensFile || !lensFile.isBlob) {
+            continue;
+        }
+
         const name = lensPath.replace(lensNameFromPathRe, '$1');
-        const config = TOML.parse(await repo.git.catFile({ p: true },  lensTree[lensPath].hash));
+        const config = TOML.parse(await repo.git.catFile({ p: true }, lensFile.hash));
 
         if (!config.hololens || !config.hololens.package) {
             throw new Error(`lens config missing hololens.package: ${lensPath}`);
