@@ -145,60 +145,28 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
         // merge source into target
-        await (spec.output == '.' ? outputTree : outputTree.getSubtree(spec.output)).merge(sourceTree, {
+        const targetTree = spec.output == '.' ? outputTree : await outputTree.getSubtree(spec.output, true);
+        await targetTree.merge(sourceTree, {
             files: spec.files
         });
 
-        // // build matchers
-        // const minimatchOptions = { dot: true };
-        // const matchers = spec.files.map(pattern => new minimatch.Minimatch(pattern, minimatchOptions));
+        // // add blob to output tree or lenses
+        // const sourceObject = sourceTree[sourcePath];
+        // const outputPath = spec.output == '.' ? sourcePath : path.join(spec.output, sourcePath);
 
-
-        // // process each blob entry in tree
-        // debugger; // TODO: this is all fucked
-        // treeLoop: for (const sourcePath in sourceTree) {
-        //     // exclude .holo/**, except lenses
-        //     if (sourcePath.substr(0, 6) == '.holo/' && sourcePath.substr(6, 7) != 'lenses/') {
-        //         continue;
-        //     }
-
-        //     // apply positive matchers--must match at least one
-        //     let matched = false;
-
-        //     for (const matcher of matchers) {
-        //         if (matcher.match(sourcePath)) {
-        //             matched = true;
-        //         } else if (matcher.negate) {
-        //             continue treeLoop;
-        //         }
-        //     }
-
-        //     if (!matched) {
-        //         continue;
-        //     }
-
-        //     // add blob to output tree or lenses
-        //     const sourceObject = sourceTree[sourcePath];
-        //     const outputPath = spec.output == '.' ? sourcePath : path.join(spec.output, sourcePath);
-
-        //     if (outputPath.substr(0, 13) == '.holo/lenses/') {
-        //         lensFiles[outputPath.substr(13)] = sourceObject;
-        //     } else {
-        //         outputTree[outputPath] = new repo.git.BlobObject(sourceObject.hash, sourceObject.mode);
-        //     }
+        // if (outputPath.substr(0, 13) == '.holo/lenses/') {
+        //     lensFiles[outputPath.substr(13)] = sourceObject;
         // }
     }
 
-
-    // assemble tree
-    logger.info('assembling tree...');
-
-    const rootTree = repo.git.TreeRoot.buildTreeObject(outputTree);
+    // TODO: extract .holo/lenses/
+    const lensesTree = await outputTree.getSubtree('.holo/lenses', false);
+    const lensesTreeChildren = await lensesTree.getChildren();
 
 
     // write tree
     logger.info('writing tree...');
-    const rootTreeHash = await repo.git.TreeObject.write(rootTree, repo.git);
+    const rootTreeHash = await outputTree.write();
 
 
     // read lenses
