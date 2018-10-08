@@ -126,7 +126,6 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
     // composite output tree
     logger.info('compositing tree...');
     const outputTree = repo.git.createTree();
-    const lensFiles = {};
     const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
@@ -160,8 +159,22 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
     }
 
     // TODO: extract .holo/lenses/
-    const lensesTree = await outputTree.getSubtree('.holo/lenses', false);
-    const lensesTreeChildren = await lensesTree.getChildren();
+    const lensFiles = {};
+    const holoTree = await outputTree.getSubtree('.holo');
+
+    if (holoTree) {
+        const lensesTree = await holoTree.getSubtree('lenses');
+
+        if (lensesTree) {
+            const lensesTreeChildren = await lensesTree.getChildren();
+
+            for (const lensName in lensesTreeChildren) {
+                lensFiles[lensName] = lensesTreeChildren[lensName];
+            }
+
+            holoTree.deleteChild('lenses');
+        }
+    }
 
 
     // write tree
