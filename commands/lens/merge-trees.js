@@ -37,5 +37,7 @@ exports.handler = async function mergeTrees ({ treeishBase, treeishInput, method
 
 
     // write tree
-    console.log(await baseTree.write());
+    const outputTree = await baseTree.write();
+    console.log(outputTree);
+    return outputTree;
 };

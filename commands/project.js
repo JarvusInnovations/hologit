@@ -370,5 +370,6 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
     // finished
     logger.info('projection ready:');
+    console.log(rootTreeHash);
     return rootTreeHash;
 };
