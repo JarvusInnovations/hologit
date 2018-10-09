@@ -31,7 +31,6 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
     const hab = await require('habitat-client').requireVersion('>=0.62');
     const handlebars = require('handlebars');
     const hololib = require('../lib');
-    const minimatch = require('minimatch');
     const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
     const shellParse = require('shell-quote-word');
@@ -265,60 +264,27 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
     // apply lenses
-    let tree = outputTree;
     const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), holobranch);
 
     for (const lens of sortedLenses) {
 
-        // build matchers
-        const minimatchOptions = { dot: true };
-        const matchers = lens.input.files.map(pattern => new minimatch.Minimatch(pattern, minimatchOptions));
-
-
         // build tree of matching files to input to lens
-        const inputRoot = lens.input.root == '.' ? null : path.join(lens.input.root, '.') + '/'; // normalize path
-        const inputRootLength = inputRoot && inputRoot.length;
-        const inputTree = {};
+        logger.info(`building input tree for lens ${lens.name} from ${lens.input.root == '.' ? '' : (path.join(lens.input.root, '.')+'/')}{${lens.input.files}}`);
 
-        logger.info(`building input tree for lens ${lens.name} from ${inputRoot ? inputRoot : ''}{${lens.input.files}}`);
+        const lensInputTree = repo.git.createTree();
+        const lensInputRoot = lens.input.root == '.' ? outputTree : await outputTree.getSubtree(lens.input.root);
 
-        treeLoop: for (const treePath in tree) {
-            let inputPath = treePath;
 
-            if (inputRoot) {
-                if (treePath.startsWith(inputRoot)) {
-                    inputPath = treePath.substr(inputRootLength);
-                } else {
-                    continue;
-                }
-            }
+        // merge input root into tree with any filters applied
+        await lensInputTree.merge(lensInputRoot, {
+            files: lens.input.files
+        });
 
-            // apply positive matchers--must match at least one
-            let matched = false;
-
-            for (const matcher of matchers) {
-                if (matcher.match(inputPath)) {
-                    matched = true;
-                } else if (matcher.negate) {
-                    continue treeLoop;
-                }
-            }
-
-            if (!matched) {
-                continue;
-            }
-
-            // add blob to lens input tree
-            inputTree[inputPath] = tree[treePath];
-        }
-
-        logger.info('assembling tree...');
-        const inputTreeRoot = repo.git.TreeRoot.buildTreeObject(inputTree);
 
         logger.info('writing tree...');
-        const inputTreeHash = await repo.git.TreeObject.write(inputTreeRoot, repo.git);
+        const lensInputTreeHash = await lensInputTree.write();
 
-        logger.info(`generated input tree: ${inputTreeHash}`);
+        logger.info(`generated input tree: ${lensInputTreeHash}`);
 
 
         // execute lens via habitat
@@ -345,7 +311,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         // build and hash spec
         const spec = {
             hololens: sortKeys(lens.hololens, { deep: true }),
-            input: inputTreeHash
+            input: lensInputTreeHash
         };
         const specToml = TOML.stringify(spec);
         const specHash = await repo.git.BlobObject.write(specToml, repo.git);
