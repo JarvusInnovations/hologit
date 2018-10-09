@@ -27,7 +27,7 @@ exports.builder = {
  * - [ ] Loop sources and generate commit for each
  * - [ ] Merge new commit onto virtualBranch
  */
-exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEAD' }) {
+exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEAD', debug = false }) {
     const hab = await require('habitat-client').requireVersion('>=0.62');
     const handlebars = require('handlebars');
     const hololib = require('../lib');
@@ -147,17 +147,17 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         await targetTree.merge(sourceTree, {
             files: spec.files
         });
-
-        // // add blob to output tree or lenses
-        // const sourceObject = sourceTree[sourcePath];
-        // const outputPath = spec.output == '.' ? sourcePath : path.join(spec.output, sourcePath);
-
-        // if (outputPath.substr(0, 13) == '.holo/lenses/') {
-        //     lensFiles[outputPath.substr(13)] = sourceObject;
-        // }
     }
 
-    // TODO: extract .holo/lenses/
+
+    // write and output pre-lensing hash if debug enabled
+    if (debug) {
+        logger.debug('writing output tree before lensing...');
+        const outputTreeHashBeforeLensing = await outputTree.write();
+        logger.debug('output tree before lensing:', outputTreeHashBeforeLensing);
+    }
+
+    // read lens tree from output
     const lensFiles = {};
     const holoTree = await outputTree.getSubtree('.holo');
 
@@ -174,11 +174,6 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
             holoTree.deleteChild('lenses');
         }
     }
-
-
-    // write tree
-    logger.info('writing tree...');
-    const rootTreeHash = await outputTree.write();
 
 
     // read lenses
@@ -343,9 +338,26 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         });
 
 
-        logger.info(`merging lens output to /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
-        // TODO: apply to ${outputTree}
+        // apply lense output to main output tree
+        logger.info(`merging lens output tree ${lensedTreeHash} into /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
+
+        const lensedTree = await repo.git.createTreeFromRef(lensedTreeHash);
+        const lensTargetTree = await outputTree.getSubtree(lens.output.root);
+
+        await lensTargetTree.merge(lensedTree, {
+            mode: lens.output.merge
+        });
     }
+
+
+    // strip .holo/ from output
+    logger.info('stripping .holo/ tree from output tree...');
+    outputTree.deleteChild('.holo');
+
+
+    // write tree
+    logger.info('writing final output tree...');
+    const rootTreeHash = await outputTree.write();
 
 
     // update targetBranch
