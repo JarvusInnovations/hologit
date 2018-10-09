@@ -29,7 +29,7 @@ require('yargs')
         default: false,
         global: true
     })
-    .check(function(argv) {
+    .check(function (argv) {
         if (argv.debug) {
             logger.level = 'debug';
         } else if (argv.quiet) {
