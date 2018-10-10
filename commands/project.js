@@ -341,7 +341,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         logger.info(`merging lens output tree ${lensedTreeHash} into /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
 
         const lensedTree = await repo.git.createTreeFromRef(lensedTreeHash);
-        const lensTargetTree = await outputTree.getSubtree(lens.output.root);
+        const lensTargetTree = await outputTree.getSubtree(lens.output.root, true);
 
         await lensTargetTree.merge(lensedTree, {
             mode: lens.output.merge
