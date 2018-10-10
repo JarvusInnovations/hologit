@@ -277,10 +277,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
             files: lens.input.files
         });
 
-
-        logger.info('writing lens input tree...');
         const lensInputTreeHash = await lensInputTree.write();
-        logger.info(`generated input tree: ${lensInputTreeHash}`);
 
 
         // execute lens via habitat
@@ -293,11 +290,10 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
             }
 
             // try to install package
+            logger.info('installing package for', lens.hololens.package);
             await hab.pkg('install', lens.hololens.package);
             pkgPath = await hab.pkg('path', lens.hololens.package);
         }
-
-        logger.info('resolved lens pkg: ', pkgPath);
 
 
         // trim path to leave just fully-qualified ident
@@ -324,6 +320,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
         // compile and execute command
         const command = handlebars.compile(lens.hololens.command)(spec);
+        logger.info('executing lens %s: %s', lens.hololens.package, command);
         const lensedTreeHash = await hab.pkg('exec', lens.hololens.package, ...shellParse(command), {
             $env: Object.assign(
                 squish({
