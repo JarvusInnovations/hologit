@@ -25,11 +25,11 @@ exports.handler = async function addSource ({ name, url, branch }) {
 
 
     // load .holo info
-    const { git, holoDir } = await hololib.getRepo();
+    const repo = await hololib.getRepo();
 
 
     // locate key paths
-    const sourcesDir = `${holoDir}/sources`;
+    const sourcesDir = `${repo.holoDir}/sources`;
     const configFile = `${sourcesDir}/${name}.toml`;
     const workTree = `${sourcesDir}/${name}`;
 
@@ -46,7 +46,7 @@ exports.handler = async function addSource ({ name, url, branch }) {
 
     // examine remote repo/branch
     logger.info(`listing ${url}#${branch||''}`);
-    const lsRemoteOutput = await git.lsRemote({ symref: true }, url, branch || 'HEAD');
+    const lsRemoteOutput = await repo.git.lsRemote({ symref: true }, url, branch || 'HEAD');
     const match = lsRemoteOutput.match(/^(ref: (refs\/heads\/\S+)\tHEAD\n)?([0-9a-f]{40})\t(\S+)$/m);
 
     if (!match) {
@@ -60,7 +60,7 @@ exports.handler = async function addSource ({ name, url, branch }) {
 
     // fetch objects
     logger.info(`fetching ${remoteRef} ${hash}`);
-    await git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
+    await repo.git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
 
 
     // write config
@@ -79,8 +79,8 @@ exports.handler = async function addSource ({ name, url, branch }) {
 
     // add to index
     logger.info(`staging source @ ${hash}`);
-    await git.add(configFile);
-    await git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
+    await repo.git.add(configFile);
+    await repo.git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
 
 
     logger.info(`added source ${name} from ${url}`);
