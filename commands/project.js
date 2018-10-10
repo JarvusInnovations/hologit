@@ -72,11 +72,13 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         }
 
         // parse holospec and apply defaults
+        const specName = path.basename(specPath, '.toml');
+
         spec.root = path.join('.', holospec.root || '.', '.');
         spec.files = typeof holospec.files == 'string' ? [holospec.files] : holospec.files;
         spec.holosource = holospec.holosource || specPath.replace(layerFromPathRe, '$3$4');
         spec.layer = holospec.layer || spec.holosource;
-        spec.output = path.join(path.dirname(specPath), holospec.output || '.', '.');
+        spec.output = path.join(path.dirname(specPath), specName[0] == '_' ? '.' : specName, holospec.output || '.', '.');
 
         if (holospec.before) {
             spec.before = typeof holospec.before == 'string' ? [holospec.before] : holospec.before;
