@@ -307,7 +307,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         };
         const specToml = TOML.stringify(spec);
         const specHash = await repo.git.BlobObject.write(specToml, repo.git);
-        logger.info(`generated lens spec hash: ${specHash}`);
+        logger.debug(`generated lens spec hash: ${specHash}`);
 
 
         // TODO: check for existing build
