@@ -387,12 +387,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         const targetRef = `refs/heads/${targetBranch}`;
         const sourceDescription = await repo.git.describe({ always: true, tags: true });
 
-        let parentHash;
-        try {
-            parentHash = await repo.git.revParse(targetRef);
-        } catch (err) {
-            parentHash = null;
-        }
+        let parentHash = await repo.git.revParse(targetRef, { $nullOnError: true });
 
         const commitHash = await repo.git.commitTree({ p: parentHash, m: `Projected ${holobranch} from ${sourceDescription}` }, rootTreeHash);
 
