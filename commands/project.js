@@ -152,9 +152,9 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
     // write and output pre-lensing hash if debug enabled
     if (debug) {
-        logger.debug('writing output tree before lensing...');
+        logger.info('writing output tree before lensing...');
         const outputTreeHashBeforeLensing = await outputTree.write();
-        logger.debug('output tree before lensing:', outputTreeHashBeforeLensing);
+        logger.info('output tree before lensing:', outputTreeHashBeforeLensing);
     }
 
     // read lens tree from output
@@ -276,9 +276,8 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         });
 
 
-        logger.info('writing tree...');
+        logger.info('writing lens input tree...');
         const lensInputTreeHash = await lensInputTree.write();
-
         logger.info(`generated input tree: ${lensInputTreeHash}`);
 
 
