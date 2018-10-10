@@ -307,12 +307,17 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         };
         const specToml = TOML.stringify(spec);
         const specHash = await repo.git.BlobObject.write(specToml, repo.git);
-        logger.debug(`generated lens spec hash: ${specHash}`);
+        const specRef = `refs/holo/specs/${specHash.substr(0, 2)}/${specHash.substr(2)}`;
 
 
-        // TODO: check for existing build
+        // check for existing output tree
+        let lensedTreeHash = await repo.git.revParse(`${specRef}^{tree}`, { $nullOnError: true });
 
 
+        // apply lens if existing tree not found
+        if (lensedTreeHash) {
+            logger.info(`found existing output tree matching holospec(${specHash})`);
+        } else {
         // assign scratch directory for lens
         const scratchPath = `${scratchRoot}/${lens.name}`;
         await mkdirp(scratchPath);
@@ -321,7 +326,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         // compile and execute command
         const command = handlebars.compile(lens.hololens.command)(spec);
         logger.info('executing lens %s: %s', lens.hololens.package, command);
-        const lensedTreeHash = await hab.pkg('exec', lens.hololens.package, ...shellParse(command), {
+            lensedTreeHash = await hab.pkg('exec', lens.hololens.package, ...shellParse(command), {
             $env: Object.assign(
                 squish({
                     hololens: spec.hololens
@@ -335,9 +340,18 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
             )
         });
 
+            if (!repo.git.isHash(lensedTreeHash)) {
+                throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
+            }
+
+
+            // save spec output
+            await repo.git.updateRef(specRef, lensedTreeHash);
+        }
+
 
         // apply lense output to main output tree
-        logger.info(`merging lens output tree ${lensedTreeHash} into /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
+        logger.info(`merging lens output tree(${lensedTreeHash}) into /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
 
         const lensedTree = await repo.git.createTreeFromRef(lensedTreeHash);
         const lensTargetStack = await outputTree.getSubtree(lens.output.root, true, true);
