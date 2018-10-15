@@ -53,7 +53,7 @@ do_install() {
   build_line "Creating git-holo command"
   cat > "${pkg_prefix}/bin/git-holo" <<- EOM
 #!/bin/sh
-export PATH="$(_assemble_runtime_path)"
+export PATH="\${PATH}:$(_assemble_runtime_path)"
 exec ${pkg_prefix}/node-bin/cli.js \$@
 EOM
   chmod +x "${pkg_prefix}/bin/git-holo"
