@@ -1,0 +1,112 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "identifier": "studio-reset",
+            "label": "reset studio",
+            "type": "shell",
+            "command": "docker kill hab-studio-hologit || true",
+            "presentation": {
+                "echo": false,
+                "reveal": "never",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "identifier": "studio-launch",
+            "label": "launch studio",
+            "dependsOn": ["studio-reset"],
+            "type": "process",
+            "command": "hab",
+            "args": [
+                "studio",
+                "-D",
+                "enter"
+            ],
+            "options": {
+                "env": {
+                    "HAB_DOCKER_OPTS": "-p 7092:7092 -v ${workspaceFolder:hologit-debug-context}:/src/_debug-context --name hab-studio-hologit"
+                }
+            },
+            "isBackground": true,
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated"
+            },
+            "problemMatcher": []
+        },
+        {
+            "identifier": "studio-killall",
+            "label": "kill all node processes within studio",
+            "type": "shell",
+            "command": "docker exec hab-studio-hologit /entrypoint.sh run 'hab pkg exec core/busybox-static killall node' && sleep 2 || true",
+            "presentation": {
+                "echo": false,
+                "reveal": "never",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "identifier": "studio-shell",
+            "label": "new shell inside studio",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "exec", "-it",
+                "-w", "/src/site",
+                "hab-studio-hologit", "/entrypoint.sh", "run",
+                "bash"
+            ],
+            "isBackground": true,
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated"
+            },
+            "problemMatcher": []
+        },
+        {
+            "identifier": "studio-debug-project",
+            "label": "run projection within studio",
+            "dependsOn": ["studio-killall"],
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "exec", "-w", "/src/_debug-context", "-e", "DEBUG=1",
+                "hab-studio-hologit", "/entrypoint.sh", "run",
+                "node --inspect=0.0.0.0:7092 --nolazy /src/bin/cli.js project site"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+            },
+            "isBackground": true,
+            "group":{
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": {
+                "owner": "javascript",
+                "pattern": {
+                    "regexp": "^(error|warning): (.*)$",
+                    "severity": 1,
+                    "message": 2
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\s*hab-studio:",
+                    "endsPattern": "^\\s*Debugger listening on ws"
+                }
+            }
+        }
+    ]
+}

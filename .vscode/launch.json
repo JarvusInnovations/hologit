@@ -15,6 +15,22 @@
         // },
         {
             "type": "node",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "studio:project",
+            "preLaunchTask": "studio-debug-project",
+            "postDebugTask": "studio-killall",
+            "port": 7092,
+            "restart": true,
+            "trace": true,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/src"
+        },
+        {
+            "type": "node",
             "request": "launch",
             "name": "project",
             "cwd": "${workspaceFolder:hologit-debug-context}",
