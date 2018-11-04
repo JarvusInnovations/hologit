@@ -1,1 +1,4 @@
-hab pkg install -b core/node jarvus/watchman core/git
+hab pkg install -b \
+    core/node \
+    core/git
+    # jarvus/watchman
