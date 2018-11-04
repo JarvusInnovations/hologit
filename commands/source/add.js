@@ -55,7 +55,7 @@ exports.handler = async function addSource ({ name, url, branch }) {
 
     const hash = match[3];
     const remoteRef = match[2] || match[4];
-    const localRef = `refs/sources/${name}/${remoteRef.substr(5)}`;
+    const localRef = `refs/holo/sources/${name}/${remoteRef.substr(5)}`;
 
 
     // fetch objects
