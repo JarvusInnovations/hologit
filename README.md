@@ -1,56 +1,42 @@
 # hologit
 
-Code virtual git branches that get assembled automatically from any number of source branches and remote repositories!
+**Hologit** is a universal tool for assembling software that lives inside your project's git repository. Virtual branches, defined through simple configuration files, can be continuously and efficiently "projected" from a source branch. The projection process handles combining code from remote sources ("compositing") and executing build tools on the result ("lensing") to produce an output file tree.
 
-## Holo sources
+**Compositing** offers deeper control over which files are pulled from a remote repository and where they are integrated than [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) alone, while being more dependable and tracable than language-specific package managers like [npm](https://www.npmjs.com/) and [composer](https://getcomposer.org/). Instead of copying and moving files around on disk, hologit takes a git-native approach to minimize disk activity by computing new git trees in memory. Computed trees may be written to disk later or used as input to another process without the overhead.
 
-- `.holo/sources/[myorg/mysource]`: Sorted git ini file defining a source
+**Lensing** can execute any existing code or build tool consistently by leveraging [habitat](https://www.habitat.sh/) and using containers where necessary. However, it also opens the door to new generation of git-native build tools that do as much of their work as possible in memory, reading and writing to git's object database instead of a working tree on disk.
 
-## Holo mounts
+## Quickstart
 
-- `.holo/mounts[/mount/path]/[mymount]`: Sorted git ini file defining a mount
+### Define and project a holo branch
 
-## Holo hooks
+- A static HTML file with bootstrap/jquery CDN links
 
-- `.holo/hooks[/mount/path]/[myhook].[pre-project|post-project]`: A hook run against from and to hashes at any effective path either before or after projection
+### Merge external code via a holo source
 
+- Pull bootstrap and jquery sources
 
+### Assemble the complete source code via a holo lens
 
-Shell scripts within the XXXXX tree can be named in the format `myscript.[hook]` where `[hook]` is one of:
+- Apply sass compilation and compression via generic lenses
 
-- `pre-project`: Can modify a tree before projection, including holomounts/holosources
-- `post-project`: Can modify a tree after projection
+### Make use of a projected tree
 
-## Examples
+- Archive tree-ish
+- Write to a real branch
+- Push to github gh-pages
 
-### Example 1: One branch with embedded holo data
+## Advanced Usage
 
-```bash
-git holobranch project master production
-```
+### Overlay a project
 
-### Example 2: Seperate code and holo data branches
+### Build new holo lenses
 
-Given a repository with 3 exististing branches:
+## Roadmap
 
-- `master`: The source code for your application
-- `holo/workspace`: A holo-only branch for projecting master to a developer workspace
-- `holo/production`: A holo-only branch for projecting master to production
+## Reference
 
-```bash
-git holobranch project master holo/workspace workspace
-git holobranch project master holo/production production
-```
+## TODO
 
-
-## Random thoughts / questions
-
-### Shorter/broader name -- `git-holo`?
-
-Then the command `git holobranch project [source-branch] [holo-branch]` might just be `git holo branch [source-branch] [holo-branch]`
-
-### Make holo-branch name optional
-
-Default to `holo/[source-branch]` so someone could just run `git holo project master`.
-
-Maybe `master` could be the default `source-branch` so jsut running `git holo project` gets your `master` branch projected to `holo/master`
+- [ ] Have `project` fetch and read source HEAD if no submodule commit is found
+- [ ] Refactor `source add` and `source fetch` to use common code, leave things in same state
