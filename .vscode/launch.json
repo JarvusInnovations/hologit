@@ -32,6 +32,20 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "init",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                "DEBUG": "1"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
+            "args": [
+                "init"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "project",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
