@@ -66,7 +66,27 @@ To start, this configuration file only assigns a name for the code in the curren
 
 ### Define and project a holobranch
 
-- A static HTML file with bootstrap/jquery CDN links
+A holobranch can be defined by creating a holobranch config file at `.holo/branches/${my_holobranch_name}.toml` or any number of holomapping config files within `.holo/branches/${my_holobranch_name}/**.toml`. Generate a minimal "passthrough" holobranch that will copy all files from the current source branch:
+
+```console
+$ git holo branch create --template=passthrough gh-pages
+initialized .holo/branches/gh-pages/_holo-example.toml
+$ cat cat .holo/branches/gh-pages/_holo-example.toml
+[holomapping]
+files = "**"
+```
+
+This defines a holobranch named `gh-pages` with all files from holosource `holo-example` matching the [glob pattern](https://github.com/isaacs/minimatch) `**` populating its root directory. There are several elements of convention on display here:
+
+- The underscore prefixing the filename of`/_holo-example.toml` indicates that any files produced by the holomapping should be merged into the root directory of the projected holobranch.
+  - If the filename were just `/holo-example.toml`, a subdirectory name `/holo-example/` would be created to contain all the files produced by the holomapping.
+  - A holomapping config prefixed with an underscore could be named anything, all such holomappings at the same path will have their files merged to populate the directory.
+- There are only two required configuration options for each holomapping:
+  - `holosource`: The name of a configured holosource referencing a repository to pull files from
+    - Ommitted in the generated holomapping config
+    - Defaults to the name of the file with the `.toml` extension and any `_` prefix stripped
+  - `files`: A string or array for strings containing [glob patterns](https://github.com/isaacs/minimatch) for matching or excluding files
+    - A value of just `'**'`, as in the generated config, matches all files in the source
 
 ### Merge external code via a holo source
 
