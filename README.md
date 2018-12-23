@@ -8,6 +8,22 @@
 
 ## Quickstart
 
+## Create a repository with some simple code
+
+To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/) to create a website:
+
+```console
+$ git init holo-example
+Initialized empty Git repository in /Users/chris/holo-example/.git/
+$ cd holo-example/
+$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/index.html > index.html
+$ git add index.html
+$ git commit -m "Add Bootstrap's starter template as index.html"
+[master (root-commit) 82a1a39] Add bootstrap's starter template as index.html
+ 1 file changed, 22 insertions(+)
+ create mode 100644 index.html
+```
+
 ### Define and project a holo branch
 
 - A static HTML file with bootstrap/jquery CDN links
