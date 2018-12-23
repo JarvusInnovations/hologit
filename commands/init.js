@@ -38,24 +38,24 @@ exports.handler = async function init ({ name = null }) {
 
 
     // read config
-    let config = await repo.readConfig();
-    logger.debug('loaded existing holoconfig:', config);
+    let repoConfig = await repo.readConfig();
+    logger.debug('loaded existing holorepo config:', repoConfig);
 
 
     // initialize config
-    if (config) {
-        if (config.holo.name != name) {
-            config.holo.name = name;
-            await repo.writeConfig(config, true);
+    if (repoConfig) {
+        if (repoConfig.holo.name != name) {
+            repoConfig.holo.name = name;
+            await repo.writeConfig(repoConfig, true);
             console.log(`updated .holo/config.toml, changed name to ${name}`);
         } else {
             logger.info('no change needed');
         }
     } else {
-        config = {
+        repoConfig = {
             holo: { name }
         };
-        await repo.writeConfig(config, true);
+        await repo.writeConfig(repoConfig, true);
         console.log(`initialized .holo/config.toml for ${name}`);
     }
 };
