@@ -4,7 +4,8 @@ exports.command = 'create <name> <url>';
 exports.desc = 'Create a holosource named <name> for repo at url <url>';
 exports.builder = {
     branch: {
-        describe: 'Unique name for the source in the set of this repositories sources'
+        describe: 'Name of branch to track in holosource repository',
+        default: 'HEAD'
     }
 };
 
@@ -45,12 +46,12 @@ exports.handler = async function addSource ({ name, url, branch }) {
 
 
     // examine remote repo/branch
-    logger.info(`listing ${url}#${branch||''}`);
-    const lsRemoteOutput = await repo.git.lsRemote({ symref: true }, url, branch || 'HEAD');
+    logger.info(`listing ${url}#${branch}`);
+    const lsRemoteOutput = await repo.git.lsRemote({ symref: true }, url, branch);
     const match = lsRemoteOutput.match(/^(ref: (refs\/heads\/\S+)\tHEAD\n)?([0-9a-f]{40})\t(\S+)$/m);
 
     if (!match) {
-        throw new Error(`could not find remote ref for ${branch||'HEAD'}`);
+        throw new Error(`could not find remote ref for ${branch}`);
     }
 
     const hash = match[3];
