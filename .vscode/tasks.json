@@ -44,7 +44,7 @@
             "identifier": "studio-killall",
             "label": "kill all node processes within studio",
             "type": "shell",
-            "command": "docker exec hab-studio-hologit /entrypoint.sh run 'hab pkg exec core/busybox-static killall node' && sleep 2 || true",
+            "command": "(docker exec hab-studio-hologit /entrypoint.sh run 'hab pkg exec core/busybox-static killall node' && sleep 2) || true",
             "presentation": {
                 "echo": false,
                 "reveal": "never",
