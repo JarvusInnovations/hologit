@@ -10,7 +10,7 @@
 
 ### Create a repository with some simple code
 
-To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/) to create a website:
+To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/#starter-template) to create a website:
 
 ```console
 $ git init holo-example
