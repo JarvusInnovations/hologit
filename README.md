@@ -24,6 +24,36 @@ $ git commit -m "Add Bootstrap's starter template as index.html"
  create mode 100644 index.html
 ```
 
+### Install hologit
+
+Hologit can be installed via habitat:
+
+```console
+$ hab pkg install -b jarvus/hologit
+» Installing jarvus/hologit
+☁ Determining latest version of jarvus/hologit in the 'stable' channel
+→ Using jarvus/hologit/0.3.0/20181015020008
+★ Install of jarvus/hologit/0.3.0/20181015020008 complete with 0 new packages installed.
+» Binlinking git-holo from jarvus/hologit/0.3.0/20181015020008 into /bin
+★ Binlinked git-holo from jarvus/hologit/0.3.0/20181015020008 to /bin/git-holo
+```
+
+or with npm:
+
+```console
+$ npm install -g hologit
+# coming soon
+```
+
+### Initialize .holo/ configuration
+
+Hologit configuration is stored under the `.holo/` tree at the root of a repository. Initialize it in each branch that will generate projections:
+
+```console
+$ git holo init
+initialized .holo/config.toml for holo-example
+```
+
 ### Define and project a holo branch
 
 - A static HTML file with bootstrap/jquery CDN links
