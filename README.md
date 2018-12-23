@@ -19,7 +19,7 @@ $ cd holo-example/
 $ curl -s https://raw.githubusercontent.com/hologit/examples/basic/index.html > index.html
 $ git add index.html
 $ git commit -m "Add Bootstrap's starter template as index.html"
-[master (root-commit) 82a1a39] Add bootstrap's starter template as index.html
+[master (root-commit) 82a1a39] Add Bootstrap's starter template as index.html
  1 file changed, 22 insertions(+)
  create mode 100644 index.html
 ```
@@ -62,7 +62,7 @@ $ git commit -m "Initialize .holo/ configuration"
  create mode 100644 .holo/config.toml
 ```
 
-To start, this configuration file only assigns a name for the code in the current source branch that can be used to reference it as a source for files when compositing a holobranch. The name `holo-example` was detected from the name of the repository's working tree, but could have been chosen by passing `--name ${my_project_name}` for the `init` command or just by editing the `./holo/config.toml` file later.
+To start, this configuration file only assigns a name for the code in the current source branch, which can be used later as an alternative to remote sources. The name `holo-example` was detected from the name of the repository's working tree, but could have been chosen by passing `--name ${my_project_name}` for the `init` command or just by editing the `./holo/config.toml` file later.
 
 ### Define and project a holobranch
 
