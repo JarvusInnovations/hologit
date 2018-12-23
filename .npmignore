@@ -1,0 +1,7 @@
+**/results/
+**/.vscode/
+**/.git
+**/.gitmodules
+**/.studiorc
+**/plan.sh
+**/test/
