@@ -54,6 +54,27 @@
                 "<node_internals>/**/*.js"
             ],
 
+            "name": "branch create gh-pages",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                "DEBUG": "1"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
+            "args": [
+                "branch",
+                "create",
+                "gh-pages",
+                "--template=passthrough"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "project",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
