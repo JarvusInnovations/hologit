@@ -13,12 +13,12 @@ exports.handler = async function init ({ name = null }) {
     const path = require('path');
 
 
-    // get holo repo from environment
+    // get repo interface
     const repo = await Repo.getFromEnvironment({ working: true });
     logger.debug('instantiated repository:', repo);
 
 
-    // compute name
+    // compute repo name
     if (!name) {
         if (repo.workTree) {
             logger.debug('computing name from work tree:', repo.workTree);
@@ -37,24 +37,22 @@ exports.handler = async function init ({ name = null }) {
     }
 
 
-    // read config
+    // read repo config
     let repoConfig = await repo.readConfig();
     logger.debug('loaded existing holorepo config:', repoConfig);
 
 
-    // initialize config
+    // initialize repo config
     if (repoConfig) {
-        if (repoConfig.holo.name != name) {
-            repoConfig.holo.name = name;
+        if (repoConfig.name != name) {
+            repoConfig.name = name;
             await repo.writeConfig(repoConfig, true);
             console.log(`updated .holo/config.toml, changed name to ${name}`);
         } else {
             logger.info('no change needed');
         }
     } else {
-        repoConfig = {
-            holo: { name }
-        };
+        repoConfig = { name };
         await repo.writeConfig(repoConfig, true);
         console.log(`initialized .holo/config.toml for ${name}`);
     }
