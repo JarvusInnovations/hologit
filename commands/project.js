@@ -11,6 +11,11 @@ exports.builder = {
     'ref': {
         describe: 'Commit ref to read holobranch from',
         default: 'HEAD'
+    },
+    'working': {
+        decribe: 'Set to use the (possibly uncommited) contents of the working tree',
+        type: 'boolean',
+        default: false
     }
 };
 
@@ -27,10 +32,10 @@ exports.builder = {
  * - [ ] Loop sources and generate commit for each
  * - [ ] Merge new commit onto virtualBranch
  */
-exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEAD', debug = false }) {
+exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEAD', working = false, debug = false }) {
     const hab = await require('habitat-client').requireVersion('>=0.62');
     const handlebars = require('handlebars');
-    const hololib = require('../lib');
+    const { Repo } = require('../lib');
     const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
     const shellParse = require('shell-quote-word');
@@ -46,74 +51,46 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
     // load .holo info
-    const repo = await hololib.getRepo();
+    const repo = await Repo.getFromEnvironment({ ref, working });
 
 
-    // read holobranch tree
-    logger.info(`reading holobranch spec tree from ${ref}`);
-    const specTree = await repo.git.TreeRoot.read(`${ref}:.holo/branches/${holobranch}`, repo.git);
+    // read holobranch mappings
+    holobranch = repo.getBranch(holobranch);
+    logger.info('reading mappings from holobranch:', holobranch);
+    const mappings = await holobranch.getMappings();
 
-    const specs = [];
-    const specsByLayer = {};
-    const layerFromPathRe = /^(.*\/)?(([^\/]+)\/_|_?([^_\/][^\/]+))\.toml$/;
 
-    for (const specPath in specTree) {
-        const spec = {
-            config: TOML.parse(await repo.git.catFile({ p: true },  specTree[specPath].hash))
-        };
-        const holospec = spec.config.holospec;
+    // group mappings by layer
+    const mappingsByLayer = {};
+    for (const mapping of mappings.values()) {
+        const { layer } = await mapping.getCachedConfig();
 
-        if (!holospec) {
-            throw new Error(`invalid holospec ${specPath}`);
-        }
-
-        if (!holospec.files) {
-            throw new Error(`holospec has no files defined ${specPath}`);
-        }
-
-        // parse holospec and apply defaults
-        const specName = path.basename(specPath, '.toml');
-
-        spec.root = path.join('.', holospec.root || '.', '.');
-        spec.files = typeof holospec.files == 'string' ? [holospec.files] : holospec.files;
-        spec.holosource = holospec.holosource || specPath.replace(layerFromPathRe, '$3$4');
-        spec.layer = holospec.layer || spec.holosource;
-        spec.output = path.join(path.dirname(specPath), specName[0] == '_' ? '.' : specName, holospec.output || '.', '.');
-
-        if (holospec.before) {
-            spec.before = typeof holospec.before == 'string' ? [holospec.before] : holospec.before;
-        }
-
-        if (holospec.after) {
-            spec.after = typeof holospec.after == 'string' ? [holospec.after] : holospec.after;
-        }
-
-        specs.push(spec);
-
-        if (specsByLayer[spec.layer]) {
-            specsByLayer[spec.layer].push(spec);
+        if (mappingsByLayer[layer]) {
+            mappingsByLayer[layer].push(mapping);
         } else {
-            specsByLayer[spec.layer] = [spec];
+            mappingsByLayer[layer] = [mapping];
         }
     }
 
 
     // compile edges formed by before/after requirements
-    const specEdges = [];
+    const mappingEdges = [];
 
-    for (const spec of specs) {
-        if (spec.after) {
-            for (const layer of spec.after) {
-                for (const afterSpec of specsByLayer[layer]) {
-                    specEdges.push([afterSpec, spec]);
+    for (const mapping of mappings.values()) {
+        const { after, before } = await mapping.getCachedConfig();
+
+        if (after) {
+            for (const layer of after) {
+                for (const afterMapping of mappingsByLayer[layer]) {
+                    mappingEdges.push([afterMapping, mapping]);
                 }
             }
         }
 
-        if (spec.before) {
-            for (const layer of spec.before) {
-                for (const beforeSpec of specsByLayer[layer]) {
-                    specEdges.push([spec, beforeSpec]);
+        if (before) {
+            for (const layer of before) {
+                for (const beforeMapping of mappingsByLayer[layer]) {
+                    mappingEdges.push([mapping, beforeMapping]);
                 }
             }
         }
@@ -121,12 +98,16 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
     // sort specs by before/after requirements
-    const sortedSpecs = toposort.array(specs, specEdges);
+    const sortedSpecs = toposort.array(Array.from(mappings.values()), mappingEdges);
+
+
+    // load git interface
+    const git = await repo.getGit();
 
 
     // composite output tree
     logger.info('compositing tree...');
-    const outputTree = repo.git.createTree();
+    const outputTree = git.createTree();
     const sourcesCache = {};
 
     for (const spec of sortedSpecs) {
