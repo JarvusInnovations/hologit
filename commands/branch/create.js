@@ -57,10 +57,13 @@ exports.handler = async function createBranch ({ name, template }) {
 
     if (Object.keys(branchConfig).length) {
         promises.push(branch.writeConfig(branchConfig));
+        console.log(`initialized ${branch.getConfigPath()}`);
     }
 
     for (const key in mappingConfigs) {
-        promises.push(branch.getMapping(key).writeConfig(mappingConfigs[key]));
+        const mapping = branch.getMapping(key);
+        promises.push(mapping.writeConfig(mappingConfigs[key]));
+        console.log(`initialized ${mapping.getConfigPath()}`);
     }
 
     return Promise.all(promises);

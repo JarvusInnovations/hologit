@@ -36,6 +36,8 @@ exports.handler = async function init ({ name = null }) {
         }
     }
 
+    console.log(`name=${name}`);
+
 
     // read repo config
     let repoConfig = await repo.readConfig();
@@ -47,13 +49,11 @@ exports.handler = async function init ({ name = null }) {
         if (repoConfig.name != name) {
             repoConfig.name = name;
             await repo.writeConfig(repoConfig);
-            console.log(`updated .holo/config.toml, changed name to ${name}`);
-        } else {
-            logger.info('no change needed');
+            console.log(`updated .holo/config.toml`);
         }
     } else {
         repoConfig = { name };
         await repo.writeConfig(repoConfig);
-        console.log(`initialized .holo/config.toml for ${name}`);
+        console.log(`initialized .holo/config.toml`);
     }
 };
