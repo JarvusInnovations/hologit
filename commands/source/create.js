@@ -1,7 +1,7 @@
 const logger = require('../../lib/logger.js');
 
-exports.command = 'add <name> <url>';
-exports.desc = 'Add a source named <name> for repo at url <url>';
+exports.command = 'create <name> <url>';
+exports.desc = 'Create a holosource named <name> for repo at url <url>';
 exports.builder = {
     branch: {
         describe: 'Unique name for the source in the set of this repositories sources'
