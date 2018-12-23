@@ -32,6 +32,10 @@
         {
             "type": "node",
             "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "init",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
@@ -46,6 +50,10 @@
         {
             "type": "node",
             "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "project",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
@@ -66,6 +74,10 @@
         {
             "type": "node",
             "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "watch",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
@@ -80,6 +92,10 @@
         {
             "type": "node",
             "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "add source",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
@@ -97,6 +113,10 @@
         {
             "type": "node",
             "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "checkout source",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
@@ -113,6 +133,10 @@
         {
             "type": "node",
             "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "fetch source",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
