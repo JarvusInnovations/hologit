@@ -15,13 +15,16 @@ exports.handler = async function init ({ name = null }) {
 
     // get holo repo from environment
     const repo = await Repo.getFromEnvironment({ working: true });
+    logger.debug('instantiated repository:', repo);
 
 
     // compute name
     if (!name) {
         if (repo.workTree) {
+            logger.debug('computing name from work tree:', repo.workTree);
             name = path.basename(repo.workTree);
         } else {
+            logger.debug('computing name from git dir:', repo.gitDir);
             const nameStack = repo.gitDir.split(path.sep);
             name = nameStack.pop();
 
@@ -36,6 +39,7 @@ exports.handler = async function init ({ name = null }) {
 
     // read config
     let config = await repo.readConfig();
+    logger.debug('loaded existing holoconfig:', config);
 
 
     // initialize config
@@ -44,6 +48,8 @@ exports.handler = async function init ({ name = null }) {
             config.holo.name = name;
             await repo.writeConfig(config, true);
             console.log(`updated .holo/config.toml, changed name to ${name}`);
+        } else {
+            logger.info('no change needed');
         }
     } else {
         config = {
