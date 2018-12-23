@@ -43,13 +43,13 @@ exports.handler = async function init ({ name = null }) {
         if (config.holo.name != name) {
             config.holo.name = name;
             await repo.writeConfig(config, true);
-            console.log(`changed name to ${name}`);
+            console.log(`updated .holo/config.toml, changed name to ${name}`);
         }
     } else {
         config = {
             holo: { name }
         };
         await repo.writeConfig(config, true);
-        console.log(`initialized config for ${name}`);
+        console.log(`initialized .holo/config.toml for ${name}`);
     }
 };
