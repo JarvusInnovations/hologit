@@ -51,7 +51,11 @@ Hologit configuration is stored under the `.holo/` tree at the root of a reposit
 
 ```console
 $ git holo init
-initialized .holo/config.toml for holo-example
+name=holo-example
+initialized .holo/config.toml
+$ cat .holo/config.toml
+[holo]
+name = "holo-example"
 $ git commit -m "Initialize .holo/ configuration"
 [master 3ae86bd] Initialize .holo/ configuration
  1 file changed, 2 insertions(+)
