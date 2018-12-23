@@ -46,14 +46,14 @@ exports.handler = async function init ({ name = null }) {
     if (repoConfig) {
         if (repoConfig.name != name) {
             repoConfig.name = name;
-            await repo.writeConfig(repoConfig, true);
+            await repo.writeConfig(repoConfig);
             console.log(`updated .holo/config.toml, changed name to ${name}`);
         } else {
             logger.info('no change needed');
         }
     } else {
         repoConfig = { name };
-        await repo.writeConfig(repoConfig, true);
+        await repo.writeConfig(repoConfig);
         console.log(`initialized .holo/config.toml for ${name}`);
     }
 };
