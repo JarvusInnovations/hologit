@@ -62,6 +62,8 @@ $ git commit -m "Initialize .holo/ configuration"
  create mode 100644 .holo/config.toml
 ```
 
+To start, this configuration file only assigns a name for the code in the current source branch that can be used to reference it as a source for files when compositing a holobranch. The name `holo-example` was detected from the name of the repository's working tree, but could have been chosen by passing `--name ${my_project_name}` for the `init` command or just by editing the `./holo/config.toml` file later.
+
 ### Define and project a holobranch
 
 - A static HTML file with bootstrap/jquery CDN links
