@@ -196,7 +196,7 @@ $ git commit -m "Initialize .holo/sources/bootstrap configuration"
  create mode 100644 .holo/sources/bootstrap.toml
 ```
 
-Now this source can be referenced in holobranch mappings:
+Now this source can be referenced in holobranch mappings, this example takes advantage of the holosource being automatically set from the mapping filename:
 
 ```console
 $ mkdir .holo/branches/gh-pages/{js,css}
