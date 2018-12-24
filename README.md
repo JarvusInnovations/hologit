@@ -210,6 +210,35 @@ $ cat > .holo/branches/gh-pages/js/_bootstrap.toml <<- END_OF_TOML
 root = "dist/js"
 files = "*.min.js"
 END_OF_TOML
+$ git add --all
+$ git commit -am "Add css and js mappings for bootstrap to gh-pages holobranch"
+[master 4180e45] Add css and js mappings for bootstrap to gh-pages holobranch
+ 2 files changed, 6 insertions(+)
+ create mode 100644 .holo/branches/gh-pages/css/_bootstrap.toml
+ create mode 100644 .holo/branches/gh-pages/js/_bootstrap.toml
+```
+
+Projecting the `gh-pages` tree now shows the files merged from bootstrap:
+
+```console
+$ git holo project gh-pages
+info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
+info: compositing tree...
+info: merging holo-example:{**} -> /
+info: merging bootstrap:dist/css/{*.min.css} -> /css/
+info: merging bootstrap:dist/js/{*.min.js} -> /js/
+info: stripping .holo/ tree from output tree...
+info: writing final output tree...
+info: projection ready:
+9cf0490dbf2955e9bf2d643862621b8322c3c07d
+chris in ~/Repositories/holo-example on master*
+$ git ls-tree -r 9cf0490dbf2955e9bf2d643862621b8322c3c07d
+100644 blob b3e6881a586c99b55e2d1878839eede6fb3fa9d7    css/bootstrap-grid.min.css
+100644 blob 0668a8cd93bba140c00bc0c410ad54c61af71d9e    css/bootstrap-reboot.min.css
+100644 blob e6b4977799e3a3a377e475ee765eb4a9961c6c71    css/bootstrap.min.css
+100644 blob 8092fa2adb4a9a395ac291fbdc9717b68be669aa    index.html
+100644 blob 97f14c05c3d5960129caf3e4666f661dfdb8228a    js/bootstrap.bundle.min.js
+100644 blob 9df6b6c2ced14a60259171e1fdacc2534ddee183    js/bootstrap.min.js
 ```
 
 ### Assemble the complete source code via a holo lens
