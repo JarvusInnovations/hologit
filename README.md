@@ -8,6 +8,8 @@
 
 ## Quickstart
 
+The guide will walk you through an illustrative minimal use of hologit to publish a GitHub Pages branch.
+
 ### Create a repository with some minimal code
 
 To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/#starter-template) to create a website:
@@ -19,7 +21,7 @@ $ cd holo-example/
 $ curl -s https://raw.githubusercontent.com/hologit/examples/basic/index.html > index.html
 $ git add index.html
 $ git commit -m "Add Bootstrap's starter template as index.html"
-[master (root-commit) 82a1a39] Add Bootstrap's starter template as index.html
+[master (root-commit) 9fe77ec] Add Bootstrap's starter template as index.html
  1 file changed, 22 insertions(+)
  create mode 100644 index.html
 ```
@@ -57,14 +59,14 @@ $ cat .holo/config.toml
 [holo]
 name = "holo-example"
 $ git commit -m "Initialize .holo/ configuration"
-[master 3ae86bd] Initialize .holo/ configuration
+[master 881b0b6] Initialize .holo/ configuration
  1 file changed, 2 insertions(+)
  create mode 100644 .holo/config.toml
 ```
 
 To start, this configuration file only assigns a name for the code in the current source branch, which can be used later as an alternative to remote sources. The name `holo-example` was detected from the name of the repository's working tree, but could have been chosen by passing `--name ${my_project_name}` for the `init` command or just by editing the `./holo/config.toml` file later.
 
-### Define and project a holobranch
+### Define a holobranch
 
 A holobranch can be defined by creating a holobranch config file at `.holo/branches/${my_holobranch_name}.toml` or any number of holomapping config files within `.holo/branches/${my_holobranch_name}/**.toml`. Generate a minimal "passthrough" holobranch that will copy all files from the current source branch:
 
@@ -74,6 +76,10 @@ initialized .holo/branches/gh-pages/_holo-example.toml
 $ cat cat .holo/branches/gh-pages/_holo-example.toml
 [holomapping]
 files = "**"
+$ git commit -m "Initialize .holo/branches/gh-pages configuration"
+[master 4b9aa68] Initialize .holo/branches/gh-pages configuration
+ 1 file changed, 2 insertions(+)
+ create mode 100644 .holo/branches/gh-pages/_holo-example.toml
 ```
 
 This defines a holobranch named `gh-pages` with all files from holosource `holo-example` matching the [glob pattern](https://github.com/isaacs/minimatch) `**` populating its root directory. There are several elements of convention on display here:
@@ -88,7 +94,13 @@ This defines a holobranch named `gh-pages` with all files from holosource `holo-
   - `files`: A string or array for strings containing [glob patterns](https://github.com/isaacs/minimatch) for matching or excluding files
     - A value of just `'**'`, as in the generated config, matches all files in the source
 
-### Merge external code via a holo source
+### Project holobranch for first time
+
+```console
+$ git holo project gh-pages
+```
+
+### Merge external code via a holosource
 
 - Pull bootstrap and jquery sources
 
