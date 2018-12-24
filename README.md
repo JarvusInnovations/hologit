@@ -177,19 +177,9 @@ Projected gh-pages from 4b9aa68
 
 ### Merge external code via a holosource
 
-The first step to using external code in your projections is defining holosources:
+The first step to using external code in your projections is defining a holosource:
 
 ```console
-$ git holo source create git@github.com:jquery/jquery.git
-info: listing git@github.com:jquery/jquery.git#HEAD
-info: fetching git@github.com:jquery/jquery.git#refs/heads/master@9cb162f6b62b6d4403060a0f0d2065d3ae96bbcc
-fetched git@github.com:jquery/jquery.git#refs/heads/master@9cb162f6b62b6d4403060a0f0d2065d3ae96bbcc
-initialized .holo/sources/jquery.toml
-$ cat .holo/sources/jquery.toml
-[holosource]
-url = "git@github.com:jquery/jquery.git"
-ref = "refs/heads/master"
-
 $ git holo source create https://github.com/twbs/bootstrap --ref=v4.2.1
 info: listing https://github.com/twbs/bootstrap#v4.2.1
 info: fetching https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e94747bd698f4f61d48ed54c9c6d4d199bd32
@@ -200,11 +190,37 @@ $ cat .holo/sources/bootstrap.toml
 url = "https://github.com/twbs/bootstrap"
 ref = "refs/tags/v4.2.1"
 
-$ git commit -m "Initialize .holo/sources/{jquery,bootstrap} configuration"
-[master c5c152e] Initialize .holo/sources/{jquery,bootstrap} configuration
- 2 files changed, 6 insertions(+)
+$ git commit -m "Initialize .holo/sources/bootstrap configuration"
+[master 64ef9fc] Initialize .holo/sources/bootstrap configuration
+ 1 file changed, 3 insertions(+)
  create mode 100644 .holo/sources/bootstrap.toml
- create mode 100644 .holo/sources/jquery.toml
+```
+
+Now this source can be referenced in holobranch mappings:
+
+```console
+$ cat > .holo/branches/gh-pages/css/_bootstrap.toml <<- END_OF_TOML
+```
+
+```toml
+[holomapping]
+root = "dist/css"
+files = "*.min.css"
+```
+
+```console
+END_OF_TOML
+$ cat > .holo/branches/gh-pages/js/_bootstrap.toml <<- END_OF_TOML
+```
+
+```toml
+[holomapping]
+root = "dist/js"
+files = "*.min.js"
+```
+
+```console
+END_OF_TOML
 ```
 
 ### Assemble the complete source code via a holo lens
