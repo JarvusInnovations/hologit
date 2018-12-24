@@ -98,7 +98,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
     // sort specs by before/after requirements
-    const sortedSpecs = toposort.array(Array.from(mappings.values()), mappingEdges);
+    const sortedMappings = toposort.array(Array.from(mappings.values()), mappingEdges);
 
 
     // load git interface
@@ -107,28 +107,24 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
     // composite output tree
     logger.info('compositing tree...');
-    const outputTree = git.createTree();
-    const sourcesCache = {};
+    const outputTree = await repo.createTree();
 
-    for (const spec of sortedSpecs) {
-        logger.info(`merging ${spec.layer}:${spec.root != '.' ? spec.root+'/' : ''}{${spec.files}} -> /${spec.output != '.' ? spec.output+'/' : ''}`);
+    for (const mapping of sortedMappings) {
+        const { layer, root, files, output, holosource } = await mapping.getCachedConfig();
+
+        logger.info(`merging ${layer}:${root != '.' ? root+'/' : ''}{${files}} -> /${output != '.' ? output+'/' : ''}`);
 
         // load source
-        let source = sourcesCache[spec.holosource];
-
-        if (!source) {
-            source = sourcesCache[spec.holosource] = await repo.getSource(spec.holosource);
-        }
-
+        const source = await repo.getSource(holosource);
+        const { head: sourceHead } = await source.getCachedConfig();
 
         // load tree
-        const sourceTree = await repo.git.createTreeFromRef(`${source.head}:${spec.root == '.' ? '' : spec.root}`);
-
+        const sourceTree = await repo.createTreeFromRef(`${sourceHead}:${root == '.' ? '' : root}`);
 
         // merge source into target
-        const targetTree = spec.output == '.' ? outputTree : await outputTree.getSubtree(spec.output, true);
+        const targetTree = output == '.' ? outputTree : await outputTree.getSubtree(output, true);
         await targetTree.merge(sourceTree, {
-            files: spec.files
+            files: files
         });
     }
 
@@ -171,6 +167,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
             continue;
         }
 
+        // TODO: use a Configurable class to instantiate and load
         const name = lensPath.replace(lensNameFromPathRe, '$1');
         const config = TOML.parse(await repo.git.catFile({ p: true }, lensFile.hash));
 
@@ -242,7 +239,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
     // apply lenses
-    const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), holobranch);
+    const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), holobranch.name);
 
     for (const lens of sortedLenses) {
 
@@ -299,27 +296,27 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
         if (lensedTreeHash) {
             logger.info(`found existing output tree matching holospec(${specHash})`);
         } else {
-        // assign scratch directory for lens
-        const scratchPath = `${scratchRoot}/${lens.name}`;
-        await mkdirp(scratchPath);
+            // assign scratch directory for lens
+            const scratchPath = `${scratchRoot}/${lens.name}`;
+            await mkdirp(scratchPath);
 
 
-        // compile and execute command
-        const command = handlebars.compile(lens.hololens.command)(spec);
-        logger.info('executing lens %s: %s', lens.hololens.package, command);
+            // compile and execute command
+            const command = handlebars.compile(lens.hololens.command)(spec);
+            logger.info('executing lens %s: %s', lens.hololens.package, command);
             lensedTreeHash = await hab.pkg('exec', lens.hololens.package, ...shellParse(command), {
-            $env: Object.assign(
-                squish({
-                    hololens: spec.hololens
-                }, { seperator: '_', modifyKey: 'uppercase' }),
-                {
-                    HOLOSPEC: specHash,
-                    GIT_DIR: repo.gitDir,
-                    GIT_WORK_TREE: scratchPath,
-                    GIT_INDEX_FILE: `${scratchPath}.index`
-                }
-            )
-        });
+                $env: Object.assign(
+                    squish({
+                        hololens: spec.hololens
+                    }, { seperator: '_', modifyKey: 'uppercase' }),
+                    {
+                        HOLOSPEC: specHash,
+                        GIT_DIR: repo.gitDir,
+                        GIT_WORK_TREE: scratchPath,
+                        GIT_INDEX_FILE: `${scratchPath}.index`
+                    }
+                )
+            });
 
             if (!repo.git.isHash(lensedTreeHash)) {
                 throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
@@ -377,7 +374,7 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
 
 
     // finished
-    repo.git.cleanup();
+    git.cleanup();
 
     logger.info('projection ready:');
     console.log(rootTreeHash);

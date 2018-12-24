@@ -84,12 +84,14 @@
             "program": "${workspaceFolder}/bin/cli.js",
             "args": [
                 "project",
+                "--working",
+                "--debug",
 
                 // holobranch
-                "site",
+                "gh-pages",
 
                 // target-branch
-                "site"
+                "gh-pages"
             ]
         },
         {
