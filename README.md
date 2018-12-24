@@ -34,17 +34,19 @@ Hologit can be installed via habitat:
 $ hab pkg install -b jarvus/hologit
 » Installing jarvus/hologit
 ☁ Determining latest version of jarvus/hologit in the 'stable' channel
-→ Using jarvus/hologit/0.3.0/20181015020008
-★ Install of jarvus/hologit/0.3.0/20181015020008 complete with 0 new packages installed.
-» Binlinking git-holo from jarvus/hologit/0.3.0/20181015020008 into /bin
-★ Binlinked git-holo from jarvus/hologit/0.3.0/20181015020008 to /bin/git-holo
+→ Using jarvus/hologit/0.4.1/20181224022822
+★ Install of jarvus/hologit/0.4.1/20181224022822 complete with 0 new packages installed.
+» Binlinking git-holo from jarvus/hologit/0.4.1/20181224022822 into /bin
+★ Binlinked git-holo from jarvus/hologit/0.4.1/20181224022822 to /bin/git-holo
 ```
 
 or with npm:
 
 ```console
 $ npm install -g hologit
-# coming soon
+/usr/local/bin/git-holo -> /usr/local/lib/node_modules/hologit/bin/cli.js
++ hologit@0.4.1
+updated 1 package in 1.947s
 ```
 
 ### Initialize .holo/ configuration
