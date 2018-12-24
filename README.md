@@ -96,8 +96,81 @@ This defines a holobranch named `gh-pages` with all files from holosource `holo-
 
 ### Project holobranch for first time
 
+With a holobranch defined with at least one holomapping, we have enough for our first tree projection:
+
 ```console
 $ git holo project gh-pages
+info: reading mappings from holobranch: gitDir=/Users/chris/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
+info: compositing tree...
+info: merging holo-example:{**} -> /
+info: stripping .holo/ tree from output tree...
+info: writing final output tree...
+info: projection ready:
+ff954bb0a1e4878db424cb1033a0c356dac8d350
+$ git cat-file -t ff954bb0a1e4878db424cb1033a0c356dac8d350
+tree
+$ git ls-tree -r ff954bb0a1e4878db424cb1033a0c356dac8d350
+100644 blob 8092fa2adb4a9a395ac291fbdc9717b68be669aa    index.html
+```
+
+The output of the `project` command seen above is the git hash of a **tree** object that has been generated, if needed, within your git repository's object database. This hash *does not* reference a commit object like most git hashes most commonly seen. A tree object is the main ingrediant of a commit obect: the tree represents a complete unique state of all the files and a commit attaches the tree to a point in your chain of commits with timestamp and authorship information.
+
+A tree can be used directly:
+
+```console
+$ git archive --format=zip $(git holo project gh-pages) > website.zip
+info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
+info: compositing tree...
+info: merging holo-example:{**} -> /
+info: stripping .holo/ tree from output tree...
+info: writing final output tree...
+info: projection ready:
+$ unzip -l website.zip
+Archive:  website.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+     1230  12-23-2018 20:32   index.html
+---------                     -------
+     1230                     1 file
+```
+
+or wrapped in a commit:
+
+```console
+$ git commit-tree -m "Update gh-pages"  $(git holo project gh-pages)
+info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
+info: compositing tree...
+info: merging holo-example:{**} -> /
+info: stripping .holo/ tree from output tree...
+info: writing final output tree...
+info: projection ready:
+846a551ce356d5fa4088e58b3ad0f0d05aa6d389
+$ git cat-file -t 846a551ce356d5fa4088e58b3ad0f0d05aa6d389
+commit
+$ git cat-file -p 846a551ce356d5fa4088e58b3ad0f0d05aa6d389
+tree ff954bb0a1e4878db424cb1033a0c356dac8d350
+author Chris Alfano <chris@jarv.us> 1545615571 -0500
+committer Chris Alfano <chris@jarv.us> 1545615571 -0500
+
+Update gh-pages
+```
+
+With the `--commit-branch` option, you can commit the generated tree to a give branch and output the new commit's hash instead:
+
+```console
+$ git cat-file -p $(git holo project gh-pages --commit-branch=gh-pages)
+info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
+info: compositing tree...
+info: merging holo-example:{**} -> /
+info: stripping .holo/ tree from output tree...
+info: writing final output tree...
+info: committed new tree to "gh-pages": 734f7dc034868af4e2bd23daf23e119faca1e0b8
+info: projection ready:
+tree ff954bb0a1e4878db424cb1033a0c356dac8d350
+author Chris Alfano <chris@jarv.us> 1545616786 -0500
+committer Chris Alfano <chris@jarv.us> 1545616786 -0500
+
+Projected gh-pages from 4b9aa68
 ```
 
 ### Merge external code via a holosource
