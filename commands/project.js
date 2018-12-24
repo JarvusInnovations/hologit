@@ -1,11 +1,15 @@
 const logger = require('../lib/logger.js');
 
-exports.command = 'project <holobranch> [target-branch]';
-exports.desc = 'Projects holobranch named <holobranch>, optionally writing result to [target-branch]';
+exports.command = 'project <holobranch>';
+exports.desc = 'Projects holobranch named <holobranch> and outputs resulting tree hash';
 
 exports.builder = {
-    'target-branch': {
-        describe: 'Target branch',
+    'commit-branch': {
+        describe: 'A target branch to commit the projected tree to',
+        type: 'string'
+    },
+    'commit-message': {
+        describe: 'A commit message to use if commit-branch is specified',
         type: 'string'
     },
     'ref': {
@@ -32,7 +36,14 @@ exports.builder = {
  * - [ ] Loop sources and generate commit for each
  * - [ ] Merge new commit onto virtualBranch
  */
-exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEAD', working = false, debug = false }) {
+exports.handler = async function project ({
+    holobranch,
+    ref = 'HEAD',
+    working = false,
+    debug = false,
+    commitBranch = null,
+    commitMessage = null
+}) {
     const hab = await require('habitat-client').requireVersion('>=0.62');
     const handlebars = require('handlebars');
     const { Repo } = require('../lib');
@@ -358,18 +369,27 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
     const rootTreeHash = await outputTree.write();
 
 
+    // prepare output
+    let outputHash = rootTreeHash;
+
+
     // update targetBranch
-    if (targetBranch) {
-        logger.info(`committing new tree to "${targetBranch}"...`);
+    if (commitBranch) {
+        const targetRef = `refs/heads/${commitBranch}`;
+        const parentHash = await git.revParse(targetRef, { $nullOnError: true });
+        const commitHash = await git.commitTree(
+            {
+                p: parentHash,
+                m: commitMessage || `Projected ${holobranch.name} from ${await git.describe({ always: true, tags: true })}`
+            },
+            rootTreeHash
+        );
 
-        const targetRef = `refs/heads/${targetBranch}`;
-        const sourceDescription = await repo.git.describe({ always: true, tags: true });
+        await git.updateRef(targetRef, commitHash);
+        logger.info(`committed new tree to "${commitBranch}":`, commitHash);
 
-        let parentHash = await repo.git.revParse(targetRef, { $nullOnError: true });
-
-        const commitHash = await repo.git.commitTree({ p: parentHash, m: `Projected ${holobranch} from ${sourceDescription}` }, rootTreeHash);
-
-        await repo.git.updateRef(targetRef, commitHash);
+        // change output to commit
+        outputHash = commitHash;
     }
 
 
@@ -377,6 +397,6 @@ exports.handler = async function project ({ holobranch, targetBranch, ref = 'HEA
     git.cleanup();
 
     logger.info('projection ready:');
-    console.log(rootTreeHash);
-    return rootTreeHash;
+    console.log(outputHash);
+    return outputHash;
 };

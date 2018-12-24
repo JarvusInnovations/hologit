@@ -86,11 +86,9 @@
                 "project",
                 "--working",
                 "--debug",
+                "--commit-branch=gh-pages",
 
                 // holobranch
-                "gh-pages",
-
-                // target-branch
                 "gh-pages"
             ]
         },
