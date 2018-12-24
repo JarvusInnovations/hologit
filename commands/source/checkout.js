@@ -38,6 +38,11 @@ exports.handler = async function checkoutSource ({ name }) {
         checkoutOptions.B = branch;
     }
 
+    // // add to index
+    // logger.info(`staging source @ ${hash}`);
+    // await repo.git.add(configFile);
+    // await repo.git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
+
 
     // checkout HEAD
     logger.info(`checking out ${source.head}` + (branch ? ` to ${branch}` : ''));
