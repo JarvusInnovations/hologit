@@ -199,6 +199,7 @@ $ git commit -m "Initialize .holo/sources/bootstrap configuration"
 Now this source can be referenced in holobranch mappings:
 
 ```console
+$ mkdir .holo/branches/gh-pages/{js,css}
 $ cat > .holo/branches/gh-pages/css/_bootstrap.toml <<- END_OF_TOML
 [holomapping]
 root = "dist/css"
