@@ -85,6 +85,7 @@ exports.handler = async function createSource ({
 
     // fetch objects
     const localRef = `refs/holo/sources/${spec.hash}`;
+    logger.info(`fetching ${url}#${remoteRef}@${hash}`);
     await git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
     console.log(`fetched ${url}#${remoteRef}@${hash}`);
 
