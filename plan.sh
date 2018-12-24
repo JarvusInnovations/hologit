@@ -31,7 +31,6 @@ do_build() {
 
   build_line "Copying application to ${CACHE_PATH}"
   cp "${PLAN_CONTEXT}/LICENSE" "${PLAN_CONTEXT}/package.json" ./
-  cp -r "${PLAN_CONTEXT}/local_modules" ./
   cp -r "${PLAN_CONTEXT}/commands" "${PLAN_CONTEXT}/lib" ./
   cp -r "${PLAN_CONTEXT}/bin" ./node-bin
 
