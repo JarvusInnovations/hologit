@@ -127,7 +127,7 @@ exports.handler = async function project ({
 
         // load source
         const source = await repo.getSource(holosource);
-        const { head: sourceHead } = await source.getCachedConfig();
+        const sourceHead = await source.getCachedHead();
 
         // load tree
         const sourceTree = await repo.createTreeFromRef(`${sourceHead}:${root == '.' ? '' : root}`);
