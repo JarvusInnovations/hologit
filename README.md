@@ -190,18 +190,18 @@ $ cat .holo/sources/jquery.toml
 url = "git@github.com:jquery/jquery.git"
 ref = "refs/heads/master"
 
-$ git holo source create https://github.com/twbs/bootstrap
-info: listing https://github.com/twbs/bootstrap#HEAD
-info: fetching https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
-fetched https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
+$ git holo source create https://github.com/twbs/bootstrap --ref=v4.2.1
+info: listing https://github.com/twbs/bootstrap#v4.2.1
+info: fetching https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e94747bd698f4f61d48ed54c9c6d4d199bd32
+fetched https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e94747bd698f4f61d48ed54c9c6d4d199bd32
 initialized .holo/sources/bootstrap.toml
 $ cat .holo/sources/bootstrap.toml
 [holosource]
 url = "https://github.com/twbs/bootstrap"
-ref = "refs/heads/v4-dev"
+ref = "refs/tags/v4.2.1"
 
 $ git commit -m "Initialize .holo/sources/{jquery,bootstrap} configuration"
-[master 39599f3] Initialize .holo/sources/{jquery,bootstrap} configuration
+[master c5c152e] Initialize .holo/sources/{jquery,bootstrap} configuration
  2 files changed, 6 insertions(+)
  create mode 100644 .holo/sources/bootstrap.toml
  create mode 100644 .holo/sources/jquery.toml
