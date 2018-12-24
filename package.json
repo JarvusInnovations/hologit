@@ -10,8 +10,8 @@
   "dependencies": {
     "@iarna/toml": "^2.0.0",
     "fb-watchman": "^2.0.0",
-    "git-client": "file:local_modules/git-client",
-    "habitat-client": "file:local_modules/habitat-client",
+    "git-client": "^1.1.0",
+    "hab-client": "^1.0.0",
     "handlebars": "^4.0.12",
     "minimatch": "^3.0.4",
     "mz": "^2.4.0",

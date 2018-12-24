@@ -44,7 +44,7 @@ exports.handler = async function project ({
     commitBranch = null,
     commitMessage = null
 }) {
-    const hab = await require('habitat-client').requireVersion('>=0.62');
+    const hab = await require('hab-client').requireVersion('>=0.62');
     const handlebars = require('handlebars');
     const { Repo } = require('../lib');
     const mkdirp = require('mz-modules/mkdirp');
