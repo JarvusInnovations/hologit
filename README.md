@@ -200,26 +200,14 @@ Now this source can be referenced in holobranch mappings:
 
 ```console
 $ cat > .holo/branches/gh-pages/css/_bootstrap.toml <<- END_OF_TOML
-```
-
-```toml
 [holomapping]
 root = "dist/css"
 files = "*.min.css"
-```
-
-```console
 END_OF_TOML
 $ cat > .holo/branches/gh-pages/js/_bootstrap.toml <<- END_OF_TOML
-```
-
-```toml
 [holomapping]
 root = "dist/js"
 files = "*.min.js"
-```
-
-```console
 END_OF_TOML
 ```
 
