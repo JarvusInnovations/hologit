@@ -231,7 +231,6 @@ info: stripping .holo/ tree from output tree...
 info: writing final output tree...
 info: projection ready:
 9cf0490dbf2955e9bf2d643862621b8322c3c07d
-chris in ~/Repositories/holo-example on master*
 $ git ls-tree -r 9cf0490dbf2955e9bf2d643862621b8322c3c07d
 100644 blob b3e6881a586c99b55e2d1878839eede6fb3fa9d7    css/bootstrap-grid.min.css
 100644 blob 0668a8cd93bba140c00bc0c410ad54c61af71d9e    css/bootstrap-reboot.min.css
