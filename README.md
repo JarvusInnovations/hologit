@@ -238,6 +238,18 @@ info: projection ready:
 100644 blob 9df6b6c2ced14a60259171e1fdacc2534ddee183    js/bootstrap.min.js
 ```
 
+For reference, here is what the holobranch definition that projected this tree looks like at this point:
+
+```console
+$ tree .holo/branches/gh-pages
+.holo/branches/gh-pages
+├── _holo-example.toml
+├── css
+│   └── _bootstrap.toml
+└── js
+    └── _bootstrap.toml
+```
+
 ### Assemble the complete source code via a holo lens
 
 - Apply sass compilation and compression via generic lenses
