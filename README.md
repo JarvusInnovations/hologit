@@ -177,7 +177,35 @@ Projected gh-pages from 4b9aa68
 
 ### Merge external code via a holosource
 
-- Pull bootstrap and jquery sources
+The first step to using external code in your projections is defining holosources:
+
+```console
+$ git holo source create git@github.com:jquery/jquery.git
+info: listing git@github.com:jquery/jquery.git#HEAD
+info: fetching git@github.com:jquery/jquery.git#refs/heads/master@9cb162f6b62b6d4403060a0f0d2065d3ae96bbcc
+fetched git@github.com:jquery/jquery.git#refs/heads/master@9cb162f6b62b6d4403060a0f0d2065d3ae96bbcc
+initialized .holo/sources/jquery.toml
+$ cat .holo/sources/jquery.toml
+[holosource]
+url = "git@github.com:jquery/jquery.git"
+ref = "refs/heads/master"
+
+$ git holo source create https://github.com/twbs/bootstrap
+info: listing https://github.com/twbs/bootstrap#HEAD
+info: fetching https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
+fetched https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
+initialized .holo/sources/bootstrap.toml
+$ cat .holo/sources/bootstrap.toml
+[holosource]
+url = "https://github.com/twbs/bootstrap"
+ref = "refs/heads/v4-dev"
+
+$ git commit -m "Initialize .holo/sources/{jquery,bootstrap} configuration"
+[master 39599f3] Initialize .holo/sources/{jquery,bootstrap} configuration
+ 2 files changed, 6 insertions(+)
+ create mode 100644 .holo/sources/bootstrap.toml
+ create mode 100644 .holo/sources/jquery.toml
+```
 
 ### Assemble the complete source code via a holo lens
 
