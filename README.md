@@ -18,7 +18,7 @@ To start this example, we'll use [the starter template from Bootstrap's *Getting
 $ git init holo-example
 Initialized empty Git repository in /Users/chris/holo-example/.git/
 $ cd holo-example/
-$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/index.html > index.html
+$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/01-init/index.html > index.html
 $ git add index.html
 $ git commit -m "Add Bootstrap's starter template as index.html"
 [master (root-commit) 9fe77ec] Add Bootstrap's starter template as index.html
