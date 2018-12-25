@@ -256,6 +256,12 @@ $ git holo source fetch --all
 fetched bootstrap https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
 ```
 
+### Work upstream by checking out a holosource
+
+- Use `git holo source checkout --all` to create and initialize submodules
+- Make commits inside submodule, project with --working
+- Commit gitlink outside submodule, change all projections
+
 ### Assemble the complete source code via a holo lens
 
 - Apply sass compilation and compression via generic lenses
@@ -273,6 +279,17 @@ fetched bootstrap https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e8
 ### Build new holo lenses
 
 ## Roadmap
+
+- `* --ref` (in progress) option to use a specific ref instead of HEAD
+- `* ---no-working` (in progress) option to ignore working directory and only use ref
+- `project --watch` option to keep running and automatically update projection with changes to input
+- `project --audit` option to produce audit commits chain
+- Visual Studio Code extension
+  - Top-level hologit section with views of sources and branches
+  - Commands via context menu and command palette
+  - Ability to graphically toggle watch mode for each source
+  - Open holobranches in workspace via filesystem provider for read-only browsing of either composited or lensed content
+  - Enable writing to mounted holobranches by routing writes to estimated source via reverse-compositing, checking out submodules on-the-fly
 
 ## Reference
 
