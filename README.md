@@ -28,7 +28,7 @@ $ git commit -m "Add Bootstrap's starter template as index.html"
 
 ### Install hologit
 
-Hologit can be installed via habitat:
+Hologit can be installed via [habitat](https://www.habitat.sh/):
 
 ```console
 $ hab pkg install -b jarvus/hologit
@@ -40,7 +40,7 @@ $ hab pkg install -b jarvus/hologit
 ★ Binlinked git-holo from jarvus/hologit/0.4.1/20181224022822 to /bin/git-holo
 ```
 
-or with npm:
+or with [npm](https://www.npmjs.com/):
 
 ```console
 $ npm install -g hologit
