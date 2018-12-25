@@ -67,13 +67,9 @@ exports.handler = async function createSource ({
     source.phantom.ref = remoteRef;
 
 
-    // generate canonical source spec
-    const { ref: specRef } = await source.getSpec();
-
-
     // fetch objects
     logger.info(`fetching ${url}#${remoteRef}@${hash}`);
-    await git.fetch({ depth: 1 }, url, `+${hash}:${specRef}`);
+    await source.fetch();
     console.log(`fetched ${url}#${remoteRef}@${hash}`);
 
 
