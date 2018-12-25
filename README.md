@@ -77,7 +77,7 @@ A holobranch can be defined by creating a holobranch config file at `.holo/branc
 ```console
 $ git holo branch create --template=passthrough gh-pages
 initialized .holo/branches/gh-pages/_holo-example.toml
-$ cat cat .holo/branches/gh-pages/_holo-example.toml
+$ cat .holo/branches/gh-pages/_holo-example.toml
 [holomapping]
 files = "**"
 $ git commit -m "Initialize .holo/branches/gh-pages configuration"
