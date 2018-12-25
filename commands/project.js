@@ -52,7 +52,7 @@ exports.handler = async function project ({
 }) {
     const hab = await require('hab-client').requireVersion('>=0.62');
     const handlebars = require('handlebars');
-    const { Repo } = require('../lib');
+    const { Repo, Projection } = require('../lib');
     const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
     const shellParse = require('shell-quote-word');
@@ -67,14 +67,17 @@ exports.handler = async function project ({
     }
 
 
-    // load .holo info
+    // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
 
 
+    // instantiate projection
+    const projection = new Projection(repo.getBranch(holobranch));
+
+
     // read holobranch mappings
-    holobranch = repo.getBranch(holobranch);
-    logger.info('reading mappings from holobranch:', holobranch);
-    const mappings = await holobranch.getMappings();
+    logger.info('reading mappings from holobranch:', projection.branch);
+    const mappings = await projection.branch.getMappings();
 
 
     // group mappings by layer
@@ -258,7 +261,7 @@ exports.handler = async function project ({
 
 
         // apply lenses
-        const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), holobranch.name);
+        const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), projection.branch.name);
 
         for (const lens of sortedLenses) {
 
@@ -397,7 +400,7 @@ exports.handler = async function project ({
         const commitHash = await git.commitTree(
             {
                 p: parentHash,
-                m: commitMessage || `Projected ${holobranch.name} from ${await git.describe({ always: true, tags: true })}`
+                m: commitMessage || `Projected ${projection.branch.name} from ${await git.describe({ always: true, tags: true })}`
             },
             rootTreeHash
         );
