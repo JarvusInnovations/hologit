@@ -127,8 +127,6 @@ exports.handler = async function project ({
 
     // composite output tree
     logger.info('compositing tree...');
-    const outputTree = await repo.createTree();
-
     for (const mapping of sortedMappings) {
         const { layer, root, files, output, holosource } = await mapping.getCachedConfig();
 
@@ -142,7 +140,7 @@ exports.handler = async function project ({
         const sourceTree = await repo.createTreeFromRef(`${sourceHead}:${root == '.' ? '' : root}`);
 
         // merge source into target
-        const targetTree = output == '.' ? outputTree : await outputTree.getSubtree(output, true);
+        const targetTree = output == '.' ? projection.output : await projection.output.getSubtree(output, true);
         await targetTree.merge(sourceTree, {
             files: files
         });
@@ -152,7 +150,7 @@ exports.handler = async function project ({
     // write and output pre-lensing hash if debug enabled
     if (debug) {
         logger.info('writing output tree before lensing...');
-        const outputTreeHashBeforeLensing = await outputTree.write();
+        const outputTreeHashBeforeLensing = await projection.output.write();
         logger.info('output tree before lensing:', outputTreeHashBeforeLensing);
     }
 
@@ -269,7 +267,7 @@ exports.handler = async function project ({
             logger.info(`building input tree for lens ${lens.name} from ${lens.input.root == '.' ? '' : (path.join(lens.input.root, '.')+'/')}{${lens.input.files}}`);
 
             const lensInputTree = repo.git.createTree();
-            const lensInputRoot = lens.input.root == '.' ? outputTree : await outputTree.getSubtree(lens.input.root);
+            const lensInputRoot = lens.input.root == '.' ? projection.output : await projection.output.getSubtree(lens.input.root);
 
 
             // merge input root into tree with any filters applied
@@ -354,14 +352,14 @@ exports.handler = async function project ({
             logger.info(`merging lens output tree(${lensedTreeHash}) into /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
 
             const lensedTree = await repo.git.createTreeFromRef(lensedTreeHash);
-            const lensTargetStack = await outputTree.getSubtree(lens.output.root, true, true);
+            const lensTargetStack = await projection.output.getSubtree(lens.output.root, true, true);
             const lensTargetTree = lensTargetStack.pop();
 
             await lensTargetTree.merge(lensedTree, {
                 mode: lens.output.merge
             });
 
-            if (lensTargetTree !== outputTree && lensTargetTree.dirty) {
+            if (lensTargetTree !== projection.output && lensTargetTree.dirty) {
                 // mark parents of lens target
                 for (const parent of lensTargetStack) {
                     parent.dirty = true;
@@ -372,9 +370,9 @@ exports.handler = async function project ({
 
         // strip .holo/ from output
         logger.info('stripping .holo/ tree from output tree...');
-        outputTree.deleteChild('.holo');
+        projection.output.deleteChild('.holo');
     } else {
-        const holoTree = await outputTree.getSubtree('.holo');
+        const holoTree = await projection.output.getSubtree('.holo');
 
         for (const childName in await holoTree.getChildren()) {
             if (childName != 'lenses') {
@@ -386,7 +384,7 @@ exports.handler = async function project ({
 
     // write tree
     logger.info('writing final output tree...');
-    const rootTreeHash = await outputTree.write();
+    const rootTreeHash = await projection.output.write();
 
 
     // prepare output
