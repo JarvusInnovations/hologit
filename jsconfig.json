@@ -1,6 +1,8 @@
 {
     "compilerOptions": {
-        "target": "es6"
+        "target": "es2018",
+        "checkJs": true,
+        "noUnusedLocals": true
     },
     "exclude": [
         "node_modules",
