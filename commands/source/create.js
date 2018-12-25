@@ -17,7 +17,7 @@ exports.handler = async function createSource ({
 }) {
     const path = require('path');
     const logger = require('../../lib/logger.js');
-    const { Repo } = require('../../lib');
+    const { Repo, Source } = require('../../lib');
 
 
     // check inputs
@@ -46,7 +46,9 @@ exports.handler = async function createSource ({
 
 
     // get source interface
-    const source = repo.getSource(name, {
+    const source = new Source({
+        repo,
+        name,
         phantom: { url, ref }
     });
 
@@ -55,10 +57,6 @@ exports.handler = async function createSource ({
     if (await source.readConfig()) {
         throw new Error('holosource already configured');
     }
-
-
-    // get low-level git interface
-    const git = await repo.getGit();
 
 
     // examine remote repo/branch to discover absolute ref and current commit hash
