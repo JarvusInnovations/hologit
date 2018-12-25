@@ -167,7 +167,7 @@
             "args": [
                 "source",
                 "fetch",
-                "skeleton-v1"
+                "--all"
             ]
         }
     ]
