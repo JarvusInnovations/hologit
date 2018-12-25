@@ -1,6 +1,6 @@
 {
   "name": "hologit",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Hologit automates the projection of layered composite file trees based on flat, declarative plans",
   "repository": "https://github.com/EmergencePlatform/hologit",
   "main": "bin/cli.js",
@@ -10,7 +10,7 @@
   "dependencies": {
     "@iarna/toml": "^2.0.0",
     "fb-watchman": "^2.0.0",
-    "git-client": "^1.1.0",
+    "git-client": "^1.1.1",
     "hab-client": "^1.0.0",
     "handlebars": "^4.0.12",
     "minimatch": "^3.0.4",
@@ -27,6 +27,13 @@
   "bin": {
     "git-holo": "./bin/cli.js"
   },
+  "engines": {
+    "node": ">=8.3.0"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
   "keywords": [
     "emergence",
     "git",
