@@ -12,7 +12,7 @@ The guide will walk you through an illustrative minimal use of hologit to publis
 
 Each heading links to [branches in the hologit/examples repository](https://github.com/hologit/examples/branches/all?query=basic%2F) showing the final state of the example project at the end of the section.
 
-### [Create a repository with some minimal code](https://github.com/hologit/examples/tree/basic/01-init)
+### [Create a repository with some minimal code](https://github.com/hologit/examples/tree/basic/01-init-repo)
 
 To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/#starter-template) to create a website:
 
@@ -20,7 +20,7 @@ To start this example, we'll use [the starter template from Bootstrap's *Getting
 $ git init holo-example
 Initialized empty Git repository in /Users/chris/holo-example/.git/
 $ cd holo-example/
-$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/01-init/index.html > index.html
+$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/01-init-repo/index.html > index.html
 $ git add index.html
 $ git commit -m "Add Bootstrap's starter template as index.html"
 [master (root-commit) 9fe77ec] Add Bootstrap's starter template as index.html
@@ -51,7 +51,7 @@ $ npm install -g hologit
 updated 1 package in 1.947s
 ```
 
-### Initialize .holo/ configuration
+### [Initialize .holo/ configuration](https://github.com/hologit/examples/tree/basic/02-init-holo)
 
 Hologit configuration is stored under the `.holo/` tree at the root of a repository. Initialize it in each branch that will generate projections:
 
@@ -70,7 +70,7 @@ $ git commit -m "Initialize .holo/ configuration"
 
 To start, this configuration file only assigns a name for the code in the current source branch, which can be used later as an alternative to remote sources. The name `holo-example` was detected from the name of the repository's working tree, but could have been chosen by passing `--name ${my_project_name}` for the `init` command or just by editing the `./holo/config.toml` file later.
 
-### Define a holobranch
+### [Define a holobranch](https://github.com/hologit/examples/tree/basic/03-create-holobranch)
 
 A holobranch can be defined by creating a holobranch config file at `.holo/branches/${my_holobranch_name}.toml` or any number of holomapping config files within `.holo/branches/${my_holobranch_name}/**.toml`. Generate a minimal "passthrough" holobranch that will copy all files from the current source branch:
 
@@ -177,7 +177,7 @@ committer Chris Alfano <chris@jarv.us> 1545616786 -0500
 Projected gh-pages from 4b9aa68
 ```
 
-### Merge external code via a holosource
+### [Merge external code via a holosource](https://github.com/hologit/examples/tree/basic/04-create-holosource)
 
 The first step to using external code in your projections is defining a holosource:
 
