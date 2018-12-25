@@ -17,7 +17,7 @@ exports.handler = async function createSource ({
 }) {
     const path = require('path');
     const logger = require('../../lib/logger.js');
-    const { Repo, Source } = require('../../lib');
+    const { Repo } = require('../../lib');
 
 
     // check inputs
@@ -46,7 +46,9 @@ exports.handler = async function createSource ({
 
 
     // get source interface
-    const source = repo.getSource(name);
+    const source = repo.getSource(name, {
+        phantom: { url, ref }
+    });
 
 
     // read source config
@@ -61,36 +63,21 @@ exports.handler = async function createSource ({
 
     // examine remote repo/branch to discover absolute ref and current commit hash
     logger.info(`listing ${url}#${ref}`);
-    const lsRemoteOutput = await git.lsRemote({ symref: true }, url, ref);
-    const match = lsRemoteOutput.match(/^(ref: (refs\/heads\/\S+)\tHEAD\n)?([0-9a-f]{40})\t(\S+)$/m);
-
-    if (!match) {
-        throw new Error(`could not find remote ref for ${ref}`);
-    }
-
-    const hash = match[3];
-    const remoteRef = match[2] || match[4];
-
-
-    // initialize source config
-    const sourceConfig = {
-        url,
-        ref: remoteRef
-    };
+    const { hash, ref: remoteRef } = await source.queryRef();
+    source.phantom.ref = remoteRef;
 
 
     // generate canonical source spec
-    const spec = await Source.buildSpec(repo, sourceConfig);
+    const { ref: specRef } = await source.getSpec();
 
 
     // fetch objects
-    const localRef = `refs/holo/sources/${spec.hash}`;
     logger.info(`fetching ${url}#${remoteRef}@${hash}`);
-    await git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
+    await git.fetch({ depth: 1 }, url, `+${hash}:${specRef}`);
     console.log(`fetched ${url}#${remoteRef}@${hash}`);
 
 
     // write config
-    await source.writeConfig(sourceConfig);
+    await source.writeConfig();
     console.log(`initialized ${source.getConfigPath()}`);
 };
