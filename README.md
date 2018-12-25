@@ -258,15 +258,26 @@ $ git holo source fetch --all
 fetched bootstrap https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
 ```
 
-### Work upstream by checking out a holosource
-
-- Use `git holo source checkout --all` to create and initialize submodules
-- Make commits inside submodule, project with --working
-- Commit gitlink outside submodule, change all projections
-
 ### Assemble the complete source code via a holo lens
 
 - Apply sass compilation and compression via generic lenses
+
+### Work upstream by checking out a holosource
+
+To work on changes to code being pulled in from remote repositories, any or all sources can be checkout out as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
+
+```console
+$ git holo source checkout --all
+checked out .holo/sources/bootstrap from https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e9474
+$ git commit -m "Initialize .holo/sources/bootstrap submodule"
+[basic/05-checkout-holosource ee39b88] Initialize .holo/sources/bootstrap submodule
+ 2 files changed, 5 insertions(+)
+ create mode 100644 .gitmodules
+ create mode 160000 .holo/sources/bootstrap
+```
+
+- Make commits inside submodule, project with --working
+- Commit gitlink outside submodule, change all projections
 
 ### Make use of a projected tree
 
