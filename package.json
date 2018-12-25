@@ -27,6 +27,13 @@
   "bin": {
     "git-holo": "./bin/cli.js"
   },
+  "engines": {
+    "node": ">=8.3.0"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
   "keywords": [
     "emergence",
     "git",
