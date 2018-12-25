@@ -32,6 +32,6 @@ exports.handler = async function fetch ({ name, all }) {
     for (const source of sources) {
         const hash = await source.fetch();
         const { url, ref } = await source.getCachedConfig();
-        console.log(`fetched${all?` ${source.name}`:''} ${url}#${ref}@${hash}`);
+        console.log(`fetched${all?` ${source.name}`:''} ${url}#${ref}@${hash.substr(0, 8)}`);
     }
 };
