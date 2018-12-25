@@ -107,6 +107,25 @@
                     "endsPattern": "^\\s*Debugger listening on ws"
                 }
             }
-        }
+        },
+        {
+            "identifier": "debug-context shell",
+            "label": "launch debug-context shell",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder:hologit-debug-context}",
+                "env": {
+                    "PATH": "${workspaceFolder:hologit-debug-context}/.git/bin:${env:PATH}"
+                }
+            },
+            "command": "mkdir -p .git/bin; echo -e '#!/bin/bash\n\nexec /usr/local/bin/node ${workspaceFolder:hologit}/bin/cli.js $@' > .git/bin/git-holo; chmod +x .git/bin/git-holo; /bin/bash",
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "echo": false
+            },
+            "problemMatcher": []
+        },
     ]
 }

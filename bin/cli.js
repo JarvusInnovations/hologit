@@ -21,11 +21,13 @@ require('yargs')
     .version(require('../package.json').version)
     .option('d', {
         alias: 'debug',
+        type: 'boolean',
         default: false,
         global: true
     })
     .option('q', {
         alias: 'quiet',
+        type: 'boolean',
         default: false,
         global: true
     })

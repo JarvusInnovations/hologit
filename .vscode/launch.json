@@ -147,7 +147,7 @@
             "args": [
                 "source",
                 "checkout",
-                "skeleton-v1"
+                "--all"
             ]
         },
         {

@@ -10,7 +10,9 @@
 
 The guide will walk you through an illustrative minimal use of hologit to publish a GitHub Pages branch.
 
-### Create a repository with some minimal code
+Each heading links to [branches in the hologit/examples repository](https://github.com/hologit/examples/branches/all?query=basic%2F) showing the final state of the example project at the end of the section.
+
+### Create a repository with some minimal code [\[example branch\]](https://github.com/hologit/examples/tree/basic/01-init-repo)
 
 To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/#starter-template) to create a website:
 
@@ -18,7 +20,7 @@ To start this example, we'll use [the starter template from Bootstrap's *Getting
 $ git init holo-example
 Initialized empty Git repository in /Users/chris/holo-example/.git/
 $ cd holo-example/
-$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/index.html > index.html
+$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/01-init-repo/index.html > index.html
 $ git add index.html
 $ git commit -m "Add Bootstrap's starter template as index.html"
 [master (root-commit) 9fe77ec] Add Bootstrap's starter template as index.html
@@ -49,7 +51,7 @@ $ npm install -g hologit
 updated 1 package in 1.947s
 ```
 
-### Initialize .holo/ configuration
+### Initialize .holo/ configuration [\[example branch\]](https://github.com/hologit/examples/tree/basic/02-init-holo)
 
 Hologit configuration is stored under the `.holo/` tree at the root of a repository. Initialize it in each branch that will generate projections:
 
@@ -68,7 +70,7 @@ $ git commit -m "Initialize .holo/ configuration"
 
 To start, this configuration file only assigns a name for the code in the current source branch, which can be used later as an alternative to remote sources. The name `holo-example` was detected from the name of the repository's working tree, but could have been chosen by passing `--name ${my_project_name}` for the `init` command or just by editing the `./holo/config.toml` file later.
 
-### Define a holobranch
+### Define a holobranch [\[example branch\]](https://github.com/hologit/examples/tree/basic/03-create-holobranch)
 
 A holobranch can be defined by creating a holobranch config file at `.holo/branches/${my_holobranch_name}.toml` or any number of holomapping config files within `.holo/branches/${my_holobranch_name}/**.toml`. Generate a minimal "passthrough" holobranch that will copy all files from the current source branch:
 
@@ -175,7 +177,7 @@ committer Chris Alfano <chris@jarv.us> 1545616786 -0500
 Projected gh-pages from 4b9aa68
 ```
 
-### Merge external code via a holosource
+### Merge external code via a holosource [\[example branch\]](https://github.com/hologit/examples/tree/basic/04-create-holosource)
 
 The first step to using external code in your projections is defining a holosource:
 
@@ -189,7 +191,6 @@ $ cat .holo/sources/bootstrap.toml
 [holosource]
 url = "https://github.com/twbs/bootstrap"
 ref = "refs/tags/v4.2.1"
-
 $ git commit -m "Initialize .holo/sources/bootstrap configuration"
 [master 64ef9fc] Initialize .holo/sources/bootstrap configuration
  1 file changed, 3 insertions(+)
@@ -250,9 +251,33 @@ $ tree .holo/branches/gh-pages
     └── _bootstrap.toml
 ```
 
+Before projecting again, you might want to update all remote sources to their latest commits:
+
+```console
+$ git holo source fetch --all
+fetched bootstrap https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
+```
+
 ### Assemble the complete source code via a holo lens
 
 - Apply sass compilation and compression via generic lenses
+
+### Work upstream by checking out a holosource
+
+To work on changes to code being pulled in from remote repositories, any or all sources can be checkout out as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
+
+```console
+$ git holo source checkout --all
+checked out .holo/sources/bootstrap from https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e9474
+$ git commit -m "Initialize .holo/sources/bootstrap submodule"
+[basic/05-checkout-holosource ee39b88] Initialize .holo/sources/bootstrap submodule
+ 2 files changed, 5 insertions(+)
+ create mode 100644 .gitmodules
+ create mode 160000 .holo/sources/bootstrap
+```
+
+- Make commits inside submodule, project with --working
+- Commit gitlink outside submodule, change all projections
 
 ### Make use of a projected tree
 
@@ -267,6 +292,17 @@ $ tree .holo/branches/gh-pages
 ### Build new holo lenses
 
 ## Roadmap
+
+- `* --ref` (in progress) option to use a specific ref instead of HEAD
+- `* ---no-working` (in progress) option to ignore working directory and only use ref
+- `project --watch` option to keep running and automatically update projection with changes to input
+- `project --audit` option to produce audit commits chain
+- Visual Studio Code extension
+  - Top-level hologit section with views of sources and branches
+  - Commands via context menu and command palette
+  - Ability to graphically toggle watch mode for each source
+  - Open holobranches in workspace via filesystem provider for read-only browsing of either composited or lensed content
+  - Enable writing to mounted holobranches by routing writes to estimated source via reverse-compositing, checking out submodules on-the-fly
 
 ## Reference
 
