@@ -1,88 +1,77 @@
-const logger = require('../../lib/logger.js');
-
-exports.command = 'create <name> <url>';
-exports.desc = 'Create a holosource named <name> for repo at url <url>';
+exports.command = 'create <url>';
+exports.desc = 'Create a holosource for repo at url <url>';
 exports.builder = {
-    branch: {
-        describe: 'Name of branch to track in holosource repository',
+    name: {
+        describe: 'Name for the holosource'
+    },
+    ref: {
+        describe: 'Name of ref to track in holosource repository',
         default: 'HEAD'
     }
 };
 
-exports.handler = async function addSource ({ name, url, branch }) {
-    const hololib = require('../../lib');
-    const fs = require('mz/fs');
-    const TOML = require('@iarna/toml');
+exports.handler = async function createSource ({
+    url,
+    name = null,
+    ref = null
+}) {
+    const path = require('path');
+    const logger = require('../../lib/logger.js');
+    const { Repo, Source } = require('../../lib');
 
 
     // check inputs
-    if (!name) {
-        throw new Error('name required');
-    }
-
     if (!url) {
         throw new Error('url required');
     }
 
 
-    // load .holo info
-    const repo = await hololib.getRepo();
+    // get repo interface
+    const repo = await Repo.getFromEnvironment({ working: true });
+    logger.debug('instantiated repository:', repo);
 
 
-    // locate key paths
-    const sourcesDir = `${repo.holoDir}/sources`;
-    const configFile = `${sourcesDir}/${name}.toml`;
-    const workTree = `${sourcesDir}/${name}`;
+    // generate source name if not specified
+    if (!name) {
+        logger.debug('computing name from url:', url);
+        const nameStack = url.split(path.sep);
+        name = nameStack.pop();
 
-
-    // check that nothing conflicting already exists
-    if (await fs.exists(configFile)) {
-        throw new Error(`source config path already exists: ${configFile}`);
+        if (name == '.git') {
+            name = nameStack.pop();
+        } else if (name.substr(-4) == '.git') {
+            name = name.substr(0, name.length - 4);
+        }
     }
 
-    if (await fs.exists(workTree)) {
-        throw new Error(`${workTree} already exists`);
+
+    // get source interface
+    const source = new Source({
+        repo,
+        name,
+        phantom: { url, ref }
+    });
+
+
+    // read source config
+    if (await source.readConfig()) {
+        throw new Error('holosource already configured');
     }
 
 
-    // examine remote repo/branch
-    logger.info(`listing ${url}#${branch}`);
-    const lsRemoteOutput = await repo.git.lsRemote({ symref: true }, url, branch);
-    const match = lsRemoteOutput.match(/^(ref: (refs\/heads\/\S+)\tHEAD\n)?([0-9a-f]{40})\t(\S+)$/m);
-
-    if (!match) {
-        throw new Error(`could not find remote ref for ${branch}`);
-    }
-
-    const hash = match[3];
-    const remoteRef = match[2] || match[4];
-    const localRef = `refs/holo/sources/${name}/${remoteRef.substr(5)}`;
+    // examine remote repo/branch to discover absolute ref and current commit hash
+    logger.info(`listing ${url}#${ref}`);
+    const { hash, ref: remoteRef } = await source.queryRef();
+    source.phantom.ref = remoteRef;
 
 
     // fetch objects
-    logger.info(`fetching ${remoteRef} ${hash}`);
-    await repo.git.fetch({ depth: 1 }, url, `+${hash}:${localRef}`);
+    logger.info(`fetching ${url}#${remoteRef}@${hash}`);
+    await source.fetch();
+    console.log(`fetched ${url}#${remoteRef}@${hash}`);
 
 
     // write config
-    if (!await fs.exists(sourcesDir)) {
-        logger.debug(`creating ${sourcesDir}`);
-        await fs.mkdir(sourcesDir);
-    }
-
-    logger.info(`writing ${configFile}`);
-    await fs.writeFile(configFile, TOML.stringify({ holosource: { url, ref: remoteRef } }));
-
-
-    // initialize repository
-    await hololib.initSource(name);
-
-
-    // add to index
-    logger.info(`staging source @ ${hash}`);
-    await repo.git.add(configFile);
-    await repo.git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
-
-
-    logger.info(`added source ${name} from ${url}`);
+    await source.writeConfig();
+    console.log(`initialized ${source.getConfigPath()}`);
 };

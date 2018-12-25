@@ -117,7 +117,7 @@
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "add source",
+            "name": "source create",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": "1"
@@ -126,9 +126,8 @@
             "program": "${workspaceFolder}/bin/cli.js",
             "args": [
                 "source",
-                "add",
-                "skeleton-v1",
-                "https://github.com/JarvusInnovations/emergence-skeleton.git"
+                "create",
+                "https://github.com/twbs/bootstrap"
             ]
         },
         {
@@ -168,7 +167,7 @@
             "args": [
                 "source",
                 "fetch",
-                "skeleton-v1"
+                "--all"
             ]
         }
     ]

@@ -28,23 +28,25 @@ $ git commit -m "Add Bootstrap's starter template as index.html"
 
 ### Install hologit
 
-Hologit can be installed via habitat:
+Hologit can be installed via [habitat](https://www.habitat.sh/):
 
 ```console
 $ hab pkg install -b jarvus/hologit
 » Installing jarvus/hologit
 ☁ Determining latest version of jarvus/hologit in the 'stable' channel
-→ Using jarvus/hologit/0.3.0/20181015020008
-★ Install of jarvus/hologit/0.3.0/20181015020008 complete with 0 new packages installed.
-» Binlinking git-holo from jarvus/hologit/0.3.0/20181015020008 into /bin
-★ Binlinked git-holo from jarvus/hologit/0.3.0/20181015020008 to /bin/git-holo
+→ Using jarvus/hologit/0.4.1/20181224022822
+★ Install of jarvus/hologit/0.4.1/20181224022822 complete with 0 new packages installed.
+» Binlinking git-holo from jarvus/hologit/0.4.1/20181224022822 into /bin
+★ Binlinked git-holo from jarvus/hologit/0.4.1/20181224022822 to /bin/git-holo
 ```
 
-or with npm:
+or with [npm](https://www.npmjs.com/):
 
 ```console
 $ npm install -g hologit
-# coming soon
+/usr/local/bin/git-holo -> /usr/local/lib/node_modules/hologit/bin/cli.js
++ hologit@0.4.1
+updated 1 package in 1.947s
 ```
 
 ### Initialize .holo/ configuration
@@ -175,7 +177,78 @@ Projected gh-pages from 4b9aa68
 
 ### Merge external code via a holosource
 
-- Pull bootstrap and jquery sources
+The first step to using external code in your projections is defining a holosource:
+
+```console
+$ git holo source create https://github.com/twbs/bootstrap --ref=v4.2.1
+info: listing https://github.com/twbs/bootstrap#v4.2.1
+info: fetching https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e94747bd698f4f61d48ed54c9c6d4d199bd32
+fetched https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e94747bd698f4f61d48ed54c9c6d4d199bd32
+initialized .holo/sources/bootstrap.toml
+$ cat .holo/sources/bootstrap.toml
+[holosource]
+url = "https://github.com/twbs/bootstrap"
+ref = "refs/tags/v4.2.1"
+
+$ git commit -m "Initialize .holo/sources/bootstrap configuration"
+[master 64ef9fc] Initialize .holo/sources/bootstrap configuration
+ 1 file changed, 3 insertions(+)
+ create mode 100644 .holo/sources/bootstrap.toml
+```
+
+Now this source can be referenced in holobranch mappings, this example takes advantage of the holosource being automatically set from the mapping filename:
+
+```console
+$ mkdir .holo/branches/gh-pages/{js,css}
+$ cat > .holo/branches/gh-pages/css/_bootstrap.toml <<- END_OF_TOML
+[holomapping]
+root = "dist/css"
+files = "*.min.css"
+END_OF_TOML
+$ cat > .holo/branches/gh-pages/js/_bootstrap.toml <<- END_OF_TOML
+[holomapping]
+root = "dist/js"
+files = "*.min.js"
+END_OF_TOML
+$ git add --all
+$ git commit -am "Add css and js mappings for bootstrap to gh-pages holobranch"
+[master 4180e45] Add css and js mappings for bootstrap to gh-pages holobranch
+ 2 files changed, 6 insertions(+)
+ create mode 100644 .holo/branches/gh-pages/css/_bootstrap.toml
+ create mode 100644 .holo/branches/gh-pages/js/_bootstrap.toml
+```
+
+Projecting the `gh-pages` tree now shows the files merged from bootstrap:
+
+```console
+$ git ls-tree -r $(git holo project gh-pages)
+info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
+info: compositing tree...
+info: merging holo-example:{**} -> /
+info: merging bootstrap:dist/css/{*.min.css} -> /css/
+info: merging bootstrap:dist/js/{*.min.js} -> /js/
+info: stripping .holo/ tree from output tree...
+info: writing final output tree...
+info: projection ready:
+100644 blob b3e6881a586c99b55e2d1878839eede6fb3fa9d7    css/bootstrap-grid.min.css
+100644 blob 0668a8cd93bba140c00bc0c410ad54c61af71d9e    css/bootstrap-reboot.min.css
+100644 blob e6b4977799e3a3a377e475ee765eb4a9961c6c71    css/bootstrap.min.css
+100644 blob 8092fa2adb4a9a395ac291fbdc9717b68be669aa    index.html
+100644 blob 97f14c05c3d5960129caf3e4666f661dfdb8228a    js/bootstrap.bundle.min.js
+100644 blob 9df6b6c2ced14a60259171e1fdacc2534ddee183    js/bootstrap.min.js
+```
+
+For reference, here is what the holobranch definition that projected this tree looks like at this point:
+
+```console
+$ tree .holo/branches/gh-pages
+.holo/branches/gh-pages
+├── _holo-example.toml
+├── css
+│   └── _bootstrap.toml
+└── js
+    └── _bootstrap.toml
+```
 
 ### Assemble the complete source code via a holo lens
 
