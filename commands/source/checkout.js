@@ -1,68 +1,37 @@
-const logger = require('../../lib/logger.js');
-
-exports.command = 'checkout <name>';
-exports.desc = 'Check out working tree for a source';
+exports.command = 'checkout [name]';
+exports.desc = 'Check out submodule for source named <name> or --all sources';
 exports.builder = {
     all: {
-        describe: 'COMING SOON: Check out working trees for all defined sources'
+        describe: 'Check out submodules for all defined sources',
+        type: 'boolean',
+        default: false
     }
 };
 
-exports.handler = async function checkoutSource ({ name }) {
-    const hololib = require('../../lib');
-    const fs = require('mz/fs');
+exports.handler = async function checkoutSource ({ name, all }) {
+    const logger = require('../../lib/logger.js');
+    const { Repo } = require('../../lib');
 
 
     // check inputs
-    if (!name) {
-        throw new Error('name required');
+    if (!name && !all) {
+        throw new Error('[name] or --all must be provided');
     }
 
 
-    // load .holo info
-    const repo = await hololib.getRepo();
-    const source = await repo.getSource(name);
+    // get repo interface
+    const repo = await Repo.getFromEnvironment({ working: true });
+    logger.debug('instantiated repository:', repo);
 
 
-    // initialize repo if needed
-    if (!source.git) {
-        await source.init();
+    // get source(s)
+    const sources = all ? (await repo.getSources()).values() : [await repo.getSource(name)];
+
+
+    // execute fetch
+    for (const source of sources) {
+        const result = await source.checkoutSubmodule();
+        console.log(`checked out ${result.path} from ${result.url}#${result.branch||result.ref}@${result.head.substr(0, 8)}`);
     }
 
-
-    // prepare checkout options
-    const checkoutOptions = {};
-
-    const branch = source.getBranch();
-    if (branch) {
-        checkoutOptions.B = branch;
-    }
-
-    // // add to index
-    // logger.info(`staging source @ ${hash}`);
-    // await repo.git.add(configFile);
-    // await repo.git.updateIndex({ add: true, cacheinfo: true }, `160000,${hash},.holo/sources/${name}`);
-
-
-    // checkout HEAD
-    logger.info(`checking out ${source.head}` + (branch ? ` to ${branch}` : ''));
-    const checkoutOutput = await source.git.checkout(checkoutOptions, source.head);
-
-    if (checkoutOutput) {
-        logger.info(checkoutOutput);
-    }
-
-
-    // mark shallow if parent isn't reachable
-    try {
-        await source.git.catFile({ t: true }, 'HEAD^1');
-    } catch (err) {
-        logger.info(`marking source as shallow`);
-        await fs.writeFile(`${await source.git.getGitDir()}/shallow`, source.head);
-    }
-
-
-    // configure submodule
-    const sourcePath = `.holo/sources/${name}`;
-    repo.git.config({ file: `${repo.workTree}/.gitmodules` }, `submodule.${sourcePath}.path`, sourcePath);
 };
