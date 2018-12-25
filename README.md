@@ -10,7 +10,9 @@
 
 The guide will walk you through an illustrative minimal use of hologit to publish a GitHub Pages branch.
 
-### Create a repository with some minimal code
+Each heading links to [branches in the hologit/examples repository](https://github.com/hologit/examples/branches/all?query=basic%2F) showing the final state of the example project at the end of the section.
+
+### [Create a repository with some minimal code](https://github.com/hologit/examples/tree/basic/01-init)
 
 To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/#starter-template) to create a website:
 
