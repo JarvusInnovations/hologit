@@ -189,7 +189,6 @@ $ cat .holo/sources/bootstrap.toml
 [holosource]
 url = "https://github.com/twbs/bootstrap"
 ref = "refs/tags/v4.2.1"
-
 $ git commit -m "Initialize .holo/sources/bootstrap configuration"
 [master 64ef9fc] Initialize .holo/sources/bootstrap configuration
  1 file changed, 3 insertions(+)
