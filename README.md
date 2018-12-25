@@ -249,6 +249,13 @@ $ tree .holo/branches/gh-pages
     └── _bootstrap.toml
 ```
 
+Before projecting again, you might want to update all remote sources to their latest commits:
+
+```console
+$ git holo source fetch --all
+fetched bootstrap https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
+```
+
 ### Assemble the complete source code via a holo lens
 
 - Apply sass compilation and compression via generic lenses
