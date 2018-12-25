@@ -121,7 +121,7 @@ $ git ls-tree -r ff954bb0a1e4878db424cb1033a0c356dac8d350
 100644 blob 8092fa2adb4a9a395ac291fbdc9717b68be669aa    index.html
 ```
 
-The output of the `project` command seen above is the git hash of a **tree** object that has been generated, if needed, within your git repository's object database. This hash *does not* reference a commit object like most git hashes most commonly seen. A tree object is the main ingrediant of a commit obect: the tree represents a complete unique state of all the files and a commit attaches the tree to a point in your chain of commits with timestamp and authorship information.
+The output of the `project` command seen above is the git hash of a [**tree** object](https://git-scm.com/book/en/v2/Git-Internals-Git-Objects) that has been generated, if needed, within your git repository's object database. This hash *does not* reference a commit object like most git hashes most commonly seen. A tree object is the main ingrediant of a commit obect: the tree represents a complete unique state of all the files and a commit attaches the tree to a point in your chain of commits with timestamp and authorship information.
 
 A tree can be used directly:
 
