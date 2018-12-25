@@ -17,7 +17,7 @@ exports.builder = {
         default: 'HEAD'
     },
     'working': {
-        decribe: 'Set to use the (possibly uncommited) contents of the working tree',
+        describe: 'Set to use the (possibly uncommited) contents of the working tree',
         type: 'boolean',
         default: false
     }
