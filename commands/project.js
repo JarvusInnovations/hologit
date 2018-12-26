@@ -208,9 +208,11 @@ exports.handler = async function project ({
     } else {
         const holoTree = await projection.output.getSubtree('.holo');
 
-        for (const childName in await holoTree.getChildren()) {
-            if (childName != 'lenses') {
-                holoTree.deleteChild(childName);
+        if (holoTree) {
+            for (const childName in await holoTree.getChildren()) {
+                if (childName != 'lenses') {
+                    holoTree.deleteChild(childName);
+                }
             }
         }
     }
