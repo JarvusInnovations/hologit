@@ -188,6 +188,27 @@
                 "studio",
                 "--socket=${workspaceFolder:hologit-debug-context}/.git/holo/studio.sock"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "lens exec",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                "DEBUG": "1",
+                "HOLO_SCRATCH": "/tmp/holoscratch"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
+            "args": [
+                "lens",
+                "exec",
+                "252c773d9f7023624618f9c312e5117af8bd69b1"
+            ]
         }
     ]
 }
