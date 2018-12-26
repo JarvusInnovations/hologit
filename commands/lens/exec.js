@@ -56,8 +56,12 @@ exports.handler = async function exportTree ({
     await mkdirp(scratchPath);
 
 
-    // compile and execute command
+    // install lens package
     const hab = await Studio.getHab();
+    await hab.pkg('install', spec.package);
+
+
+    // compile and execute command
     const command = handlebars.compile(spec.command)(spec);
     const env = Object.assign(
         squish({
