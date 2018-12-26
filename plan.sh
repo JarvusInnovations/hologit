@@ -11,6 +11,7 @@ pkg_build_deps=(
 pkg_deps=(
   core/git
   core/node
+  core/hab
 )
 
 pkg_bin_dirs=(bin)

@@ -18,6 +18,7 @@ exports.handler = async function exportTree ({
     refresh=false,
     save=true
 }) {
+    const logger = require('../../lib/logger.js');
     const { Repo, SpecObject, Studio } = require('../../lib');
     const TOML = require('@iarna/toml');
     const handlebars = require('handlebars');
@@ -58,23 +59,26 @@ exports.handler = async function exportTree ({
     // compile and execute command
     const hab = await Studio.getHab();
     const command = handlebars.compile(spec.command)(spec);
+    const env = Object.assign(
+        squish({
+            hololens: { ...spec, spec: specHash }
+        }, { seperator: '_', modifyKey: 'uppercase' }),
+        {
+            GIT_DIR: repo.gitDir,
+            GIT_WORK_TREE: scratchPath,
+            GIT_INDEX_FILE: `${scratchPath}.index`
+        }
+    );
 
+    logger.info('preparing environment', env);
     const lensedTreeHash = await hab.pkg('exec', spec.package, ...shellParse(command), {
-        $env: Object.assign(
-            squish({
-                hololens: { ...spec, spec: specHash }
-            }, { seperator: '_', modifyKey: 'uppercase' }),
-            {
-                GIT_DIR: repo.gitDir,
-                GIT_WORK_TREE: scratchPath,
-                GIT_INDEX_FILE: `${scratchPath}.index`
-            }
-        )
+        $env: env
     });
 
-    debugger;
 
-    if (!repo.git.isHash(lensedTreeHash)) {
+    if (!git.isHash(lensedTreeHash)) {
         throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
     }
+
+    console.log(lensedTreeHash);
 };

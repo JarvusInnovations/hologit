@@ -12,6 +12,10 @@ pkg_deps=(
   jarvus/hologit
 )
 
+pkg_exports=(
+  [debug.port]=debug.port
+)
+pkg_exposes=(debug.port)
 pkg_svc_run="git-holo studio --socket ${pkg_svc_var_path}/studio.sock"
 
 

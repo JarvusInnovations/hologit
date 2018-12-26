@@ -193,20 +193,13 @@ exports.handler = async function project ({
             // apply lense output to main output tree
             logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
 
-            const lensedTree = await repo.git.createTreeFromRef(outputTreeHash);
+            const lensedTree = await repo.createTreeFromRef(outputTreeHash);
             const lensTargetStack = await projection.output.getSubtree(outputRoot, true, true);
             const lensTargetTree = lensTargetStack.pop();
 
             await lensTargetTree.merge(lensedTree, {
                 mode: outputMerge
             });
-
-            if (lensTargetTree !== projection.output && lensTargetTree.dirty) {
-                // mark parents of lens target
-                for (const parent of lensTargetStack) {
-                    parent.dirty = true;
-                }
-            }
         }
 
 
