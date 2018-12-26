@@ -34,11 +34,13 @@ exports.handler = async function exportTree ({
 
     // check for existing build
     const specRef = SpecObject.buildRef('lens', specHash);
-    const existingBuildHash = await repo.resolveRef(specRef);
+    if (!refresh) {
+        const existingBuildHash = await repo.resolveRef(specRef);
 
-    if (existingBuildHash) {
-        console.log(existingBuildHash);
-        return;
+        if (existingBuildHash) {
+            console.log(existingBuildHash);
+            return;
+        }
     }
 
 
@@ -84,5 +86,13 @@ exports.handler = async function exportTree ({
         throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
     }
 
+
+    // save ref to accelerate next projection
+    if (save) {
+        await git.updateRef(specRef, lensedTreeHash);
+    }
+
+
+    // output tree hash
     console.log(lensedTreeHash);
 };
