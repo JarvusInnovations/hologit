@@ -1,5 +1,3 @@
-const logger = require('../lib/logger.js');
-
 exports.command = 'init';
 exports.desc = 'Initialize hologit for current repository';
 exports.builder = {
@@ -9,6 +7,7 @@ exports.builder = {
 };
 
 exports.handler = async function init ({ name = null }) {
+    const logger = require('../lib/logger.js');
     const { Repo } = require('../lib');
     const path = require('path');
 

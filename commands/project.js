@@ -1,5 +1,3 @@
-const logger = require('../lib/logger.js');
-
 exports.command = 'project <holobranch>';
 exports.desc = 'Projects holobranch named <holobranch> and outputs resulting tree hash';
 
@@ -17,9 +15,14 @@ exports.builder = {
         default: 'HEAD'
     },
     'working': {
-        decribe: 'Set to use the (possibly uncommited) contents of the working tree',
+        describe: 'Set to use the (possibly uncommited) contents of the working tree',
         type: 'boolean',
         default: false
+    },
+    'lens': {
+        describe: 'Whether to apply lensing to the composite tree',
+        type: 'boolean',
+        default: true
     }
 };
 
@@ -39,14 +42,15 @@ exports.builder = {
 exports.handler = async function project ({
     holobranch,
     ref = 'HEAD',
+    lens = true,
     working = false,
     debug = false,
     commitBranch = null,
     commitMessage = null
 }) {
-    const hab = await require('hab-client').requireVersion('>=0.62');
+    const logger = require('../lib/logger.js');
     const handlebars = require('handlebars');
-    const { Repo } = require('../lib');
+    const { Repo, Projection } = require('../lib');
     const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
     const shellParse = require('shell-quote-word');
@@ -61,14 +65,17 @@ exports.handler = async function project ({
     }
 
 
-    // load .holo info
+    // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
 
 
+    // instantiate projection
+    const projection = new Projection(repo.getBranch(holobranch));
+
+
     // read holobranch mappings
-    holobranch = repo.getBranch(holobranch);
-    logger.info('reading mappings from holobranch:', holobranch);
-    const mappings = await holobranch.getMappings();
+    logger.info('reading mappings from holobranch:', projection.branch);
+    const mappings = await projection.branch.getMappings();
 
 
     // group mappings by layer
@@ -118,8 +125,6 @@ exports.handler = async function project ({
 
     // composite output tree
     logger.info('compositing tree...');
-    const outputTree = await repo.createTree();
-
     for (const mapping of sortedMappings) {
         const { layer, root, files, output, holosource } = await mapping.getCachedConfig();
 
@@ -133,7 +138,7 @@ exports.handler = async function project ({
         const sourceTree = await repo.createTreeFromRef(`${sourceHead}:${root == '.' ? '' : root}`);
 
         // merge source into target
-        const targetTree = output == '.' ? outputTree : await outputTree.getSubtree(output, true);
+        const targetTree = output == '.' ? projection.output : await projection.output.getSubtree(output, true);
         await targetTree.merge(sourceTree, {
             files: files
         });
@@ -143,230 +148,78 @@ exports.handler = async function project ({
     // write and output pre-lensing hash if debug enabled
     if (debug) {
         logger.info('writing output tree before lensing...');
-        const outputTreeHashBeforeLensing = await outputTree.write();
+        const outputTreeHashBeforeLensing = await projection.output.write();
         logger.info('output tree before lensing:', outputTreeHashBeforeLensing);
     }
 
-    // read lens tree from output
-    const lensFiles = {};
-    const holoTree = await outputTree.getSubtree('.holo');
 
-    if (holoTree) {
-        const lensesTree = await holoTree.getSubtree('lenses');
+    if (lens) {
+        // read lenses
+        const lenses = await projection.getLenses();
 
-        if (lensesTree) {
-            const lensesTreeChildren = await lensesTree.getChildren();
 
-            for (const lensName in lensesTreeChildren) {
-                lensFiles[lensName] = lensesTreeChildren[lensName];
+        // apply lenses
+        const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), projection.branch.name);
+
+        for (const lens of lenses) {
+            const {
+                input: {
+                    root: inputRoot,
+                    files: inputFiles
+                },
+                output: {
+                    root: outputRoot,
+                    merge: outputMerge
+                }
+            } = await lens.getCachedConfig();
+
+            // build tree of matching files to input to lens
+            logger.info(`building input tree for lens ${lens.name} from ${inputRoot == '.' ? '' : (path.join(inputRoot, '.')+'/')}{${inputFiles}}`);
+            const { hash: specHash, ref: specRef } = await lens.buildSpec(await lens.buildInputTree());
+
+
+            // check for existing output tree
+            let outputTreeHash = await repo.resolveRef(`${specRef}^{tree}`);
+
+
+            // apply lens if existing tree not found
+            if (outputTreeHash) {
+                logger.info(`found existing output tree matching holospec(${specHash})`);
+            } else {
+                outputTreeHash = await lens.execute(specHash);
             }
 
-            holoTree.deleteChild('lenses');
-        }
-    }
 
+            // apply lense output to main output tree
+            logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
 
-    // read lenses
-    const lenses = [];
-    const lensesByName = {};
-    const lensNameFromPathRe = /^([^\/]+)\.toml$/;
+            const lensedTree = await repo.createTreeFromRef(outputTreeHash);
+            const lensTargetStack = await projection.output.getSubtree(outputRoot, true, true);
+            const lensTargetTree = lensTargetStack.pop();
 
-    for (const lensPath in lensFiles) {
-        const lensFile = lensFiles[lensPath];
-
-        if (!lensFile || !lensFile.isBlob) {
-            continue;
-        }
-
-        // TODO: use a Configurable class to instantiate and load
-        const name = lensPath.replace(lensNameFromPathRe, '$1');
-        const config = TOML.parse(await repo.git.catFile({ p: true }, lensFile.hash));
-
-        if (!config.hololens || !config.hololens.package) {
-            throw new Error(`lens config missing hololens.package: ${lensPath}`);
-        }
-
-        if (!config.input || !config.input.files) {
-            throw new Error(`lens config missing input.files: ${lensPath}`);
-        }
-
-
-        // parse and normalize lens config
-        const hololens = config.hololens;
-        hololens.package = hololens.package;
-        hololens.command = hololens.command || 'lens-tree {{ input }}';
-
-
-        // parse and normalize input config
-        const input = {};
-        input.files = typeof config.input.files == 'string' ? [config.input.files] : config.input.files;
-        input.root = config.input.root || '.';
-
-        if (config.input.before) {
-            input.before =
-                typeof config.input.before == 'string'
-                    ? [config.input.before]
-                    : config.input.before;
-        }
-
-        if (config.input.after) {
-            input.after =
-                typeof config.input.after == 'string'
-                    ? [config.input.after]
-                    : config.input.after;
-        }
-
-
-        // parse and normalize output config
-        const output = {};
-        output.root = config.output && config.output.root || input.root;
-        output.merge = config.output && config.output.merge || 'overlay';
-
-
-        lenses.push(lensesByName[name] = { name, hololens, input, output });
-    }
-
-
-    // compile edges formed by before/after requirements
-    const lensEdges = [];
-
-    for (const lens of lenses) {
-        if (lens.input.after) {
-            for (const afterLens of lens.input.after) {
-                lensEdges.push([lensesByName[afterLens], lens]);
-            }
-        }
-
-        if (lens.input.before) {
-            for (const beforeLens of lens.input.before) {
-                lensEdges.push([lens, lensesByName[beforeLens]]);
-            }
-        }
-    }
-
-
-    // sort specs by before/after requirements
-    const sortedLenses = toposort.array(lenses, lensEdges);
-
-
-    // apply lenses
-    const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), holobranch.name);
-
-    for (const lens of sortedLenses) {
-
-        // build tree of matching files to input to lens
-        logger.info(`building input tree for lens ${lens.name} from ${lens.input.root == '.' ? '' : (path.join(lens.input.root, '.')+'/')}{${lens.input.files}}`);
-
-        const lensInputTree = repo.git.createTree();
-        const lensInputRoot = lens.input.root == '.' ? outputTree : await outputTree.getSubtree(lens.input.root);
-
-
-        // merge input root into tree with any filters applied
-        await lensInputTree.merge(lensInputRoot, {
-            files: lens.input.files
-        });
-
-        const lensInputTreeHash = await lensInputTree.write();
-
-
-        // execute lens via habitat
-        let pkgPath;
-        try {
-            pkgPath = await hab.pkg('path', lens.hololens.package);
-        } catch (err) {
-            if (err.code != 1) {
-                throw err;
-            }
-
-            // try to install package
-            logger.info('installing package for', lens.hololens.package);
-            await hab.pkg('install', lens.hololens.package);
-            pkgPath = await hab.pkg('path', lens.hololens.package);
-        }
-
-
-        // trim path to leave just fully-qualified ident
-        lens.hololens.package = pkgPath.substr(10);
-
-
-        // build and hash spec
-        const spec = {
-            hololens: sortKeys(lens.hololens, { deep: true }),
-            input: lensInputTreeHash
-        };
-        const specToml = TOML.stringify(spec);
-        const specHash = await repo.git.BlobObject.write(specToml, repo.git);
-        const specRef = `refs/holo/specs/${specHash.substr(0, 2)}/${specHash.substr(2)}`;
-
-
-        // check for existing output tree
-        let lensedTreeHash = await repo.git.revParse(`${specRef}^{tree}`, { $nullOnError: true });
-
-
-        // apply lens if existing tree not found
-        if (lensedTreeHash) {
-            logger.info(`found existing output tree matching holospec(${specHash})`);
-        } else {
-            // assign scratch directory for lens
-            const scratchPath = `${scratchRoot}/${lens.name}`;
-            await mkdirp(scratchPath);
-
-
-            // compile and execute command
-            const command = handlebars.compile(lens.hololens.command)(spec);
-            logger.info('executing lens %s: %s', lens.hololens.package, command);
-            lensedTreeHash = await hab.pkg('exec', lens.hololens.package, ...shellParse(command), {
-                $env: Object.assign(
-                    squish({
-                        hololens: spec.hololens
-                    }, { seperator: '_', modifyKey: 'uppercase' }),
-                    {
-                        HOLOSPEC: specHash,
-                        GIT_DIR: repo.gitDir,
-                        GIT_WORK_TREE: scratchPath,
-                        GIT_INDEX_FILE: `${scratchPath}.index`
-                    }
-                )
+            await lensTargetTree.merge(lensedTree, {
+                mode: outputMerge
             });
-
-            if (!repo.git.isHash(lensedTreeHash)) {
-                throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
-            }
-
-
-            // save spec output
-            await repo.git.updateRef(specRef, lensedTreeHash);
         }
 
 
-        // apply lense output to main output tree
-        logger.info(`merging lens output tree(${lensedTreeHash}) into /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
+        // strip .holo/ from output
+        logger.info('stripping .holo/ tree from output tree...');
+        projection.output.deleteChild('.holo');
+    } else {
+        const holoTree = await projection.output.getSubtree('.holo');
 
-        const lensedTree = await repo.git.createTreeFromRef(lensedTreeHash);
-        const lensTargetStack = await outputTree.getSubtree(lens.output.root, true, true);
-        const lensTargetTree = lensTargetStack.pop();
-
-        await lensTargetTree.merge(lensedTree, {
-            mode: lens.output.merge
-        });
-
-        if (lensTargetTree !== outputTree && lensTargetTree.dirty) {
-            // mark parents of lens target
-            for (const parent of lensTargetStack) {
-                parent.dirty = true;
+        for (const childName in await holoTree.getChildren()) {
+            if (childName != 'lenses') {
+                holoTree.deleteChild(childName);
             }
         }
     }
-
-
-    // strip .holo/ from output
-    logger.info('stripping .holo/ tree from output tree...');
-    outputTree.deleteChild('.holo');
 
 
     // write tree
     logger.info('writing final output tree...');
-    const rootTreeHash = await outputTree.write();
+    const rootTreeHash = await projection.output.write();
 
 
     // prepare output
@@ -380,7 +233,7 @@ exports.handler = async function project ({
         const commitHash = await git.commitTree(
             {
                 p: parentHash,
-                m: commitMessage || `Projected ${holobranch.name} from ${await git.describe({ always: true, tags: true })}`
+                m: commitMessage || `Projected ${projection.branch.name} from ${await git.describe({ always: true, tags: true })}`
             },
             rootTreeHash
         );

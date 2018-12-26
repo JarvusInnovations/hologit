@@ -1,9 +1,8 @@
-const logger = require('../lib/logger.js');
-
 exports.command = 'watch';
 exports.desc = 'Watch the current working tree and automatically update projection';
 
 exports.handler = async function watch (options) {
+    const logger = require('../lib/logger.js');
     const fs = require('mz/fs');
     const watchman = require('fb-watchman');
     const watchmanClient = new watchman.Client();

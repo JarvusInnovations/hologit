@@ -1,6 +1,6 @@
 pkg_name="hologit"
 pkg_origin="jarvus"
-pkg_description="Command-line utility-belt for hacking JSON and Javascript."
+pkg_description="A universal, git-native tool for assembling software"
 pkg_upstream_url="https://github.com/JarvusInnovations/hologit"
 pkg_license=("MIT")
 pkg_maintainer="Chris Alfano <chris@jarv.us>"
@@ -11,6 +11,7 @@ pkg_build_deps=(
 pkg_deps=(
   core/git
   core/node
+  core/hab
 )
 
 pkg_bin_dirs=(bin)

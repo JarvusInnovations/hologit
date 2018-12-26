@@ -76,6 +76,7 @@
             ],
 
             "name": "project",
+            "preLaunchTask": "purge hologit studios",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": "1"
@@ -169,6 +170,60 @@
                 "fetch",
                 "--all"
             ]
-        }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "studio",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                "DEBUG": "1"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
+            "args": [
+                "studio",
+                "--socket=${workspaceFolder:hologit-debug-context}/.git/holo/studio.sock"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "lens exec",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                "DEBUG": "1",
+                "HOLO_SCRATCH": "/tmp/holoscratch"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder}/bin/cli.js",
+            "args": [
+                "lens",
+                "exec",
+                "252c773d9f7023624618f9c312e5117af8bd69b1"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "attach",
+            "port": 9229,
+            "restart": true,
+            "trace": true,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/src"
+        },
     ]
 }
