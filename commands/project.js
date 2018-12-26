@@ -201,6 +201,12 @@ exports.handler = async function project ({
             }
 
 
+            // verify output
+            if (!git.isHash(outputTreeHash)) {
+                throw new Error(`no output tree hash was returned by lens ${lens.name}`);
+            }
+
+
             // apply lense output to main output tree
             logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
 
