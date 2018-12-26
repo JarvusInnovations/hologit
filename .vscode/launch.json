@@ -76,6 +76,7 @@
             ],
 
             "name": "project",
+            "preLaunchTask": "purge hologit studios",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": "1"

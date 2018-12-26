@@ -127,5 +127,16 @@
             },
             "problemMatcher": []
         },
+        {
+            "label": "purge hologit studios",
+            "type": "shell",
+            "command": "docker stop $(docker ps -a -f label=sh.holo.studio --format '{{.ID}}'); docker rm $(docker ps -a -f label=sh.holo.studio --format '{{.ID}}'); exit 0",
+            "presentation": {
+                "echo": true,
+                "reveal": "never",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
     ]
 }
