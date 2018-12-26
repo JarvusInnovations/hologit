@@ -23,6 +23,11 @@ exports.builder = {
         describe: 'Whether to apply lensing to the composite tree',
         type: 'boolean',
         default: true
+    },
+    'fetch': {
+        describe: 'Whether to fetch the latest commit for all sources while projecting',
+        type: 'boolean',
+        default: false
     }
 };
 
@@ -45,19 +50,14 @@ exports.handler = async function project ({
     lens = true,
     working = false,
     debug = false,
+    fetch = false,
     commitBranch = null,
     commitMessage = null
 }) {
-    const logger = require('../lib/logger.js');
-    const handlebars = require('handlebars');
-    const { Repo, Projection } = require('../lib');
-    const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
-    const shellParse = require('shell-quote-word');
-    const sortKeys = require('sort-keys');
-    const squish = require('object-squish');
-    const TOML = require('@iarna/toml');
     const toposort = require('toposort');
+    const logger = require('../lib/logger.js');
+    const { Repo, Projection } = require('../lib');
 
     // check inputs
     if (!holobranch) {
@@ -67,6 +67,19 @@ exports.handler = async function project ({
 
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
+    const repoHash = await repo.resolveRef();
+
+
+    // fetch all sources
+    if (fetch) {
+        const sources = await repo.getSources();
+
+        for (const source of sources.values()) {
+            const hash = await source.fetch();
+            const { url, ref } = await source.getCachedConfig();
+            logger.info(`fetched ${source.name} ${url}#${ref}@${hash.substr(0, 8)}`);
+        }
+    }
 
 
     // instantiate projection
@@ -159,8 +172,6 @@ exports.handler = async function project ({
 
 
         // apply lenses
-        const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), projection.branch.name);
-
         for (const lens of lenses) {
             const {
                 input: {
@@ -190,6 +201,12 @@ exports.handler = async function project ({
             }
 
 
+            // verify output
+            if (!git.isHash(outputTreeHash)) {
+                throw new Error(`no output tree hash was returned by lens ${lens.name}`);
+            }
+
+
             // apply lense output to main output tree
             logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
 
@@ -209,9 +226,11 @@ exports.handler = async function project ({
     } else {
         const holoTree = await projection.output.getSubtree('.holo');
 
-        for (const childName in await holoTree.getChildren()) {
-            if (childName != 'lenses') {
-                holoTree.deleteChild(childName);
+        if (holoTree) {
+            for (const childName in await holoTree.getChildren()) {
+                if (childName != 'lenses') {
+                    holoTree.deleteChild(childName);
+                }
             }
         }
     }
@@ -229,10 +248,13 @@ exports.handler = async function project ({
     // update targetBranch
     if (commitBranch) {
         const targetRef = `refs/heads/${commitBranch}`;
-        const parentHash = await git.revParse(targetRef, { $nullOnError: true });
+
         const commitHash = await git.commitTree(
             {
-                p: parentHash,
+                p: [
+                    await git.revParse(targetRef, { $nullOnError: true }),
+                    repoHash
+                ],
                 m: commitMessage || `Projected ${projection.branch.name} from ${await git.describe({ always: true, tags: true })}`
             },
             rootTreeHash
