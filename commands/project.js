@@ -48,7 +48,6 @@ exports.handler = async function project ({
     commitBranch = null,
     commitMessage = null
 }) {
-    const hab = await require('hab-client').requireVersion('>=0.62');
     const logger = require('../lib/logger.js');
     const handlebars = require('handlebars');
     const { Repo, Projection } = require('../lib');
@@ -155,207 +154,51 @@ exports.handler = async function project ({
 
 
     if (lens) {
-        // read lens tree from output
-        const lensFiles = {};
-        const holoTree = await outputTree.getSubtree('.holo');
-
-        if (holoTree) {
-            const lensesTree = await holoTree.getSubtree('lenses');
-
-            if (lensesTree) {
-                const lensesTreeChildren = await lensesTree.getChildren();
-
-                for (const lensName in lensesTreeChildren) {
-                    lensFiles[lensName] = lensesTreeChildren[lensName];
-                }
-
-                holoTree.deleteChild('lenses');
-            }
-        }
-
-
         // read lenses
-        const lenses = [];
-        const lensesByName = {};
-        const lensNameFromPathRe = /^([^\/]+)\.toml$/;
-
-        for (const lensPath in lensFiles) {
-            const lensFile = lensFiles[lensPath];
-
-            if (!lensFile || !lensFile.isBlob) {
-                continue;
-            }
-
-            // TODO: use a Configurable class to instantiate and load
-            const name = lensPath.replace(lensNameFromPathRe, '$1');
-            const config = TOML.parse(await repo.git.catFile({ p: true }, lensFile.hash));
-
-            if (!config.hololens || !config.hololens.package) {
-                throw new Error(`lens config missing hololens.package: ${lensPath}`);
-            }
-
-            if (!config.input || !config.input.files) {
-                throw new Error(`lens config missing input.files: ${lensPath}`);
-            }
-
-
-            // parse and normalize lens config
-            const hololens = config.hololens;
-            hololens.package = hololens.package;
-            hololens.command = hololens.command || 'lens-tree {{ input }}';
-
-
-            // parse and normalize input config
-            const input = {};
-            input.files = typeof config.input.files == 'string' ? [config.input.files] : config.input.files;
-            input.root = config.input.root || '.';
-
-            if (config.input.before) {
-                input.before =
-                    typeof config.input.before == 'string'
-                        ? [config.input.before]
-                        : config.input.before;
-            }
-
-            if (config.input.after) {
-                input.after =
-                    typeof config.input.after == 'string'
-                        ? [config.input.after]
-                        : config.input.after;
-            }
-
-
-            // parse and normalize output config
-            const output = {};
-            output.root = config.output && config.output.root || input.root;
-            output.merge = config.output && config.output.merge || 'overlay';
-
-
-            lenses.push(lensesByName[name] = { name, hololens, input, output });
-        }
-
-
-        // compile edges formed by before/after requirements
-        const lensEdges = [];
-
-        for (const lens of lenses) {
-            if (lens.input.after) {
-                for (const afterLens of lens.input.after) {
-                    lensEdges.push([lensesByName[afterLens], lens]);
-                }
-            }
-
-            if (lens.input.before) {
-                for (const beforeLens of lens.input.before) {
-                    lensEdges.push([lens, lensesByName[beforeLens]]);
-                }
-            }
-        }
-
-
-        // sort specs by before/after requirements
-        const sortedLenses = toposort.array(lenses, lensEdges);
+        const lenses = await projection.getLenses();
 
 
         // apply lenses
         const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), projection.branch.name);
 
-        for (const lens of sortedLenses) {
+        for (const lens of lenses) {
+            const {
+                input: {
+                    root: inputRoot,
+                    files: inputFiles
+                },
+                output: {
+                    root: outputRoot,
+                    merge: outputMerge
+                }
+            } = await lens.getCachedConfig();
 
             // build tree of matching files to input to lens
-            logger.info(`building input tree for lens ${lens.name} from ${lens.input.root == '.' ? '' : (path.join(lens.input.root, '.')+'/')}{${lens.input.files}}`);
-
-            const lensInputTree = repo.git.createTree();
-            const lensInputRoot = lens.input.root == '.' ? projection.output : await projection.output.getSubtree(lens.input.root);
-
-
-            // merge input root into tree with any filters applied
-            await lensInputTree.merge(lensInputRoot, {
-                files: lens.input.files
-            });
-
-            const lensInputTreeHash = await lensInputTree.write();
-
-
-            // execute lens via habitat
-            let pkgPath;
-            try {
-                pkgPath = await hab.pkg('path', lens.hololens.package);
-            } catch (err) {
-                if (err.code != 1) {
-                    throw err;
-                }
-
-                // try to install package
-                logger.info('installing package for', lens.hololens.package);
-                await hab.pkg('install', lens.hololens.package);
-                pkgPath = await hab.pkg('path', lens.hololens.package);
-            }
-
-
-            // trim path to leave just fully-qualified ident
-            lens.hololens.package = pkgPath.substr(10);
-
-
-            // build and hash spec
-            const spec = {
-                hololens: sortKeys(lens.hololens, { deep: true }),
-                input: lensInputTreeHash
-            };
-            const specToml = TOML.stringify(spec);
-            const specHash = await repo.git.BlobObject.write(specToml, repo.git);
-            const specRef = `refs/holo/specs/${specHash.substr(0, 2)}/${specHash.substr(2)}`;
+            logger.info(`building input tree for lens ${lens.name} from ${inputRoot == '.' ? '' : (path.join(inputRoot, '.')+'/')}{${inputFiles}}`);
+            const { hash: specHash, ref: specRef } = await lens.buildSpec(await lens.buildInputTree());
 
 
             // check for existing output tree
-            let lensedTreeHash = await repo.git.revParse(`${specRef}^{tree}`, { $nullOnError: true });
+            let outputTreeHash = await repo.resolveRef(`${specRef}^{tree}`);
 
 
             // apply lens if existing tree not found
-            if (lensedTreeHash) {
+            if (outputTreeHash) {
                 logger.info(`found existing output tree matching holospec(${specHash})`);
             } else {
-                // assign scratch directory for lens
-                const scratchPath = `${scratchRoot}/${lens.name}`;
-                await mkdirp(scratchPath);
-
-
-                // compile and execute command
-                const command = handlebars.compile(lens.hololens.command)(spec);
-                logger.info('executing lens %s: %s', lens.hololens.package, command);
-                lensedTreeHash = await hab.pkg('exec', lens.hololens.package, ...shellParse(command), {
-                    $env: Object.assign(
-                        squish({
-                            hololens: spec.hololens
-                        }, { seperator: '_', modifyKey: 'uppercase' }),
-                        {
-                            HOLOSPEC: specHash,
-                            GIT_DIR: repo.gitDir,
-                            GIT_WORK_TREE: scratchPath,
-                            GIT_INDEX_FILE: `${scratchPath}.index`
-                        }
-                    )
-                });
-
-                if (!repo.git.isHash(lensedTreeHash)) {
-                    throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
-                }
-
-
-                // save spec output
-                await repo.git.updateRef(specRef, lensedTreeHash);
+                outputTreeHash = await lens.execute(specHash);
             }
 
 
             // apply lense output to main output tree
-            logger.info(`merging lens output tree(${lensedTreeHash}) into /${lens.output.root != '.' ? lens.output.root+'/' : ''}`);
+            logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
 
-            const lensedTree = await repo.git.createTreeFromRef(lensedTreeHash);
-            const lensTargetStack = await projection.output.getSubtree(lens.output.root, true, true);
+            const lensedTree = await repo.git.createTreeFromRef(outputTreeHash);
+            const lensTargetStack = await projection.output.getSubtree(outputRoot, true, true);
             const lensTargetTree = lensTargetStack.pop();
 
             await lensTargetTree.merge(lensedTree, {
-                mode: lens.output.merge
+                mode: outputMerge
             });
 
             if (lensTargetTree !== projection.output && lensTargetTree.dirty) {
