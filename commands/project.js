@@ -23,6 +23,11 @@ exports.builder = {
         describe: 'Whether to apply lensing to the composite tree',
         type: 'boolean',
         default: true
+    },
+    'fetch': {
+        describe: 'Whether to fetch the latest commit for all sources while projecting',
+        type: 'boolean',
+        default: false
     }
 };
 
@@ -45,6 +50,7 @@ exports.handler = async function project ({
     lens = true,
     working = false,
     debug = false,
+    fetch = false,
     commitBranch = null,
     commitMessage = null
 }) {
@@ -62,6 +68,18 @@ exports.handler = async function project ({
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
     const repoHash = await repo.resolveRef();
+
+
+    // fetch all sources
+    if (fetch) {
+        const sources = await repo.getSources();
+
+        for (const source of sources.values()) {
+            const hash = await source.fetch();
+            const { url, ref } = await source.getCachedConfig();
+            logger.info(`fetched ${source.name} ${url}#${ref}@${hash.substr(0, 8)}`);
+        }
+    }
 
 
     // instantiate projection
