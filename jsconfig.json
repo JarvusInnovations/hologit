@@ -2,7 +2,9 @@
     "compilerOptions": {
         "target": "es2018",
         "checkJs": true,
-        "noUnusedLocals": true
+        "noUnusedLocals": true,
+        "module": "commonjs",
+        "moduleResolution": "node"
     },
     "exclude": [
         "node_modules",
