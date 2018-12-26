@@ -209,6 +209,20 @@
                 "exec",
                 "252c773d9f7023624618f9c312e5117af8bd69b1"
             ]
-        }
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "attach",
+            "port": 9229,
+            "restart": true,
+            "trace": true,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/src"
+        },
     ]
 }
