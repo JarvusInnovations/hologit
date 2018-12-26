@@ -67,6 +67,7 @@ exports.handler = async function project ({
 
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
+    const repoHash = await repo.resolveRef();
 
 
     // instantiate projection
@@ -159,8 +160,6 @@ exports.handler = async function project ({
 
 
         // apply lenses
-        const scratchRoot = path.join('/hab/cache/holo', repo.gitDir.substr(1).replace(/\//g, '--'), projection.branch.name);
-
         for (const lens of lenses) {
             const {
                 input: {
@@ -229,10 +228,13 @@ exports.handler = async function project ({
     // update targetBranch
     if (commitBranch) {
         const targetRef = `refs/heads/${commitBranch}`;
-        const parentHash = await git.revParse(targetRef, { $nullOnError: true });
+
         const commitHash = await git.commitTree(
             {
-                p: parentHash,
+                p: [
+                    await git.revParse(targetRef, { $nullOnError: true }),
+                    repoHash
+                ],
                 m: commitMessage || `Projected ${projection.branch.name} from ${await git.describe({ always: true, tags: true })}`
             },
             rootTreeHash
