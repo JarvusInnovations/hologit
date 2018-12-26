@@ -34,11 +34,13 @@ exports.handler = async function exportTree ({
 
     // check for existing build
     const specRef = SpecObject.buildRef('lens', specHash);
-    const existingBuildHash = await repo.resolveRef(specRef);
+    if (!refresh) {
+        const existingBuildHash = await repo.resolveRef(specRef);
 
-    if (existingBuildHash) {
-        console.log(existingBuildHash);
-        return;
+        if (existingBuildHash) {
+            console.log(existingBuildHash);
+            return;
+        }
     }
 
 
@@ -56,8 +58,12 @@ exports.handler = async function exportTree ({
     await mkdirp(scratchPath);
 
 
-    // compile and execute command
+    // install lens package
     const hab = await Studio.getHab();
+    await hab.pkg('install', spec.package);
+
+
+    // compile and execute command
     const command = handlebars.compile(spec.command)(spec);
     const env = Object.assign(
         squish({
@@ -80,5 +86,13 @@ exports.handler = async function exportTree ({
         throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
     }
 
+
+    // save ref to accelerate next projection
+    if (save) {
+        await git.updateRef(specRef, lensedTreeHash);
+    }
+
+
+    // output tree hash
     console.log(lensedTreeHash);
 };
