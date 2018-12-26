@@ -1,0 +1,8 @@
+[hologit]
+plan_path = "."
+
+[hologit-studio]
+plan_path = "studio"
+paths = [
+  "*",
+]
