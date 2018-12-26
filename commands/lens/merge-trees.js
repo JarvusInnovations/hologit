@@ -1,5 +1,3 @@
-const logger = require('../../lib/logger.js');
-
 exports.command = 'merge-trees <treeish-base> <treeish-input>';
 exports.desc = 'Merge <treeish-input> into <treeish-base>';
 
@@ -19,6 +17,7 @@ exports.builder = {
 };
 
 exports.handler = async function mergeTrees ({ treeishBase, treeishInput, method }) {
+    const logger = require('../lib/logger.js');
     const hololib = require('../../lib');
     const git = await hololib.getGit();
 

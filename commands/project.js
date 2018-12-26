@@ -1,5 +1,3 @@
-const logger = require('../lib/logger.js');
-
 exports.command = 'project <holobranch>';
 exports.desc = 'Projects holobranch named <holobranch> and outputs resulting tree hash';
 
@@ -51,6 +49,7 @@ exports.handler = async function project ({
     commitMessage = null
 }) {
     const hab = await require('hab-client').requireVersion('>=0.62');
+    const logger = require('../lib/logger.js');
     const handlebars = require('handlebars');
     const { Repo, Projection } = require('../lib');
     const mkdirp = require('mz-modules/mkdirp');

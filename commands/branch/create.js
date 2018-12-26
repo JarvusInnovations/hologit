@@ -1,5 +1,3 @@
-const logger = require('../../lib/logger.js');
-
 exports.command = 'create <name>';
 exports.desc = 'Create a holobranch named <name>';
 exports.builder = {
@@ -11,6 +9,7 @@ exports.builder = {
 };
 
 exports.handler = async function createBranch ({ name, template }) {
+    const logger = require('../../lib/logger.js');
     const { Repo } = require('../../lib');
 
 

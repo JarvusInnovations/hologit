@@ -1,9 +1,8 @@
-const logger = require('../../lib/logger.js');
-
 exports.command = 'export-tree <treeish>';
 exports.desc = 'Export given <treeish> to current index and working tree';
 
 exports.handler = async function exportTree ({ treeish }) {
+    const logger = require('../../lib/logger.js');
     const hololib = require('../../lib');
 
 
