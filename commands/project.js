@@ -48,16 +48,10 @@ exports.handler = async function project ({
     commitBranch = null,
     commitMessage = null
 }) {
-    const logger = require('../lib/logger.js');
-    const handlebars = require('handlebars');
-    const { Repo, Projection } = require('../lib');
-    const mkdirp = require('mz-modules/mkdirp');
     const path = require('path');
-    const shellParse = require('shell-quote-word');
-    const sortKeys = require('sort-keys');
-    const squish = require('object-squish');
-    const TOML = require('@iarna/toml');
     const toposort = require('toposort');
+    const logger = require('../lib/logger.js');
+    const { Repo, Projection } = require('../lib');
 
     // check inputs
     if (!holobranch) {
