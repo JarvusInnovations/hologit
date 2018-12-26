@@ -63,7 +63,7 @@ exports.handler = async function exportTree ({
     await hab.pkg('install', spec.package);
 
 
-    // compile and execute command
+    // prepare command and environment
     const command = handlebars.compile(spec.command)(spec);
     const env = Object.assign(
         squish({
@@ -75,12 +75,25 @@ exports.handler = async function exportTree ({
             GIT_INDEX_FILE: `${scratchPath}.index`
         }
     );
+    logger.debug('lens environment:', env);
+    logger.debug('lens command:', command);
 
-    logger.info('preparing environment', env);
-    const lensedTreeHash = await hab.pkg('exec', spec.package, ...shellParse(command), {
-        $env: env
+
+    // spawn process and log STDERR
+    const lensProcess = await hab.pkg('exec', spec.package, ...shellParse(command), {
+        $env: env,
+        $spawn: true
     });
 
+    lensProcess.stderr.on('data', data => {
+        data.toString().trim().split(/\n/).forEach(
+            line => logger.info(`lens: ${line}`)
+        )
+    });
+
+
+    // process output
+    const lensedTreeHash = await lensProcess.captureOutputTrimmed();
 
     if (!git.isHash(lensedTreeHash)) {
         throw new Error(`lens "${command}" did not return hash: ${lensedTreeHash}`);
