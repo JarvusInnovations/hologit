@@ -38,8 +38,9 @@ exports.handler = async function init ({ name = null }) {
     console.log(`name=${name}`);
 
 
-    // read repo config
-    let repoConfig = await repo.readConfig();
+    // read workspace config
+    const workspace = await repo.getWorkspace();
+    let repoConfig = await workspace.readConfig();
     logger.debug('loaded existing holorepo config:', repoConfig);
 
 
