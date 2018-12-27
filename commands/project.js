@@ -31,19 +31,6 @@ exports.builder = {
     }
 };
 
-/**
- * Initialize a holobranch
- * - [X] Check if branch exists already (die for now, merge on top of later)
- * - [X] Try loading repo with js-git and loading a tree
- * - [X] Initialize and fetch sources automatically if needed
- * - [X] Ensure sources have recipricol alternates
- * - [X] Move source repos to root .git/modules tree
- * - [X] register as submodule under .git/config
- * - [X] Create shallow for submodules
- * - [X] Load sources and mounts from topBranch
- * - [ ] Loop sources and generate commit for each
- * - [X] Merge new commit onto virtualBranch
- */
 exports.handler = async function project ({
     holobranch,
     ref = 'HEAD',
