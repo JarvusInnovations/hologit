@@ -13,13 +13,22 @@ exports.handler = async function createBranch ({ name, template }) {
     const { Repo } = require('../../lib');
 
 
-    // get holo repo from environment
+    // check inputs
+    if (!name) {
+        throw new Error('name required');
+    }
+
+
+    // load holorepo
     const repo = await Repo.getFromEnvironment({ working: true });
-    logger.debug('instantiated repository:', repo);
+
+
+    // load workspace
+    const workspace = await repo.getWorkspace();
 
 
     // get branch interface
-    const branch = repo.getBranch(name);
+    const branch = workspace.getBranch(name);
 
 
     // read branch config
@@ -42,9 +51,9 @@ exports.handler = async function createBranch ({ name, template }) {
         case 'empty':
             break;
         case 'passthrough':
-            const repoConfig = await repo.getConfig();
+            const { name: workspaceName } = await workspace.getCachedConfig();
 
-            mappingConfigs[`_${repoConfig.name}`] = {
+            mappingConfigs[`_${workspaceName}`] = {
                 files: '**'
             };
 
@@ -66,5 +75,8 @@ exports.handler = async function createBranch ({ name, template }) {
         console.log(`initialized ${mapping.getConfigPath()}`);
     }
 
-    return Promise.all(promises);
+    await Promise.all(promises);
+
+    // write changes to index
+    await workspace.writeWorkingChanges();
 };

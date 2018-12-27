@@ -48,12 +48,15 @@ exports.handler = async function init ({ name = null }) {
     if (repoConfig) {
         if (repoConfig.name != name) {
             repoConfig.name = name;
-            await repo.writeConfig(repoConfig);
+            await workspace.writeConfig(repoConfig);
             console.log(`updated .holo/config.toml`);
         }
     } else {
         repoConfig = { name };
-        await repo.writeConfig(repoConfig);
+        await workspace.writeConfig(repoConfig);
         console.log(`initialized .holo/config.toml`);
     }
+
+    // write changes to index
+    await workspace.writeWorkingChanges();
 };

@@ -34,7 +34,6 @@ exports.handler = async function createSource ({
     const workspace = await repo.getWorkspace();
 
 
-
     // generate source name if not specified
     if (!name) {
         logger.debug('computing name from url:', url);
@@ -77,5 +76,9 @@ exports.handler = async function createSource ({
 
     // write config
     await source.writeConfig();
-    console.log(`initialized ${source.getConfigPath()}`);
+
+    if (workspace.root.dirty) {
+        await workspace.writeWorkingChanges();
+        console.log(`initialized ${source.getConfigPath()}`);
+    }
 };
