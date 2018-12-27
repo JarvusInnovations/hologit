@@ -297,16 +297,24 @@ $ git commit -m "Initialize .holo/sources/bootstrap submodule"
 
 ## Roadmap
 
+- (in progress) Complete getting started tour, break into sections in another doc format
+- Develop shorter quickstart
 - `* --ref` (in progress) option to use a specific ref instead of HEAD
 - `* ---no-working` (in progress) option to ignore working directory and only use ref
 - `project --watch` option to keep running and automatically update projection with changes to input
 - `project --audit` option to produce audit commits chain
+- Leverage lower-overhead chroot environments instead of Docker containers on Linux systems
 - Visual Studio Code extension
   - Top-level hologit section with views of sources and branches
   - Commands via context menu and command palette
   - Ability to graphically toggle watch mode for each source
   - Open holobranches in workspace via filesystem provider for read-only browsing of either composited or lensed content
   - Enable writing to mounted holobranches by routing writes to estimated source via reverse-compositing, checking out submodules on-the-fly
+- Isolate lens environments further from source
+  - Currently, `.git` directory is mounted into lensing environment, so working tree is safe but repo is exposed to damage by lens code
+  - Lensing only needs to exchange object hashes, so objects tree could be mounted read-write and the rest could be empty
+  - More robust options might include using git's fetch/push mechanism and/or mounting objects tree as read-only alternates
+    - A git SmartHTTP server could be exposed via the studio socket, but could objects be exchanged as efficiently as just bind-mounting the objects database directly?
 
 ## Reference
 

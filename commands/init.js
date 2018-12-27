@@ -38,8 +38,9 @@ exports.handler = async function init ({ name = null }) {
     console.log(`name=${name}`);
 
 
-    // read repo config
-    let repoConfig = await repo.readConfig();
+    // read workspace config
+    const workspace = await repo.getWorkspace();
+    let repoConfig = await workspace.readConfig();
     logger.debug('loaded existing holorepo config:', repoConfig);
 
 
@@ -47,12 +48,15 @@ exports.handler = async function init ({ name = null }) {
     if (repoConfig) {
         if (repoConfig.name != name) {
             repoConfig.name = name;
-            await repo.writeConfig(repoConfig);
+            await workspace.writeConfig(repoConfig);
             console.log(`updated .holo/config.toml`);
         }
     } else {
         repoConfig = { name };
-        await repo.writeConfig(repoConfig);
+        await workspace.writeConfig(repoConfig);
         console.log(`initialized .holo/config.toml`);
     }
+
+    // write changes to index
+    await workspace.writeWorkingChanges();
 };
