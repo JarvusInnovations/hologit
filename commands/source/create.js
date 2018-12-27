@@ -26,9 +26,13 @@ exports.handler = async function createSource ({
     }
 
 
-    // get repo interface
+    // load holorepo
     const repo = await Repo.getFromEnvironment({ working: true });
-    logger.debug('instantiated repository:', repo);
+
+
+    // load workspace
+    const workspace = await repo.getWorkspace();
+
 
 
     // generate source name if not specified
@@ -47,7 +51,7 @@ exports.handler = async function createSource ({
 
     // get source interface
     const source = new Source({
-        repo,
+        workspace,
         name,
         phantom: { url, ref }
     });
