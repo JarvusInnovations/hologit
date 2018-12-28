@@ -7,6 +7,7 @@
   - Holosources
   - Holobranches
   - Hololenses
+  - Holoreactors
 - Workflows
   - Publish a Static Website
   - Operationalize a Data Set

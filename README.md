@@ -307,6 +307,7 @@ $ git commit -m "Initialize .holo/sources/bootstrap submodule"
   - [ ] Implement a `holoreactor` for serving static websites
   - [ ] Implement a `holoreactor` for running/restarting a node app
   - [ ] Implement a `holoreactor` for running an emergence app locally or on a remote cluster
+- [ ] Expose from the studio's HTTP interface a *virtual* holospace that can be mutated via git push or WebDAV
 - [ ] Add option to `[holosource]` config to override submodule checkout path
 - [ ] Leverage lower-overhead chroot environments instead of Docker containers on Linux systems
 - [ ] Enable running and connecting to a persistent background studio for quick on-demand projection
@@ -325,6 +326,7 @@ $ git commit -m "Initialize .holo/sources/bootstrap submodule"
   - Lensing only needs to exchange object hashes, so objects tree could be mounted read-write and the rest could be empty
   - More robust options might include using git's fetch/push mechanism and/or mounting objects tree as read-only alternates
     - A git SmartHTTP server could be exposed via the studio socket, but could objects be exchanged as efficiently as just bind-mounting the objects database directly?
+- [ ] Enable running web-based code editor as a holoreactor to your code base
 
 ## Reference
 
