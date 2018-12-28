@@ -297,14 +297,16 @@ $ git commit -m "Initialize .holo/sources/bootstrap submodule"
 
 ## Roadmap
 
-- (in progress) Complete getting started tour, break into sections in another doc format
-- Develop shorter quickstart
-- `* --ref` (in progress) option to use a specific ref instead of HEAD
-- `* ---no-working` (in progress) option to ignore working directory and only use ref
-- `project --watch` option to keep running and automatically update projection with changes to input
-- `project --audit` option to produce audit commits chain
-- Leverage lower-overhead chroot environments instead of Docker containers on Linux systems
-- Visual Studio Code extension
+- [~] (in progress) Complete getting started tour, break into sections in another doc format
+- [ ] Develop shorter quickstart
+- [~] `* --ref` (in progress) option to use a specific ref instead of HEAD
+- [~] `* ---no-working` (in progress) option to ignore working directory and only use ref
+- [ ] `project --watch` option to keep running and automatically update projection with changes to input
+- [ ] `project --audit` option to produce audit commits chain
+- [ ] Leverage lower-overhead chroot environments instead of Docker containers on Linux systems
+- [ ] Enable running and connecting to a persistent background studio for quick on-demand projection
+- [ ] Implement in-memory tree hashing to avoid calls to `git mktree` for tree hashes that are known in the tree cache to already exist in the repo
+- [ ] Visual Studio Code extension
   - Top-level hologit section with views of sources and branches
   - Commands via context menu and command palette
   - Ability to graphically toggle watch mode for each source
