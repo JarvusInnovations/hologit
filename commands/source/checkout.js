@@ -21,11 +21,14 @@ exports.handler = async function checkoutSource ({ name, all }) {
 
     // get repo interface
     const repo = await Repo.getFromEnvironment({ working: true });
-    logger.debug('instantiated repository:', repo);
+
+
+    // load workspace
+    const workspace = await repo.getWorkspace();
 
 
     // get source(s)
-    const sources = all ? (await repo.getSources()).values() : [await repo.getSource(name)];
+    const sources = all ? (await workspace.getSources()).values() : [workspace.getSource(name)];
 
 
     // execute fetch
