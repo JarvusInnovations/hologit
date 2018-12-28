@@ -303,8 +303,16 @@ $ git commit -m "Initialize .holo/sources/bootstrap submodule"
 - [~] `* ---no-working` (in progress) option to ignore working directory and only use ref
 - [ ] `project --watch` option to keep running and automatically update projection with changes to input
 - [ ] `project --audit` option to produce audit commits chain
+- [ ] Implement `holoreactor` objects: defined like lenses within the projected branches, the handle piping result subtrees into single-run or persistent processes running in the studio via `hab exec` or `hab svc load`
+  - [ ] Implement a `holoreactor` for serving static websites
+  - [ ] Implement a `holoreactor` for running/restarting a node app
+  - [ ] Implement a `holoreactor` for running an emergence app locally or on a remote cluster
+- [ ] Add option to `[holosource]` config to override submodule checkout path
 - [ ] Leverage lower-overhead chroot environments instead of Docker containers on Linux systems
 - [ ] Enable running and connecting to a persistent background studio for quick on-demand projection
+  - Build a studio docker image that extends Habitat's studio image with hologit pre-installed
+  - Wrap around opening interactive shells
+  - Wrap around entrypoint to start holostudio process
 - [ ] Implement in-memory tree hashing to avoid calls to `git mktree` for tree hashes that are known in the tree cache to already exist in the repo
 - [ ] Visual Studio Code extension
   - Top-level hologit section with views of sources and branches
@@ -312,7 +320,7 @@ $ git commit -m "Initialize .holo/sources/bootstrap submodule"
   - Ability to graphically toggle watch mode for each source
   - Open holobranches in workspace via filesystem provider for read-only browsing of either composited or lensed content
   - Enable writing to mounted holobranches by routing writes to estimated source via reverse-compositing, checking out submodules on-the-fly
-- Isolate lens environments further from source
+- [ ] Isolate lens environments further from source
   - Currently, `.git` directory is mounted into lensing environment, so working tree is safe but repo is exposed to damage by lens code
   - Lensing only needs to exchange object hashes, so objects tree could be mounted read-write and the rest could be empty
   - More robust options might include using git's fetch/push mechanism and/or mounting objects tree as read-only alternates
