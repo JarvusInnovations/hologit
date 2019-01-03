@@ -103,7 +103,7 @@ exports.handler = async function project ({
         const sourceTree = await repo.createTreeFromRef(`${sourceHead}:${root == '.' ? '' : root}`);
 
         // merge source into target
-        const targetTree = output == '.' ? projection.workspace.root : await projection.workspace.root.getSubtree(output, true);
+        const targetTree = await projection.workspace.root.getSubtree(output, true);
         await targetTree.merge(sourceTree, {
             files: files
         });
