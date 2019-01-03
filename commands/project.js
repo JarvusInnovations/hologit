@@ -163,7 +163,7 @@ exports.handler = async function project ({
             logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
 
             const lensedTree = await repo.createTreeFromRef(outputTreeHash);
-            const lensTargetStack = await projection.workspace.root.getSubtree(outputRoot, true, true);
+            const lensTargetStack = await projection.workspace.root.getSubtreeStack(outputRoot, true);
             const lensTargetTree = lensTargetStack.pop();
 
             await lensTargetTree.merge(lensedTree, {
