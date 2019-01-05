@@ -28,6 +28,11 @@ exports.builder = {
         describe: 'Whether to fetch the latest commit for all sources while projecting',
         type: 'boolean',
         default: false
+    },
+    'watch': {
+        describe: 'Set to continously output updated output',
+        type: 'boolean',
+        default: false
     }
 };
 
@@ -38,11 +43,12 @@ exports.handler = async function project ({
     working = false,
     debug = false,
     fetch = false,
+    watch = false,
     commitBranch = null,
     commitMessage = null
 }) {
     const logger = require('../lib/logger.js');
-    const { Repo, Projection } = require('../lib');
+    const { Repo, Projection, Workspace } = require('../lib');
 
 
     // check inputs
@@ -53,7 +59,7 @@ exports.handler = async function project ({
 
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
-    const repoHash = await repo.resolveRef();
+    const parentCommit = await repo.resolveRef();
 
 
     // load git interface
@@ -76,60 +82,49 @@ exports.handler = async function project ({
     }
 
 
-    // instantiate projection
-    const projection = new Projection({
-        branch: workspace.getBranch(holobranch)
+    /**
+     * create a reusable block for the rest of the process so it can be repeated
+     * in watch mode--until a more efficient watch response can be developed
+     */
+    let outputHash = await Projection.projectBranch(workspace.getBranch(holobranch), {
+        debug,
+        lens,
+        commitBranch,
+        commitMessage,
+        parentCommit
     });
+    console.log(outputHash);
 
 
-    // apply composition
-    await projection.composite();
+    // watch for changes
+    if (watch) {
+        const { watching } = await repo.watch({
+            callback: async (newTreeHash, newCommitHash=null) => {
+                logger.info('watch new hash: %s (from:%s)', newTreeHash, newCommitHash||'unknown');
 
+                const newWorkspace = new Workspace({
+                    root: await repo.createTree({ hash: newTreeHash })
+                });
 
-    // write and output pre-lensing hash if debug enabled
-    if (debug) {
-        logger.info('writing output tree before lensing...');
-        const outputTreeHashBeforeLensing = await projection.output.root.write();
-        logger.info('output tree before lensing:', outputTreeHashBeforeLensing);
-    }
-
-
-    if (lens) {
-        await projection.lens();
-    } else {
-        const holoTree = await projection.output.root.getSubtree('.holo');
-
-        if (holoTree) {
-            for (const childName in await holoTree.getChildren()) {
-                if (childName != 'lenses') {
-                    holoTree.deleteChild(childName);
-                }
+                outputHash = await Projection.projectBranch(newWorkspace.getBranch(holobranch), {
+                    debug,
+                    lens,
+                    commitBranch,
+                    commitMessage,
+                    parentCommit: newCommitHash
+                });
+                console.log(outputHash);
             }
-        }
-    }
+        });
 
-
-    // write tree
-    logger.info('writing final output tree...');
-    let outputHash = await projection.output.root.write();
-
-
-    // update commitBranch
-    if (commitBranch) {
-        outputHash = await projection.commit(
-            `refs/heads/${commitBranch}`,
-            {
-                mergeParent: working ? null : repoHash,
-                commitMessage
-            }
-        );
+        await watching;
     }
 
 
     // finished
     git.cleanup();
+    // TODO: ensure studio is cleaned up
 
-    logger.info('projection ready:');
-    console.log(outputHash);
+
     return outputHash;
 };
