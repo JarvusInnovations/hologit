@@ -48,7 +48,7 @@ exports.handler = async function project ({
     commitMessage = null
 }) {
     const logger = require('../lib/logger.js');
-    const { Repo, Projection, Workspace } = require('../lib');
+    const { Repo, Projection, Workspace, Studio } = require('../lib');
 
 
     // check inputs
@@ -123,7 +123,7 @@ exports.handler = async function project ({
 
     // finished
     git.cleanup();
-    // TODO: ensure studio is cleaned up
+    Studio.cleanup();
 
 
     return outputHash;
