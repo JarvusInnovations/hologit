@@ -111,38 +111,17 @@ exports.handler = async function project ({
 
     // write tree
     logger.info('writing final output tree...');
-    const rootTreeHash = await projection.output.root.write();
+    let outputHash = await projection.output.root.write();
 
 
-    // prepare output
-    let outputHash = rootTreeHash;
-
-
-    // update targetBranch
+    // update commitBranch
     if (commitBranch) {
-        const targetRef = `refs/heads/${commitBranch}`;
-
-        const parents = [
-            await git.revParse(targetRef, { $nullOnError: true })
-        ];
-
-        if (repoHash && !working) {
-            parents.push(repoHash);
-        }
-
-        const commitHash = await git.commitTree(
+        outputHash = await projection.commit(
+            `refs/heads/${commitBranch}`,
             {
-                p: parents,
-                m: commitMessage || `Projected ${projection.branch.name} from ${await git.describe({ always: true, tags: true })}`
-            },
-            rootTreeHash
+                mergeParent: working ? null : repoHash
+            }
         );
-
-        await git.updateRef(targetRef, commitHash);
-        logger.info(`committed new tree to "${commitBranch}":`, commitHash);
-
-        // change output to commit
-        outputHash = commitHash;
     }
 
 
