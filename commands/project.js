@@ -119,7 +119,8 @@ exports.handler = async function project ({
         outputHash = await projection.commit(
             `refs/heads/${commitBranch}`,
             {
-                mergeParent: working ? null : repoHash
+                mergeParent: working ? null : repoHash,
+                commitMessage
             }
         );
     }
