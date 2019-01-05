@@ -28,6 +28,11 @@ exports.builder = {
         describe: 'Whether to fetch the latest commit for all sources while projecting',
         type: 'boolean',
         default: false
+    },
+    'watch': {
+        describe: 'Set to continously output updated output',
+        type: 'boolean',
+        default: false
     }
 };
 
@@ -38,12 +43,12 @@ exports.handler = async function project ({
     working = false,
     debug = false,
     fetch = false,
+    watch = false,
     commitBranch = null,
     commitMessage = null
 }) {
-    const path = require('path');
     const logger = require('../lib/logger.js');
-    const { Repo, Projection } = require('../lib');
+    const { Repo, Projection, Workspace, Studio } = require('../lib');
 
 
     // check inputs
@@ -54,7 +59,11 @@ exports.handler = async function project ({
 
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
-    const repoHash = await repo.resolveRef();
+    const parentCommit = await repo.resolveRef();
+
+
+    // load git interface
+    const git = await repo.getGit();
 
 
     // load workspace
@@ -66,169 +75,56 @@ exports.handler = async function project ({
         const sources = await workspace.getSources();
 
         for (const source of sources.values()) {
-            const hash = await source.fetch();
+            const hash = await source.fetch(); // TODO: skip fetch if there is a submodule gitlink
             const { url, ref } = await source.getCachedConfig();
             logger.info(`fetched ${source.name} ${url}#${ref}@${hash.substr(0, 8)}`);
         }
     }
 
 
-    // instantiate projection
-    const projection = new Projection({
-        branch: workspace.getBranch(holobranch)
+    /**
+     * create a reusable block for the rest of the process so it can be repeated
+     * in watch mode--until a more efficient watch response can be developed
+     */
+    let outputHash = await Projection.projectBranch(workspace.getBranch(holobranch), {
+        debug,
+        lens,
+        commitBranch,
+        commitMessage,
+        parentCommit
     });
+    console.log(outputHash);
 
 
-    // read holobranch mappings
-    logger.info('reading mappings from holobranch:', projection.branch.name);
-    const mappings = await projection.branch.getMappings();
+    // watch for changes
+    if (watch) {
+        const { watching } = await repo.watch({
+            callback: async (newTreeHash, newCommitHash=null) => {
+                logger.info('watch new hash: %s (from:%s)', newTreeHash, newCommitHash||'unknown');
 
+                const newWorkspace = new Workspace({
+                    root: await repo.createTree({ hash: newTreeHash })
+                });
 
-    // load git interface
-    const git = await repo.getGit();
-
-
-    // composite output tree
-    logger.info('compositing tree...');
-    for (const mapping of mappings.values()) {
-        const { layer, root, files, output, holosource } = await mapping.getCachedConfig();
-
-        logger.info(`merging ${layer}:${root != '.' ? root+'/' : ''}{${files}} -> /${output != '.' ? output+'/' : ''}`);
-
-        // load source
-        const source = await workspace.getSource(holosource);
-        const sourceHead = await source.getCachedHead();
-
-        // load tree
-        const sourceTree = await repo.createTreeFromRef(`${sourceHead}:${root == '.' ? '' : root}`);
-
-        // merge source into target
-        const targetTree = output == '.' ? projection.workspace.root : await projection.workspace.root.getSubtree(output, true);
-        await targetTree.merge(sourceTree, {
-            files: files
+                outputHash = await Projection.projectBranch(newWorkspace.getBranch(holobranch), {
+                    debug,
+                    lens,
+                    commitBranch,
+                    commitMessage,
+                    parentCommit: newCommitHash
+                });
+                console.log(outputHash);
+            }
         });
-    }
 
-
-    // write and output pre-lensing hash if debug enabled
-    if (debug) {
-        logger.info('writing output tree before lensing...');
-        const outputTreeHashBeforeLensing = await projection.workspace.root.write();
-        logger.info('output tree before lensing:', outputTreeHashBeforeLensing);
-    }
-
-
-    if (lens) {
-        // read lenses from projection workspace
-        const lenses = await projection.workspace.getLenses();
-
-
-        // apply lenses
-        for (const lens of lenses.values()) {
-            const {
-                input: {
-                    root: inputRoot,
-                    files: inputFiles
-                },
-                output: {
-                    root: outputRoot,
-                    merge: outputMerge
-                }
-            } = await lens.getCachedConfig();
-
-            // build tree of matching files to input to lens
-            logger.info(`building input tree for lens ${lens.name} from ${inputRoot == '.' ? '' : (path.join(inputRoot, '.')+'/')}{${inputFiles}}`);
-            const { hash: specHash, ref: specRef } = await lens.buildSpec(await lens.buildInputTree());
-
-
-            // check for existing output tree
-            let outputTreeHash = await repo.resolveRef(`${specRef}^{tree}`);
-
-
-            // apply lens if existing tree not found
-            if (outputTreeHash) {
-                logger.info(`found existing output tree matching holospec(${specHash})`);
-            } else {
-                outputTreeHash = await lens.execute(specHash);
-            }
-
-
-            // verify output
-            if (!git.isHash(outputTreeHash)) {
-                throw new Error(`no output tree hash was returned by lens ${lens.name}`);
-            }
-
-
-            // apply lense output to main output tree
-            logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
-
-            const lensedTree = await repo.createTreeFromRef(outputTreeHash);
-            const lensTargetStack = await projection.workspace.root.getSubtree(outputRoot, true, true);
-            const lensTargetTree = lensTargetStack.pop();
-
-            await lensTargetTree.merge(lensedTree, {
-                mode: outputMerge
-            });
-        }
-
-
-        // strip .holo/ from output
-        logger.info('stripping .holo/ tree from output tree...');
-        projection.workspace.root.deleteChild('.holo');
-    } else {
-        const holoTree = await projection.workspace.root.getSubtree('.holo');
-
-        if (holoTree) {
-            for (const childName in await holoTree.getChildren()) {
-                if (childName != 'lenses') {
-                    holoTree.deleteChild(childName);
-                }
-            }
-        }
-    }
-
-
-    // write tree
-    logger.info('writing final output tree...');
-    const rootTreeHash = await projection.workspace.root.write();
-
-
-    // prepare output
-    let outputHash = rootTreeHash;
-
-
-    // update targetBranch
-    if (commitBranch) {
-        const targetRef = `refs/heads/${commitBranch}`;
-
-        const parents = [
-            await git.revParse(targetRef, { $nullOnError: true })
-        ];
-
-        if (repoHash && !working) {
-            parents.push(repoHash);
-        }
-
-        const commitHash = await git.commitTree(
-            {
-                p: parents,
-                m: commitMessage || `Projected ${projection.branch.name} from ${await git.describe({ always: true, tags: true })}`
-            },
-            rootTreeHash
-        );
-
-        await git.updateRef(targetRef, commitHash);
-        logger.info(`committed new tree to "${commitBranch}":`, commitHash);
-
-        // change output to commit
-        outputHash = commitHash;
+        await watching;
     }
 
 
     // finished
     git.cleanup();
+    Studio.cleanup();
 
-    logger.info('projection ready:');
-    console.log(outputHash);
+
     return outputHash;
 };
