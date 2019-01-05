@@ -41,7 +41,6 @@ exports.handler = async function project ({
     commitBranch = null,
     commitMessage = null
 }) {
-    const path = require('path');
     const logger = require('../lib/logger.js');
     const { Repo, Projection } = require('../lib');
 
@@ -96,62 +95,7 @@ exports.handler = async function project ({
 
 
     if (lens) {
-        // read lenses from projection workspace
-        const lenses = await projection.output.getLenses();
-
-
-        // apply lenses
-        for (const lens of lenses.values()) {
-            const {
-                input: {
-                    root: inputRoot,
-                    files: inputFiles
-                },
-                output: {
-                    root: outputRoot,
-                    merge: outputMerge
-                }
-            } = await lens.getCachedConfig();
-
-            // build tree of matching files to input to lens
-            logger.info(`building input tree for lens ${lens.name} from ${inputRoot == '.' ? '' : (path.join(inputRoot, '.')+'/')}{${inputFiles}}`);
-            const { hash: specHash, ref: specRef } = await lens.buildSpec(await lens.buildInputTree());
-
-
-            // check for existing output tree
-            let outputTreeHash = await repo.resolveRef(`${specRef}^{tree}`);
-
-
-            // apply lens if existing tree not found
-            if (outputTreeHash) {
-                logger.info(`found existing output tree matching holospec(${specHash})`);
-            } else {
-                outputTreeHash = await lens.execute(specHash);
-            }
-
-
-            // verify output
-            if (!git.isHash(outputTreeHash)) {
-                throw new Error(`no output tree hash was returned by lens ${lens.name}`);
-            }
-
-
-            // apply lense output to main output tree
-            logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
-
-            const lensedTree = await repo.createTreeFromRef(outputTreeHash);
-            const lensTargetStack = await projection.output.root.getSubtreeStack(outputRoot, true);
-            const lensTargetTree = lensTargetStack.pop();
-
-            await lensTargetTree.merge(lensedTree, {
-                mode: outputMerge
-            });
-        }
-
-
-        // strip .holo/ from output
-        logger.info('stripping .holo/ tree from output tree...');
-        projection.output.root.deleteChild('.holo');
+        await projection.lens();
     } else {
         const holoTree = await projection.output.root.getSubtree('.holo');
 
