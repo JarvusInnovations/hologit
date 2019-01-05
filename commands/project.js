@@ -57,6 +57,10 @@ exports.handler = async function project ({
     const repoHash = await repo.resolveRef();
 
 
+    // load git interface
+    const git = await repo.getGit();
+
+
     // load workspace
     const workspace = await repo.getWorkspace();
 
@@ -66,7 +70,7 @@ exports.handler = async function project ({
         const sources = await workspace.getSources();
 
         for (const source of sources.values()) {
-            const hash = await source.fetch();
+            const hash = await source.fetch(); // TODO: skip fetch if there is a submodule gitlink
             const { url, ref } = await source.getCachedConfig();
             logger.info(`fetched ${source.name} ${url}#${ref}@${hash.substr(0, 8)}`);
         }
@@ -79,48 +83,21 @@ exports.handler = async function project ({
     });
 
 
-    // read holobranch mappings
-    logger.info('reading mappings from holobranch:', projection.branch.name);
-    const mappings = await projection.branch.getMappings();
-
-
-    // load git interface
-    const git = await repo.getGit();
-
-
-    // composite output tree
-    logger.info('compositing tree...');
-    for (const mapping of mappings.values()) {
-        const { layer, root, files, output, holosource } = await mapping.getCachedConfig();
-
-        logger.info(`merging ${layer}:${root != '.' ? root+'/' : ''}{${files}} -> /${output != '.' ? output+'/' : ''}`);
-
-        // load source
-        const source = await workspace.getSource(holosource);
-        const sourceHead = await source.getCachedHead();
-
-        // load tree
-        const sourceTree = await repo.createTreeFromRef(`${sourceHead}:${root == '.' ? '' : root}`);
-
-        // merge source into target
-        const targetTree = await projection.workspace.root.getSubtree(output, true);
-        await targetTree.merge(sourceTree, {
-            files: files
-        });
-    }
+    // apply composition
+    await projection.composite();
 
 
     // write and output pre-lensing hash if debug enabled
     if (debug) {
         logger.info('writing output tree before lensing...');
-        const outputTreeHashBeforeLensing = await projection.workspace.root.write();
+        const outputTreeHashBeforeLensing = await projection.output.root.write();
         logger.info('output tree before lensing:', outputTreeHashBeforeLensing);
     }
 
 
     if (lens) {
         // read lenses from projection workspace
-        const lenses = await projection.workspace.getLenses();
+        const lenses = await projection.output.getLenses();
 
 
         // apply lenses
@@ -163,7 +140,7 @@ exports.handler = async function project ({
             logger.info(`merging lens output tree(${outputTreeHash}) into /${outputRoot != '.' ? outputRoot+'/' : ''}`);
 
             const lensedTree = await repo.createTreeFromRef(outputTreeHash);
-            const lensTargetStack = await projection.workspace.root.getSubtreeStack(outputRoot, true);
+            const lensTargetStack = await projection.output.root.getSubtreeStack(outputRoot, true);
             const lensTargetTree = lensTargetStack.pop();
 
             await lensTargetTree.merge(lensedTree, {
@@ -174,9 +151,9 @@ exports.handler = async function project ({
 
         // strip .holo/ from output
         logger.info('stripping .holo/ tree from output tree...');
-        projection.workspace.root.deleteChild('.holo');
+        projection.output.root.deleteChild('.holo');
     } else {
-        const holoTree = await projection.workspace.root.getSubtree('.holo');
+        const holoTree = await projection.output.root.getSubtree('.holo');
 
         if (holoTree) {
             for (const childName in await holoTree.getChildren()) {
@@ -190,7 +167,7 @@ exports.handler = async function project ({
 
     // write tree
     logger.info('writing final output tree...');
-    const rootTreeHash = await projection.workspace.root.write();
+    const rootTreeHash = await projection.output.root.write();
 
 
     // prepare output
