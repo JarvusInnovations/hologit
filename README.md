@@ -30,30 +30,7 @@ $ git commit -m "Add Bootstrap's starter template as index.html"
 
 ### Install hologit
 
-Hologit can be installed via [habitat](https://www.habitat.sh/) (best option in Linux environments):
-
-```console
-$ hab pkg install -b jarvus/hologit
-» Installing jarvus/hologit
-☁ Determining latest version of jarvus/hologit in the 'stable' channel
-→ Using jarvus/hologit/0.4.1/20181224022822
-★ Install of jarvus/hologit/0.4.1/20181224022822 complete with 0 new packages installed.
-» Binlinking git-holo from jarvus/hologit/0.4.1/20181224022822 into /bin
-★ Binlinked git-holo from jarvus/hologit/0.4.1/20181224022822 to /bin/git-holo
-```
-
-or with [npm](https://www.npmjs.com/) (best option in Mac environments):
-
-```console
-$ git --version # ensure >= 2.8.0
-git version 2.17.2 (Apple Git-113)
-$ node --version # ensure >= 8.3.0
-v11.5.0
-$ npm install -g hologit
-/usr/local/bin/git-holo -> /usr/local/lib/node_modules/hologit/bin/cli.js
-+ hologit@0.4.1
-updated 1 package in 1.947s
-```
+See [docs/grand-tour/installation.md](docs/grand-tour/installation.md)
 
 ### Initialize .holo/ configuration [\[example branch\]](https://github.com/hologit/examples/tree/basic/02-init-holo)
 
