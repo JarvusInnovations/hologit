@@ -26,7 +26,7 @@
             "port": 7092,
             "restart": true,
             "trace": true,
-            "localRoot": "${workspaceFolder}",
+            "localRoot": "${workspaceFolder:hologit}",
             "remoteRoot": "/src"
         },
         {
@@ -42,7 +42,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "init"
             ]
@@ -60,7 +60,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "branch",
                 "create",
@@ -82,7 +82,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "project",
                 "--working",
@@ -106,7 +106,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "watch"
             ]
@@ -124,7 +124,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "source",
                 "create",
@@ -144,7 +144,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "source",
                 "checkout",
@@ -164,7 +164,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "source",
                 "fetch",
@@ -184,7 +184,7 @@
                 "DEBUG": "1"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "studio",
                 "--socket=${workspaceFolder:hologit-debug-context}/.git/holo/studio.sock"
@@ -204,7 +204,7 @@
                 "HOLO_SCRATCH": "/tmp/holoscratch"
             },
             "outputCapture": "std",
-            "program": "${workspaceFolder}/bin/cli.js",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "lens",
                 "exec",
@@ -222,8 +222,8 @@
             "port": 9229,
             "restart": true,
             "trace": true,
-            "localRoot": "${workspaceFolder}",
-            "remoteRoot": "/src"
+            "localRoot": "${workspaceFolder:hologit}",
+            "remoteRoot": "/src/hologit"
         },
         {
             "type": "node",
@@ -236,8 +236,8 @@
             "port": 9229,
             "restart": true,
             "trace": true,
-            "localRoot": "${workspaceFolder}",
-            "remoteRoot": "${workspaceFolder}"
+            "localRoot": "${workspaceFolder:hologit}",
+            "remoteRoot": "${workspaceFolder:hologit}"
         },
     ]
 }
