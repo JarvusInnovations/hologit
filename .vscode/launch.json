@@ -218,12 +218,26 @@
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "attach",
+            "name": "attach studio",
             "port": 9229,
             "restart": true,
             "trace": true,
             "localRoot": "${workspaceFolder}",
             "remoteRoot": "/src"
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "attach local",
+            "port": 9229,
+            "restart": true,
+            "trace": true,
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "${workspaceFolder}"
         },
     ]
 }
