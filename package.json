@@ -1,6 +1,6 @@
 {
   "name": "hologit",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Hologit automates the projection of layered composite file trees based on flat, declarative plans",
   "repository": "https://github.com/EmergencePlatform/hologit",
   "main": "bin/cli.js",
@@ -19,6 +19,7 @@
     "minimatch": "^3.0.4",
     "mz": "^2.4.0",
     "mz-modules": "^2.1.0",
+    "node-cleanup": "^2.1.2",
     "object-squish": "^1.1.0",
     "parse-url": "^5.0.0",
     "shell-quote-word": "^1.0.1",
