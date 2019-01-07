@@ -20,14 +20,26 @@
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "studio:project",
-            "preLaunchTask": "studio-debug-project",
-            "postDebugTask": "studio-killall",
-            "port": 7092,
+            "name": "attach studio",
+            "port": 9229,
             "restart": true,
             "trace": true,
             "localRoot": "${workspaceFolder:hologit}",
-            "remoteRoot": "/src"
+            "remoteRoot": "/src/hologit"
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "attach local",
+            "port": 9229,
+            "restart": true,
+            "trace": true,
+            "localRoot": "${workspaceFolder:hologit}",
+            "remoteRoot": "${workspaceFolder:hologit}"
         },
         {
             "type": "node",
@@ -44,7 +56,8 @@
             "outputCapture": "std",
             "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
-                "init"
+                "init",
+                "--name=newt"
             ]
         },
         {
@@ -86,11 +99,16 @@
             "args": [
                 "project",
                 "--working",
+                "--watch",
                 "--debug",
-                "--commit-branch=gh-pages",
+                // "--no-lens",
+                // "--fetch",
+                // "--ref=develop",
+                "--commit-to=site",
+                // "--commit-message=foo",
 
                 // holobranch
-                "gh-pages"
+                "site"
             ]
         },
         {
@@ -108,7 +126,9 @@
             "outputCapture": "std",
             "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
-                "watch"
+                "watch",
+                "--working"
+                // "--ref=refs/heads/develop"
             ]
         },
         {
@@ -213,31 +233,26 @@
         },
         {
             "type": "node",
-            "request": "attach",
+            "request": "launch",
             "skipFiles": [
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "attach studio",
-            "port": 9229,
-            "restart": true,
-            "trace": true,
-            "localRoot": "${workspaceFolder:hologit}",
-            "remoteRoot": "/src/hologit"
-        },
-        {
-            "type": "node",
-            "request": "attach",
-            "skipFiles": [
-                "<node_internals>/**/*.js"
-            ],
-
-            "name": "attach local",
-            "port": 9229,
-            "restart": true,
-            "trace": true,
-            "localRoot": "${workspaceFolder:hologit}",
-            "remoteRoot": "${workspaceFolder:hologit}"
-        },
+            "name": "lens export-tree",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                "DEBUG": "1",
+                "GIT_DIR": "${workspaceFolder:hologit-debug-context}/.git",
+                "GIT_WORK_TREE": "/tmp/export",
+                "GIT_INDEX_FILE": "/tmp/export.index"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
+            "args": [
+                "lens",
+                "export-tree",
+                "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+            ]
+        }
     ]
 }
