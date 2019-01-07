@@ -1,9 +1,13 @@
 exports.command = 'export-tree <treeish>';
-exports.desc = 'Export given <treeish> to current index and working tree';
+exports.desc = 'Export given <treeish> to current index and working tree (warning: destructive)';
 
 exports.handler = async function exportTree ({ treeish }) {
-    const logger = require('../../lib/logger.js');
-    const hololib = require('../../lib');
+    const { Repo } = require('../../lib');
+
+
+    // load holorepo
+    const repo = await Repo.getFromEnvironment({ working: true });
+    const git = await repo.getGit();
 
 
     // check inputs
@@ -11,9 +15,9 @@ exports.handler = async function exportTree ({ treeish }) {
         throw new Error('treeish required');
     }
 
-
-    // load .holo info
-    const git = await hololib.getGit();
+    if (!repo.workTree) {
+        throw new Error('must be run in working tree');
+    }
 
 
     // read tree contents into index
