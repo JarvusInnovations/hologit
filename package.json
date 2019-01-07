@@ -14,7 +14,7 @@
     "debounce": "^1.2.0",
     "dockerode": "^2.5.7",
     "fb-watchman": "^2.0.0",
-    "git-client": "^1.2.1",
+    "git-client": "^1.2.2",
     "hab-client": "^1.0.0",
     "handlebars": "^4.0.12",
     "minimatch": "^3.0.4",
