@@ -2,8 +2,8 @@ exports.command = 'project <holobranch>';
 exports.desc = 'Projects holobranch named <holobranch> and outputs resulting tree hash';
 
 exports.builder = {
-    'commit-branch': {
-        describe: 'A target branch to commit the projected tree to',
+    'commit-to': {
+        describe: 'A target branch/ref to commit the projected tree to',
         type: 'string'
     },
     'commit-message': {
@@ -44,11 +44,11 @@ exports.handler = async function project ({
     debug = false,
     fetch = false,
     watch = false,
-    commitBranch = null,
+    commitTo = null,
     commitMessage = null
 }) {
     const logger = require('../lib/logger.js');
-    const { Repo, Projection, Workspace, Studio } = require('../lib');
+    const { Repo, Projection, Workspace } = require('../lib');
 
 
     // check inputs
@@ -89,7 +89,7 @@ exports.handler = async function project ({
     let outputHash = await Projection.projectBranch(workspace.getBranch(holobranch), {
         debug,
         lens,
-        commitBranch,
+        commitTo,
         commitMessage,
         parentCommit
     });
@@ -109,7 +109,7 @@ exports.handler = async function project ({
                 outputHash = await Projection.projectBranch(newWorkspace.getBranch(holobranch), {
                     debug,
                     lens,
-                    commitBranch,
+                    commitTo,
                     commitMessage,
                     parentCommit: newCommitHash
                 });
