@@ -1,5 +1,5 @@
 exports.command = 'merge-trees <treeish-base> <treeish-input>';
-exports.desc = 'Merge <treeish-input> into <treeish-base>';
+exports.desc = 'Merge <treeish-input> into <treeish-base> and output resulting tree hash';
 
 exports.builder = {
     'treeish-base': {
@@ -17,9 +17,12 @@ exports.builder = {
 };
 
 exports.handler = async function mergeTrees ({ treeishBase, treeishInput, method }) {
-    const logger = require('../lib/logger.js');
-    const hololib = require('../../lib');
-    const git = await hololib.getGit();
+    const { Repo } = require('../../lib');
+
+
+    // load holorepo
+    const repo = await Repo.getFromEnvironment();
+    const git = await repo.getGit();
 
 
     // check inputs
