@@ -122,9 +122,5 @@ exports.handler = async function project ({
 
 
     // finished
-    git.cleanup();
-    Studio.cleanup();
-
-
     return outputHash;
 };
