@@ -1,6 +1,12 @@
 # hologit
 
-**Hologit** is a universal tool for assembling software. It lives inside your project's git repository and enables you to define virtual "holobranches" that can be continuously and efficiently "projected" from a source branch. The projection process handles combining code from remote sources ("compositing") and executing build tools on the result ("lensing") to produce an output file tree.
+**Hologit** is a [free and open](https://www.fsf.org/about/what-is-free-software) tool that provides code and content automation for hoomans.
+
+Hologit aim to make working on software easier for everyone, pro and beginner alike, by getting rid of the need to think about or know what needs to happen after you change code. There should just be code, and it goes places when you change it.
+
+Hologit occupies the same space as *build* tools and *continuous integration* tools that experienced software developers use today; it aims to wrap around those in the short term but displace them as relevant concepts anyone needs to worry about in the long term.
+
+Hologit lives inside your project's git repository and enables you to define virtual "holobranches" that can be continuously and efficiently "projected" from a source branch. The projection process handles combining code from remote sources ("compositing") and executing build tools on the result ("lensing") to produce an output file tree.
 
 **Compositing** offers deeper control over which files are pulled from a remote repository and where they are integrated than [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) alone, while being more dependable and tracable than language-specific package managers like [npm](https://www.npmjs.com/) and [composer](https://getcomposer.org/). Instead of copying and moving files around on disk, hologit takes a git-native approach to minimize disk activity by computing new git trees in memory. Computed trees may be written to disk later or used as input to another process without the overhead.
 
