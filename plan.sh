@@ -12,7 +12,6 @@ pkg_deps=(
   core/git
   core/node
   core/hab
-  jarvus/watchman
 )
 
 pkg_bin_dirs=(bin)
