@@ -3,7 +3,7 @@ exports.desc = 'Create a holobranch named <name>';
 exports.builder = {
     template: {
         describe: 'Which generated starting point to use for the new holobranch',
-        choices: ['passthrough', 'empty'],
+        choices: ['emergence-site', 'passthrough', 'empty'],
         default: 'empty'
     }
 };
@@ -50,7 +50,7 @@ exports.handler = async function createBranch ({ name, template }) {
     switch (template) {
         case 'empty':
             break;
-        case 'passthrough':
+        case 'passthrough': {
             const { name: workspaceName } = await workspace.getCachedConfig();
 
             mappingConfigs[`_${workspaceName}`] = {
@@ -58,6 +58,21 @@ exports.handler = async function createBranch ({ name, template }) {
             };
 
             break;
+        }
+        case 'emergence-site': {
+            const { name: workspaceName } = await workspace.getCachedConfig();
+
+            mappingConfigs[`_${workspaceName}`] = {
+                files: '*/**',
+                after: ['skeleton-v2']
+            };
+
+            mappingConfigs[`_skeleton-v2`] = {
+                files: '*/**'
+            };
+
+            break;
+        }
         default:
             throw new Error(`unknown holobranch template: ${template}`);
     }
