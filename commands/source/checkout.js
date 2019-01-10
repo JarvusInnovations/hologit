@@ -1,14 +1,19 @@
-exports.command = 'checkout [name]';
-exports.desc = 'Check out submodule for source named <name> or --all sources';
+exports.command = 'checkout [name|--all]';
+exports.desc = 'Check out repositories for source named <name> or --all sources';
 exports.builder = {
     all: {
-        describe: 'Check out submodules for all defined sources',
+        describe: 'Check out repositories for all defined sources',
+        type: 'boolean',
+        default: false
+    },
+    submodule: {
+        describe: 'Create a submodule for tracking the source\'s version in the outer repository',
         type: 'boolean',
         default: false
     }
 };
 
-exports.handler = async function checkoutSource ({ name, all }) {
+exports.handler = async function checkoutSource ({ name, all, submodule }) {
     const logger = require('../../lib/logger.js');
     const { Repo } = require('../../lib');
 
@@ -33,7 +38,7 @@ exports.handler = async function checkoutSource ({ name, all }) {
 
     // execute fetch
     for (const source of sources) {
-        const result = await source.checkoutSubmodule();
+        const result = await source.checkout({ submodule });
         console.log(`checked out ${result.path} from ${result.url}#${result.branch||result.ref}@${result.head.substr(0, 8)}`);
     }
 
