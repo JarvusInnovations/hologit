@@ -1,4 +1,4 @@
-exports.command = 'checkout [name|--all]';
+exports.command = 'checkout [name]';
 exports.desc = 'Check out repositories for source named <name> or --all sources';
 exports.builder = {
     all: {
