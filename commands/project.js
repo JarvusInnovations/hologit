@@ -75,7 +75,8 @@ exports.handler = async function project ({
         const sources = await workspace.getSources();
 
         for (const source of sources.values()) {
-            const hash = await source.fetch(); // TODO: skip fetch if there is a submodule gitlink
+            await source.fetch(); // TODO: skip fetch if there is a submodule gitlink
+            const hash = await source.getHead();
             const { url, ref } = await source.getCachedConfig();
             logger.info(`fetched ${source.name} ${url}#${ref}@${hash.substr(0, 8)}`);
         }
