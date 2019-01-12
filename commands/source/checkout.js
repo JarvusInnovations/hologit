@@ -39,7 +39,7 @@ exports.handler = async function checkoutSource ({ name, all, submodule }) {
     // execute fetch
     for (const source of sources) {
         const result = await source.checkout({ submodule });
-        console.log(`checked out ${result.path} from ${result.url}#${result.branch||result.ref}@${result.head.substr(0, 8)}`);
+        console.log(`checked out ${result.path} from ${result.url||''}#${result.branch||result.ref}@${result.head.substr(0, 8)}`);
     }
 
 };
