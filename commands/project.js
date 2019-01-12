@@ -103,10 +103,7 @@ exports.handler = async function project ({
             callback: async (newTreeHash, newCommitHash=null) => {
                 logger.info('watch new hash: %s (from:%s)', newTreeHash, newCommitHash||'unknown');
 
-                const newWorkspace = new Workspace({
-                    root: await repo.createTree({ hash: newTreeHash })
-                });
-
+                const newWorkspace = await repo.createWorkspaceFromTreeHash(newTreeHash);
                 outputHash = await Projection.projectBranch(newWorkspace.getBranch(holobranch), {
                     debug,
                     lens,
