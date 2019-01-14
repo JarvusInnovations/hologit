@@ -64,14 +64,18 @@ exports.handler = async function createSource ({
 
     // examine remote repo/branch to discover absolute ref and current commit hash
     logger.info(`listing ${url}#${ref}`);
-    const { hash, ref: remoteRef } = await source.queryRef();
+    const { ref: remoteRef } = await source.queryRef();
     source.phantom.ref = remoteRef;
 
 
     // fetch objects
-    logger.info(`fetching ${url}#${remoteRef}@${hash}`);
-    await source.fetch();
-    console.log(`fetched ${url}#${remoteRef}@${hash}`);
+    logger.info(`fetching ${url||''}#${remoteRef}`);
+    const { refs: [ fetchedRef ] } = await source.fetch();
+    const fetchedHash = await repo.resolveRef(fetchedRef);
+    if (!fetchedHash) {
+       throw new Error(`failed to fetch ${source.name} ${url||''}#${ref}`);
+    }
+    console.log(`fetched ${url||''}#${remoteRef}@${fetchedHash}`);
 
 
     // write config

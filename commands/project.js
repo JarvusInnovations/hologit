@@ -75,9 +75,13 @@ exports.handler = async function project ({
         const sources = await workspace.getSources();
 
         for (const source of sources.values()) {
-            const hash = await source.fetch(); // TODO: skip fetch if there is a submodule gitlink
             const { url, ref } = await source.getCachedConfig();
-            logger.info(`fetched ${source.name} ${url}#${ref}@${hash.substr(0, 8)}`);
+            const { refs: [ fetchedRef ] } = await source.fetch();
+            const fetchedHash = await repo.resolveRef(fetchedRef);
+            if (!fetchedHash) {
+               throw new Error(`failed to fetch ${source.name} ${url||''}#${ref}`);
+            }
+            logger.info(`fetched ${source.name} ${url||''}#${ref}@${fetchedHash.substr(0, 8)}`);
         }
     }
 
@@ -102,10 +106,7 @@ exports.handler = async function project ({
             callback: async (newTreeHash, newCommitHash=null) => {
                 logger.info('watch new hash: %s (from:%s)', newTreeHash, newCommitHash||'unknown');
 
-                const newWorkspace = new Workspace({
-                    root: await repo.createTree({ hash: newTreeHash })
-                });
-
+                const newWorkspace = await repo.createWorkspaceFromTreeHash(newTreeHash);
                 outputHash = await Projection.projectBranch(newWorkspace.getBranch(holobranch), {
                     debug,
                     lens,
