@@ -10,7 +10,7 @@ exports.builder = {
 
 exports.handler = async function createBranch ({ name, template }) {
     const logger = require('../../lib/logger.js');
-    const { Repo, Branch } = require('../../lib');
+    const { Repo } = require('../../lib');
 
 
     // check inputs
@@ -32,14 +32,8 @@ exports.handler = async function createBranch ({ name, template }) {
 
 
     // read branch config
-    if (await branch.readConfig() !== Branch.DEFAULT_CONFIG) {
-        throw new Error('holobranch already configured');
-    }
-
-
-    // read mappings config
-    if ((await branch.getMappings()).size) {
-        throw new Error('holobranch already contains mappings');
+    if (await branch.isDefined()) {
+        throw new Error('holobranch already defined');
     }
 
 
