@@ -81,7 +81,7 @@ exports.handler = async function project ({
             if (!fetchedHash) {
                throw new Error(`failed to fetch ${source.name} ${url||''}#${ref}`);
             }
-            logger.info(`fetched ${source.name} ${url||''}#${ref}@${fetchedHash.substr(0, 8)}`);
+            logger.info(`fetched ${source.name} ${url||''}#${fetchedRef}@${fetchedHash.substr(0, 8)}`);
         }
     }
 
