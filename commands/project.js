@@ -48,7 +48,7 @@ exports.handler = async function project ({
     commitMessage = null
 }) {
     const logger = require('../lib/logger.js');
-    const { Repo, Projection, Workspace } = require('../lib');
+    const { Repo, Projection } = require('../lib');
 
 
     // check inputs
@@ -60,10 +60,6 @@ exports.handler = async function project ({
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
     const parentCommit = await repo.resolveRef();
-
-
-    // load git interface
-    const git = await repo.getGit();
 
 
     // load workspace
@@ -81,8 +77,15 @@ exports.handler = async function project ({
             if (!fetchedHash) {
                throw new Error(`failed to fetch ${source.name} ${url||''}#${ref}`);
             }
-            logger.info(`fetched ${source.name} ${url||''}#${ref}@${fetchedHash.substr(0, 8)}`);
+            logger.info(`fetched ${source.name} ${url||''}#${fetchedRef}@${fetchedHash.substr(0, 8)}`);
         }
+    }
+
+
+    // examine holobranch
+    const workspaceBranch = workspace.getBranch(holobranch);
+    if (!await workspaceBranch.isDefined()) {
+        throw new Error(`holobranch not defined: ${holobranch}`);
     }
 
 
@@ -90,7 +93,7 @@ exports.handler = async function project ({
      * create a reusable block for the rest of the process so it can be repeated
      * in watch mode--until a more efficient watch response can be developed
      */
-    let outputHash = await Projection.projectBranch(workspace.getBranch(holobranch), {
+    let outputHash = await Projection.projectBranch(workspaceBranch, {
         debug,
         lens,
         commitTo,

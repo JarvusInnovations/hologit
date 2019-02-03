@@ -32,14 +32,8 @@ exports.handler = async function createBranch ({ name, template }) {
 
 
     // read branch config
-    if (await branch.readConfig()) {
-        throw new Error('holobranch already configured');
-    }
-
-
-    // read mappings config
-    if ((await branch.getMappings()).size) {
-        throw new Error('holobranch already contains mappings');
+    if (await branch.isDefined()) {
+        throw new Error('holobranch already defined');
     }
 
 
