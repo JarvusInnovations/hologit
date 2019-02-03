@@ -22,7 +22,7 @@ exports.builder = {
     'lens': {
         describe: 'Whether to apply lensing to the composite tree',
         type: 'boolean',
-        default: true
+        default: null
     },
     'fetch': {
         describe: 'Whether to fetch the latest commit for all sources while projecting',
@@ -39,7 +39,7 @@ exports.builder = {
 exports.handler = async function project ({
     holobranch,
     ref = 'HEAD',
-    lens = true,
+    lens = null,
     working = false,
     debug = false,
     fetch = false,
