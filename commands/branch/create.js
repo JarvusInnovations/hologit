@@ -10,7 +10,7 @@ exports.builder = {
 
 exports.handler = async function createBranch ({ name, template }) {
     const logger = require('../../lib/logger.js');
-    const { Repo } = require('../../lib');
+    const { Repo, Branch } = require('../../lib');
 
 
     // check inputs
@@ -32,7 +32,7 @@ exports.handler = async function createBranch ({ name, template }) {
 
 
     // read branch config
-    if (await branch.readConfig()) {
+    if (await branch.readConfig() !== Branch.DEFAULT_CONFIG) {
         throw new Error('holobranch already configured');
     }
 
