@@ -82,11 +82,18 @@ exports.handler = async function project ({
     }
 
 
+    // examine holobranch
+    const workspaceBranch = workspace.getBranch(holobranch);
+    if (!await workspaceBranch.isDefined()) {
+        throw new Error(`holobranch not defined: ${holobranch}`);
+    }
+
+
     /**
      * create a reusable block for the rest of the process so it can be repeated
      * in watch mode--until a more efficient watch response can be developed
      */
-    let outputHash = await Projection.projectBranch(workspace.getBranch(holobranch), {
+    let outputHash = await Projection.projectBranch(workspaceBranch, {
         debug,
         lens,
         commitTo,
