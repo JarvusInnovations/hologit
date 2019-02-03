@@ -48,7 +48,7 @@ exports.handler = async function project ({
     commitMessage = null
 }) {
     const logger = require('../lib/logger.js');
-    const { Repo, Projection, Workspace } = require('../lib');
+    const { Repo, Projection } = require('../lib');
 
 
     // check inputs
@@ -60,10 +60,6 @@ exports.handler = async function project ({
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
     const parentCommit = await repo.resolveRef();
-
-
-    // load git interface
-    const git = await repo.getGit();
 
 
     // load workspace
