@@ -6,3 +6,9 @@
 **/plan.sh
 **/test/
 /studio/
+/docs/
+.bldr.toml
+.eslintrc.json
+jsconfig.json
+*.md
+!README.md
