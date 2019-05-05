@@ -1,9 +1,26 @@
-const init = require('./init');
+const commandName = "init";
+const { command, handler } = require(`./${commandName}`);
 
-test('init exports command', () => {
-  expect(init.command).toBe('init');
+test("exports command", () => {
+    expect(command).toBe("init");
 });
 
-test('init exports handler', () => {
-  expect(typeof init.handler).toBe('function');
+test("exports handler", () => {
+    expect(typeof handler).toBe("function");
+});
+
+test("outputs initialized repo's config", async () => {
+    const spy = jest.spyOn(console, 'log');
+
+    const result = await handler();
+
+    expect(spy.mock.calls.length).toBe(2);
+    expect(spy.mock.calls[0]).toEqual([
+        'name=hologit',
+        'initialized .holo/config.toml'
+    ]);
+
+    expect(result).toEqual({
+        name: 'hologit'
+    });
 });

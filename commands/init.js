@@ -6,7 +6,7 @@ exports.builder = {
     }
 };
 
-exports.handler = async function init ({ name = null }) {
+exports.handler = async function init ({ name = null } = {}) {
     const logger = require('../lib/logger.js');
     const { Repo } = require('../lib');
     const path = require('path');
@@ -57,6 +57,11 @@ exports.handler = async function init ({ name = null }) {
         console.log(`initialized .holo/config.toml`);
     }
 
+
     // write changes to index
     await workspace.writeWorkingChanges();
+
+
+    // return generated configuration
+    return repoConfig;
 };
