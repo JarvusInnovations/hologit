@@ -16,7 +16,7 @@
     "fb-watchman": "^2.0.0",
     "git-client": "^1.5.1",
     "hab-client": "^1.0.0",
-    "handlebars": "^4.0.12",
+    "handlebars": "^4.1.2",
     "minimatch": "^3.0.4",
     "mz": "^2.4.0",
     "mz-modules": "^2.1.0",
