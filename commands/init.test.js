@@ -15,9 +15,9 @@ test('outputs initialized repo\'s config', async () => {
     const result = await handler();
 
     expect(spy.mock.calls.length).toBe(2);
-    expect(spy.mock.calls[0]).toEqual([
-        'name=hologit',
-        'initialized .holo/config.toml'
+    expect(spy.mock.calls).toEqual([
+        ['name=hologit'],
+        ['initialized .holo/config.toml']
     ]);
 
     expect(result).toEqual({
