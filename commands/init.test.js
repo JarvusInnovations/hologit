@@ -1,15 +1,15 @@
-const commandName = "init";
+const commandName = 'init';
 const { command, handler } = require(`./${commandName}`);
 
-test("exports command", () => {
-    expect(command).toBe("init");
+test('exports command', () => {
+    expect(command).toBe('init');
 });
 
-test("exports handler", () => {
-    expect(typeof handler).toBe("function");
+test('exports handler', () => {
+    expect(typeof handler).toBe('function');
 });
 
-test("outputs initialized repo's config", async () => {
+test('outputs initialized repo\'s config', async () => {
     const spy = jest.spyOn(console, 'log');
 
     const result = await handler();
