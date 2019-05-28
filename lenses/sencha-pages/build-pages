@@ -1,0 +1,26 @@
+#!/bin/bash
+
+sencha \
+  --sdk-path='./ext' \
+  compile \
+    --classpath='./ext/packages/core/src' \
+    --classpath='./ext/packages/core/overrides' \
+    --classpath='./pages/src' \
+    union --recursive --tag='class' \
+    and save core \
+    and concat \
+      --input-js-version='ANY' \
+      --js-version='ANY' \
+      --strip-comments \
+      --output-file='./build/common.js' \
+    and union --recursive --include-uses=no --tag='core' \
+    and require --source-name='Ext.event.publisher.Dom' --requires='Ext.GlobalEvents' \
+    and require --source-name='Ext.event.Event' --requires='Ext.dom.Fly' \
+    and include --recursive --include-uses=no --class='Site.Common' \
+    and exclude --set='core' \
+    and concat \
+      --input-js-version='ANY' \
+      --js-version='ANY' \
+      --strip-comments \
+      --append \
+      --output-file='./build/common.js'

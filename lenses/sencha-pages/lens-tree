@@ -1,0 +1,20 @@
+#!/bin/bash
+
+INPUT_TREE="${1?<input> required}"
+
+# redirect all output to stderr
+{
+  # export git tree to disk
+  git holo lens export-tree "${INPUT_TREE}"
+
+  # execute compilation
+  pushd "${GIT_WORK_TREE}" > /dev/null
+  build-pages
+  popd > /dev/null
+
+  # add output to git index
+  git add build
+} 1>&2
+
+# output tree hash
+git write-tree --prefix=build
