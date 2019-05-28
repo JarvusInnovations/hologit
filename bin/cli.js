@@ -40,7 +40,7 @@ require('yargs')
 
         return true;
     })
-    .commandDir('../commands')
+    .commandDir('../commands', { exclude: /\.test\.js$/ })
     .demandCommand()
     .showHelpOnFail(false, 'Specify --help for available options')
     .fail((msg, err) => {

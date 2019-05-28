@@ -5,8 +5,10 @@
 **/.studiorc
 **/plan.sh
 **/test/
+**/*.test.js
 /studio/
 /docs/
+/lenses/
 .bldr.toml
 .eslintrc.json
 jsconfig.json
