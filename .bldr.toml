@@ -6,3 +6,15 @@ plan_path = "studio"
 paths = [
   "*",
 ]
+
+[lens-compass]
+plan_path = "lenses/compass"
+paths = [
+  "*",
+]
+
+[lens-sencha-pages]
+plan_path = "lenses/sencha-pages"
+paths = [
+  "*",
+]
