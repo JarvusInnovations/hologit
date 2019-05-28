@@ -15,6 +15,21 @@ CONCAT_OPTIONS='
   --strip-comments
 '
 
+# build pages commands
+COMPILE_PAGES=''
+
+
+# build pages commands
+for pageSrc in ./pages/src/page/*.js; do
+  pageName="$(basename $pageSrc .js)"
+  echo "Configuring page ${pageName} from ${pageSrc}"
+
+  COMPILE_PAGES="${COMPILE_PAGES} and union --recursive --include-uses=no --class=Site.page.${pageName}"
+  COMPILE_PAGES="${COMPILE_PAGES} and exclude --set=common"
+  COMPILE_PAGES="${COMPILE_PAGES} and concat ${CONCAT_OPTIONS} --output-file=./build/${pageName}.js"
+done;
+
+
 # build common.js
 $SENCHA_COMPILE \
     union --recursive --tag='class' \
@@ -25,4 +40,7 @@ $SENCHA_COMPILE \
     and require --source-name='Ext.event.Event' --requires='Ext.dom.Fly' \
     and include --recursive --include-uses=no --class='Site.Common' \
     and exclude --set='core' \
-    and concat $CONCAT_OPTIONS --append --output-file='./build/common.js'
+    and concat $CONCAT_OPTIONS --append --output-file='./build/common.js' \
+    and include --set='core' \
+    and save common \
+    $COMPILE_PAGES
