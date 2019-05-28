@@ -22,6 +22,7 @@
         --output-file='./classes-core.txt' \
       and union --recursive --include-uses=no --tag='core' \
       and require --source-name='Ext.event.publisher.Dom' --requires='Ext.GlobalEvents' \
+      and require --source-name='Ext.event.Event' --requires='Ext.dom.Fly' \
       and include --recursive --include-uses=no --class='Site.Common' \
       and exclude --set='core' \
       and metadata \
