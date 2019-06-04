@@ -20,6 +20,7 @@ COMPILE_PAGES=''
 
 
 # build pages commands
+shopt -s nullglob
 for pageSrc in ./pages/src/page/*.js; do
   pageName="$(basename $pageSrc .js)"
   echo "Configuring page ${pageName} from ${pageSrc}"
