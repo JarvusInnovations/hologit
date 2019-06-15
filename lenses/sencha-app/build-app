@@ -1,0 +1,13 @@
+#!/bin/bash
+
+sencha \
+  ant \
+    -Dext.dir=../ext\
+    -Dbuild.temp.dir=./tmp \
+    -Dapp.output.base=./build \
+    -Dapp.cache.deltas=false \
+    -Dapp.output.microloader.enable=false \
+    -Dbuild.enable.appmanifest=false \
+    -Denable.standalone.manifest=true \
+  production \
+  build

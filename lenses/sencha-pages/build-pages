@@ -1,26 +1,45 @@
 #!/bin/bash
 
-sencha \
-  --sdk-path='./ext' \
-  compile \
-    --classpath='./ext/packages/core/src' \
-    --classpath='./ext/packages/core/overrides' \
-    --classpath='./pages/src' \
+SENCHA_COMPILE='
+sencha
+  --sdk-path=./ext
+  compile
+    --classpath=./ext/packages/core/src
+    --classpath=./ext/packages/core/overrides
+    --classpath=./pages/src
+'
+
+CONCAT_OPTIONS='
+  --input-js-version=ANY
+  --js-version=ANY
+  --strip-comments
+'
+
+# build pages commands
+COMPILE_PAGES=''
+
+
+# build pages commands
+shopt -s nullglob
+for pageSrc in ./pages/src/page/*.js; do
+  pageName="$(basename $pageSrc .js)"
+  echo "Configuring page ${pageName} from ${pageSrc}"
+
+  COMPILE_PAGES="${COMPILE_PAGES} and union --recursive --include-uses=no --class=Site.page.${pageName}"
+  COMPILE_PAGES="${COMPILE_PAGES} and exclude --set=common"
+  COMPILE_PAGES="${COMPILE_PAGES} and concat ${CONCAT_OPTIONS} --output-file=./build/${pageName}.js"
+done;
+
+
+# build common.js
+$SENCHA_COMPILE \
     union --recursive --tag='class' \
     and save core \
-    and concat \
-      --input-js-version='ANY' \
-      --js-version='ANY' \
-      --strip-comments \
-      --output-file='./build/common.js' \
-    and union --recursive --include-uses=no --tag='core' \
-    and require --source-name='Ext.event.publisher.Dom' --requires='Ext.GlobalEvents' \
-    and require --source-name='Ext.event.Event' --requires='Ext.dom.Fly' \
-    and include --recursive --include-uses=no --class='Site.Common' \
+    and concat $CONCAT_OPTIONS --output-file='./build/common.js' \
+    and union --recursive --tag='core' \
+    and include --recursive --class='Site.Common' \
     and exclude --set='core' \
-    and concat \
-      --input-js-version='ANY' \
-      --js-version='ANY' \
-      --strip-comments \
-      --append \
-      --output-file='./build/common.js'
+    and concat $CONCAT_OPTIONS --append --output-file='./build/common.js' \
+    and include --set='core' \
+    and save common \
+    $COMPILE_PAGES
