@@ -1,0 +1,38 @@
+#!/bin/bash
+
+INPUT_TREE="${1?<input> required}"
+
+# redirect all output to stderr
+{
+  if [ -z "${HOLOLENS_APP}" ]; then
+    echo "hololens.app required configuation value is missing from the lens environment"
+    exit 1;
+  fi
+
+  if [ "$(git cat-file -t ${INPUT_TREE}:${HOLOLENS_APP} 2> /dev/null)" != "tree" ]; then
+    echo "hololens.app '${HOLOLENS_APP}' does not match a top-level subtree of the input tree"
+    exit 1;
+  fi
+
+  # export git tree to disk
+  git holo lens export-tree "${INPUT_TREE}"
+
+  # execute compilation
+  pushd "${GIT_WORK_TREE}/${HOLOLENS_APP}" > /dev/null
+  build-app
+  build_status=$?
+  popd > /dev/null
+
+  # process result
+  if [ $build_status -eq 0 ]; then
+    echo -e "\napp build completed successfully"
+
+    # add output to git index
+    git add "${HOLOLENS_APP}/build"
+  else
+    echo -e "\napp build failed with exit status ${build_status}"
+  fi
+} 1>&2
+
+# output tree hash
+git write-tree --prefix="${HOLOLENS_APP}/build"
