@@ -1,13 +1,32 @@
-#!/bin/bash
+#!/bin/bash -e
 
+app_dir="$(pwd)"
+build_dir="${app_dir}/build"
+
+# build app with sencha cmd
 sencha \
   ant \
     -Dext.dir=../ext\
-    -Dbuild.temp.dir=./tmp \
-    -Dapp.output.base=./build \
+    -Dbuild.temp.dir="${app_dir}/tmp" \
+    -Dapp.output.base="${build_dir}" \
     -Dapp.cache.deltas=false \
     -Dapp.output.microloader.enable=false \
     -Dbuild.enable.appmanifest=false \
     -Denable.standalone.manifest=true \
   production \
   build
+
+# strip undesired absolute paths from output
+underscore \
+  process \
+    --in "${build_dir}/app.json" \
+    --out "${build_dir}/app.json" \
+    "
+      data.css.forEach(file => {
+        file.path = file.path.replace('${build_dir}/', '');
+      });
+
+      data;
+    "
+
+sed "s#${build_dir}/##" --in-place "${build_dir}/index.html"
