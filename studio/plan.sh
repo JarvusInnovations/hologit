@@ -6,7 +6,7 @@ pkg_license=("MIT")
 pkg_maintainer="Chris Alfano <chris@jarv.us>"
 
 pkg_build_deps=(
-  core/hab
+  core/hab/0.79.0 # last version before new license
 )
 pkg_deps=(
   jarvus/hologit
