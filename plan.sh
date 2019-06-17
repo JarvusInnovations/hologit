@@ -11,7 +11,7 @@ pkg_build_deps=(
 pkg_deps=(
   core/git
   core/node
-  core/hab
+  core/hab/0.79.0 # last version before new license
 )
 
 pkg_bin_dirs=(bin)
