@@ -9,6 +9,7 @@ pkg_deps=(
   core/bash
   jarvus/sencha-cmd
   jarvus/hologit
+  jarvus/underscore
 )
 
 pkg_bin_dirs=(bin)

@@ -24,14 +24,16 @@ INPUT_TREE="${1?<input> required}"
   popd > /dev/null
 
   # process result
-  if [ $build_status -eq 0 ]; then
-    echo -e "\napp build completed successfully"
-
-    # add output to git index
-    git add "${HOLOLENS_APP}/build"
-  else
-    echo -e "\napp build failed with exit status ${build_status}"
+  if [ $build_status -ne 0 ]; then
+    echo -e "\n${HOLOLENS_APP} build failed with exit status ${build_status}"
+    exit
   fi
+
+  echo -e "\n${HOLOLENS_APP} build completed successfully"
+
+  # add output to git index
+  git add "${HOLOLENS_APP}/build"
+
 } 1>&2
 
 # output tree hash
