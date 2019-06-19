@@ -4,13 +4,13 @@ INPUT_TREE="${1?<input> required}"
 
 # redirect all output to stderr
 {
-  if [ -z "${HOLOLENS_APP}" ]; then
-    echo "hololens.app required configuation value is missing from the lens environment"
+  if [ -z "${HOLOLENS_SENCHA_APP}" ]; then
+    echo "hololens.sencha.app required configuation value is missing from the lens environment"
     exit 1;
   fi
 
-  if [ "$(git cat-file -t ${INPUT_TREE}:${HOLOLENS_APP} 2> /dev/null)" != "tree" ]; then
-    echo "hololens.app '${HOLOLENS_APP}' does not match a top-level subtree of the input tree"
+  if [ "$(git cat-file -t ${INPUT_TREE}:${HOLOLENS_SENCHA_APP} 2> /dev/null)" != "tree" ]; then
+    echo "hololens.sencha.app '${HOLOLENS_APP}' does not match a top-level subtree of the input tree"
     exit 1;
   fi
 
@@ -18,23 +18,23 @@ INPUT_TREE="${1?<input> required}"
   git holo lens export-tree "${INPUT_TREE}"
 
   # execute compilation
-  pushd "${GIT_WORK_TREE}/${HOLOLENS_APP}" > /dev/null
+  pushd "${GIT_WORK_TREE}/${HOLOLENS_SENCHA_APP}" > /dev/null
   build-app
   build_status=$?
   popd > /dev/null
 
   # process result
   if [ $build_status -ne 0 ]; then
-    echo -e "\n${HOLOLENS_APP} build failed with exit status ${build_status}"
+    echo -e "\n${HOLOLENS_SENCHA_APP} build failed with exit status ${build_status}"
     exit
   fi
 
-  echo -e "\n${HOLOLENS_APP} build completed successfully"
+  echo -e "\n${HOLOLENS_SENCHA_APP} build completed successfully"
 
   # add output to git index
-  git add "${HOLOLENS_APP}/build"
+  git add "${HOLOLENS_SENCHA_APP}/build"
 
 } 1>&2
 
 # output tree hash
-git write-tree --prefix="${HOLOLENS_APP}/build"
+git write-tree --prefix="${HOLOLENS_SENCHA_APP}/build"
