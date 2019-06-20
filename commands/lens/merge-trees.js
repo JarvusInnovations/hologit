@@ -22,12 +22,11 @@ exports.handler = async function mergeTrees ({ treeishBase, treeishInput, method
 
     // load holorepo
     const repo = await Repo.getFromEnvironment();
-    const git = await repo.getGit();
 
 
     // check inputs
-    const baseTree = await git.createTreeFromRef(treeishBase);
-    const inputTree = await git.createTreeFromRef(treeishInput);
+    const baseTree = await repo.createTreeFromRef(treeishBase);
+    const inputTree = await repo.createTreeFromRef(treeishInput);
 
 
     // apply merge
