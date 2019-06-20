@@ -10,7 +10,7 @@ INPUT_TREE="${1?<input> required}"
   fi
 
   if [ "$(git cat-file -t ${INPUT_TREE}:${HOLOLENS_SENCHA_APP} 2> /dev/null)" != "tree" ]; then
-    echo "hololens.sencha.app '${HOLOLENS_APP}' does not match a top-level subtree of the input tree"
+    echo "hololens.sencha.app '${HOLOLENS_SENCHA_APP}' does not match a top-level subtree of the input tree"
     exit 1;
   fi
 
