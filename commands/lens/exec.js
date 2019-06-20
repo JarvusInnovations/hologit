@@ -60,6 +60,7 @@ exports.handler = async function exportTree ({
 
     // install lens package
     const hab = await Studio.getHab();
+    logger.info(`installing lens package: ${spec.package}`);
     await hab.pkg('install', spec.package);
 
 
@@ -76,10 +77,10 @@ exports.handler = async function exportTree ({
         }
     );
     logger.debug('lens environment:', env);
-    logger.debug('lens command:', command);
 
 
     // spawn process and log STDERR
+    logger.info(`executing lens command: ${command}`);
     const lensProcess = await hab.pkg('exec', spec.package, ...shellParse(command), {
         $env: env,
         $spawn: true
