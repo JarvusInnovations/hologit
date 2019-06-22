@@ -210,6 +210,25 @@
                 "<node_internals>/**/*.js"
             ],
 
+            "name": "source ls",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                // "DEBUG": "1"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
+            "args": [
+                "source",
+                "ls"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
             "name": "studio",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
