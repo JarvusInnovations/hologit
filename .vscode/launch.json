@@ -170,7 +170,7 @@
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "checkout source",
+            "name": "source checkout",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": "1"
@@ -190,7 +190,7 @@
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "fetch source",
+            "name": "source fetch",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": "1"
