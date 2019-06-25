@@ -2,7 +2,7 @@ const commandName = 'init';
 const { command, handler } = require(`./${commandName}`);
 
 test('exports command', () => {
-    expect(command).toBe('init');
+    expect(command).toBe(commandName);
 });
 
 test('exports handler', () => {

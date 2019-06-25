@@ -120,7 +120,7 @@
                 // "--commit-message=foo",
 
                 // holobranch
-                "site"
+                "emergence-site"
             ]
         },
         {
@@ -170,7 +170,7 @@
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "checkout source",
+            "name": "source checkout",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": "1"
@@ -190,7 +190,7 @@
                 "<node_internals>/**/*.js"
             ],
 
-            "name": "fetch source",
+            "name": "source fetch",
             "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
                 "DEBUG": "1"
@@ -201,6 +201,25 @@
                 "source",
                 "fetch",
                 "--all"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "source ls",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "env": {
+                // "DEBUG": "1"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
+            "args": [
+                "source",
+                "ls"
             ]
         },
         {
@@ -264,6 +283,30 @@
                 "lens",
                 "export-tree",
                 "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "lens merge-trees",
+            "cwd": "${workspaceFolder:emergence-skeleton-v1}",
+            "env": {
+                "DEBUG": "1",
+                "GIT_DIR": "${workspaceFolder:emergence-skeleton-v1}/.git",
+                "GIT_WORK_TREE": "/tmp/export",
+                "GIT_INDEX_FILE": "/tmp/export.index"
+            },
+            "outputCapture": "std",
+            "program": "${workspaceFolder:hologit}/bin/cli.js",
+            "args": [
+                "lens",
+                "merge-trees",
+                "4e78f11a2d8ba8cc462e8e6ace46d2a71d002774",
+                "da4534092d66f23e29c69e485f544f88636639c0"
             ]
         }
     ]
