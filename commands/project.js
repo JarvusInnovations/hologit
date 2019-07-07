@@ -71,13 +71,16 @@ exports.handler = async function project ({
         const sources = await workspace.getSources();
 
         for (const source of sources.values()) {
+            const originalHash = await source.getHead();
+            await source.fetch();
+            const hash = await source.getHead();
             const { url, ref } = await source.getCachedConfig();
-            const { refs: [ fetchedRef ] } = await source.fetch();
-            const fetchedHash = await repo.resolveRef(fetchedRef);
-            if (!fetchedHash) {
-               throw new Error(`failed to fetch ${source.name} ${url||''}#${ref}`);
+
+            if (hash == originalHash) {
+                logger.info(`${source.name}@${hash.substr(0, 8)} up-to-date`);
+            } else {
+                logger.info(`${source.name}@${originalHash.substr(0, 8)}..${hash.substr(0, 8)} fetched ${url}#${ref}`);
             }
-            logger.info(`fetched ${source.name} ${url||''}#${fetchedRef}@${fetchedHash.substr(0, 8)}`);
         }
     }
 
