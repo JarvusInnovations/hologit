@@ -9,7 +9,7 @@
   "license": "MIT",
   "dependencies": {
     "@iarna/toml": "^2.0.0",
-    "axios": "^0.18.0",
+    "axios": "^0.19.0",
     "chokidar": "^2.0.4",
     "debounce": "^1.2.0",
     "dockerode": "^2.5.7",
