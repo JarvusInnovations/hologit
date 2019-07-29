@@ -66,25 +66,6 @@ exports.handler = async function project ({
     const workspace = await repo.getWorkspace();
 
 
-    // fetch all sources
-    if (fetch) {
-        const sources = await workspace.getSources();
-
-        for (const source of sources.values()) {
-            const originalHash = await source.getHead();
-            await source.fetch();
-            const hash = await source.getHead();
-            const { url, ref } = await source.getCachedConfig();
-
-            if (hash == originalHash) {
-                logger.info(`${source.name}@${hash.substr(0, 8)} up-to-date`);
-            } else {
-                logger.info(`${source.name}@${originalHash.substr(0, 8)}..${hash.substr(0, 8)} fetched ${url}#${ref}`);
-            }
-        }
-    }
-
-
     // examine holobranch
     const workspaceBranch = workspace.getBranch(holobranch);
     if (!await workspaceBranch.isDefined()) {
@@ -101,7 +82,8 @@ exports.handler = async function project ({
         lens,
         commitTo,
         commitMessage,
-        parentCommit
+        parentCommit,
+        fetch
     });
     console.log(outputHash);
 
