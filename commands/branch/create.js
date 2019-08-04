@@ -57,7 +57,8 @@ exports.handler = async function createBranch ({ name, template }) {
             const { name: workspaceName } = await workspace.getCachedConfig();
 
             mappingConfigs[`_${workspaceName}`] = {
-                files: '*/**'
+                files: '*/**',
+                after: '*'
             };
 
             mappingConfigs[`_skeleton-v2`] = {
