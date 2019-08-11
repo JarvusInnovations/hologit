@@ -58,11 +58,12 @@ exports.handler = async function createBranch ({ name, template }) {
 
             mappingConfigs[`_${workspaceName}`] = {
                 files: '*/**',
-                after: ['skeleton-v2']
+                after: '*'
             };
 
             mappingConfigs[`_skeleton-v2`] = {
-                files: '*/**'
+                files: '*/**',
+                before: '*'
             };
 
             break;

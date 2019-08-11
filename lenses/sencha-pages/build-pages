@@ -6,8 +6,9 @@ sencha
   compile
     --classpath=./ext/packages/core/src
     --classpath=./ext/packages/core/overrides
-    --classpath=./pages/src
 '
+
+declare -A REQUIRED_PACKAGES
 
 CONCAT_OPTIONS='
   --input-js-version=ANY
@@ -28,11 +29,33 @@ for pageSrc in ./pages/src/page/*.js; do
   COMPILE_PAGES="${COMPILE_PAGES} and union --recursive --include-uses=no --class=Site.page.${pageName}"
   COMPILE_PAGES="${COMPILE_PAGES} and exclude --set=common"
   COMPILE_PAGES="${COMPILE_PAGES} and concat ${CONCAT_OPTIONS} --output-file=./build/${pageName}.js"
-done;
+
+  while read packageName; do
+    test -z "${packageName}" && continue
+    REQUIRED_PACKAGES["${packageName}"]=1
+  done <<< $(grep '// @require-package ' "${pageSrc}" | awk '{print $3}')
+done
+
+
+# append classpaths to compile command
+for packageName in "${!REQUIRED_PACKAGES[@]}"; do
+  test -d "./packages/${packageName}" || { echo >&2 "required package ${packageName} not found in ./packages"; exit 1; }
+
+  echo "Adding required package to classpath: ${packageName}"
+
+  if [ -d "./packages/${packageName}/src" ]; then
+    SENCHA_COMPILE="${SENCHA_COMPILE} --classpath=./packages/${packageName}/src"
+  fi
+
+  if [ -d "./packages/${packageName}/overrides" ]; then
+    SENCHA_COMPILE="${SENCHA_COMPILE} --classpath=./packages/${packageName}/overrides"
+  fi
+done
 
 
 # build common.js
 $SENCHA_COMPILE \
+  --classpath=./pages/src \
     union --recursive --tag='class' \
     and save core \
     and concat $CONCAT_OPTIONS --output-file='./build/common.js' \
