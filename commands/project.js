@@ -25,9 +25,8 @@ exports.builder = {
         default: null
     },
     'fetch': {
-        describe: 'Whether to fetch the latest commit for all sources while projecting',
-        type: 'boolean',
-        default: false
+        describe: 'List of sources to fetch while projecting or * to fetch all',
+        type: 'string'
     },
     'watch': {
         describe: 'Set to continously output updated output',
@@ -42,7 +41,7 @@ exports.handler = async function project ({
     lens = null,
     working = false,
     debug = false,
-    fetch = false,
+    fetch = null,
     watch = false,
     commitTo = null,
     commitMessage = null
@@ -54,6 +53,27 @@ exports.handler = async function project ({
     // check inputs
     if (!holobranch) {
         throw new Error('holobranch required');
+    }
+
+
+    // parse fetch list from options and env
+    const fetchSplitRe = /[\s,:]+/;
+
+    if (fetch || fetch === '') {
+        if (fetch == '*' || !fetch) {
+            fetch = true;
+        } else if (!Array.isArray(fetch)) {
+            fetch = fetch.split(fetchSplitRe);
+        }
+    }
+
+    const fetchEnv = process.env.HOLO_FETCH;
+    if (fetchEnv) {
+        if (fetchEnv == '*' || fetch === true) {
+            fetch = true;
+        } else {
+            (fetch || (fetch = [])).push(...fetchEnv.split(fetchSplitRe));
+        }
     }
 
 
