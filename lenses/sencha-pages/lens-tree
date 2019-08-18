@@ -13,8 +13,8 @@ INPUT_TREE="${1?<input> required}"
   popd > /dev/null
 
   # add output to git index
-  git add build
+  git reset HEAD && git add -f "build"
 } 1>&2
 
 # output tree hash
-git write-tree --prefix=build
+git write-tree --prefix="build"

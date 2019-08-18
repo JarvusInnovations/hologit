@@ -38,11 +38,11 @@ INPUT_TREE="\${1?<input> required}"
   popd > /dev/null
 
   # add output to git index
-  git add css
+  git reset HEAD && git add -f "css"
 } 1>&2
 
 # output tree hash
-git write-tree --prefix=css
+git write-tree --prefix="css"
 
 EOM
   chmod +x "bin/lens-tree"
