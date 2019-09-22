@@ -26,8 +26,6 @@ jobs:
             commit-to: emergence/skeleton/v1 # TODO: extract 'v1' from pushed branch
           - holobranch: emergence-layer
             commit-to: emergence/layer/v1 # TODO: extract 'v1' from pushed branch
-          - holobranch: emergence-layer
-            commit-to: emergence/layer/v1 # TODO: extract 'v1' from pushed branch
     - name: Project docs holobranches
       uses: jarvus/hologit-action@v1
       with:
