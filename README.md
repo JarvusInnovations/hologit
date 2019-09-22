@@ -18,20 +18,28 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - id: get-release-name
+      name: Get release name with github-script
+      uses: actions/github-script@0.2.0
+      with:
+        github-token: ${{github.token}}
+        script: return context.ref.replace(/^refs\/heads\/releases\//, '')
     - name: Project emergence holobranches
       uses: jarvus/hologit-action@v1
       with:
         projections:
           - holobranch: emergence-skeleton
-            commit-to: emergence/skeleton/v1 # TODO: extract 'v1' from pushed branch
+            commit-to: emergence/skeleton/${{steps.get-release-name.outputs.result}}
           - holobranch: emergence-layer
-            commit-to: emergence/layer/v1 # TODO: extract 'v1' from pushed branch
+            commit-to: emergence/layer/${{steps.get-release-name.outputs.result}}
     - name: Project docs holobranches
       uses: jarvus/hologit-action@v1
       with:
         projections:
           - holobranch: docs
-            commit-to: # TODO: add support for multiple commit-to args?
-            - docs/v1 # TODO: extract 'v1' from pushed branch
-            - gh-pages
+            commit-to:
+            - docs/${{steps.get-release-name.outputs.result}}
+            - gh-pages # TODO: make conditional on release name matching current major version
   ```
+
+*Note: this example won't totally work yet, pending actions/github-script#7*
