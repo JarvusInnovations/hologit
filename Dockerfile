@@ -16,5 +16,7 @@ LABEL "com.github.actions.inputs.holobranch.commit-to"="Name of branch/ref to op
 
 LABEL "com.github.actions.outputs.commit.description"="Commit hash for last projection"
 
+LABEL "com.github.actions.runs.args"="${{ inputs.holobranch }} --commit-to=${{ inputs.commit-to }}"
+
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
