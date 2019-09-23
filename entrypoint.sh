@@ -1,11 +1,13 @@
 #!/bin/bash -e
 
-cat /entrypoint.sh
-
 # port hyphenated env to underscored, unless already set
 INPUT_COMMIT_TO_HYPHENATED='INPUT_COMMIT-TO'
-if [ -z "${INPUT_COMMIT_TO}" ] && [ -n "${!INPUT_COMMIT_TO_HYPHENATED}" ]; then
-    export INPUT_COMMIT_TO="${!INPUT_COMMIT_TO_HYPHENATED}"
+if [ -z "${INPUT_COMMIT_TO}" ]; then
+    while IFS= read -r -d '' var; do
+        [[ $var = "$INPUT_COMMIT_TO_HYPHENATED"=* ]] || continue
+        export INPUT_COMMIT_TO=${var#"${INPUT_COMMIT_TO_HYPHENATED}="}
+        break
+    done </proc/self/environ
 fi
 
 # grab local copy of commit-to ref
