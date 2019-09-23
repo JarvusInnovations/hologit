@@ -12,5 +12,6 @@ RUN hab pkg binlink core/git \
     && hab pkg binlink jarvus/hologit
 
 RUN hab pkg exec core/coreutils mkdir -m 1777 -p /tmp
+    && hab pkg exec core/coreutils mkdir -m 0750 -p /root
 
 ENV STUDIO_TYPE=action
