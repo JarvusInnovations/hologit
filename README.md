@@ -56,7 +56,8 @@ jobs:
 ### Build container
 
 ```bash
-docker build --build-arg HAB_LICENSE=accept-no-persist -t hologit-projector-action:v1 .
+docker build --build-arg HAB_LICENSE=accept-no-persist -t jarvus/hologit-actions-projector:v1 .
+docker push jarvus/hologit-actions-projector:v1
 ```
 
 ### Run container with shell
