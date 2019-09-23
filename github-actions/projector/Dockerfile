@@ -8,6 +8,6 @@ RUN hab pkg install \
     core/git \
     jarvus/hologit
 
+ENV STUDIO_TYPE=action
 COPY entrypoint.sh /entrypoint.sh
-
 ENTRYPOINT ["/entrypoint.sh"]
