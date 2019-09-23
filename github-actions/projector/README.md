@@ -2,6 +2,13 @@
 
 A GitHub action for hologit
 
+## TODO: Convert to JavaScript action
+
+Could this be better implemented as a javascript action that invokes hologit, letting it
+handle invoking docker only if necessary and using a dockerhub-hosted image?
+
+Could a javascript action handle turning the virtual environment into a pseudo-studio that habitat can be run natively within?
+
 ## Usage (mockup)
 
 ```yaml
