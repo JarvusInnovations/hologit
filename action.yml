@@ -1,14 +1,17 @@
 name: 'Hologit Projector'
 description: 'Project one or more holobranch'
 inputs:
-    projections:
-      description: 'List of one or more projection job'
+    holobranch:
+      description: 'Name of holobranch to project'
       required: true
+    commit-to:
+      description: 'Name of branch/ref to optionally commit result to'
 outputs:
-  last-projection:
+  commit:
     description: 'Commit hash for last projection'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
-    - ${{ inputs.projections }}
+    - ${{ inputs.holobranch }}
+    - "--commit-to=${{ inputs.commit-to }}"
