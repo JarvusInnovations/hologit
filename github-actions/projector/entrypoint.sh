@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
-echo "Projections: ${1}"
+echo "Holobranch: ${1}"
+echo "All args: $*"
 
 echo ::set-output "name=last-projection::abcdef1234567890"
 
