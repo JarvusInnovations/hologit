@@ -56,7 +56,7 @@ jobs:
 ### Build container
 
 ```bash
-docker build --build-arg HAB_LICENSE=accept-no-persist -t hologit-projector-action .
+docker build --build-arg HAB_LICENSE=accept-no-persist -t hologit-projector-action:v1 .
 ```
 
 ### Run container with shell
