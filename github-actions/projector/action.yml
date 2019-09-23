@@ -1,0 +1,14 @@
+name: 'Hologit Projector'
+description: 'Project one or more holobranch'
+inputs:
+    projections:
+      description: 'List of one or more projection job'
+      required: true
+outputs:
+  last-projection:
+    description: 'Commit hash for last projection'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.projections }}
