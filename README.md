@@ -1,6 +1,6 @@
-# hologit-action
-A GitHub action for hologit
+# hologit-projector-action
 
+A GitHub action for hologit
 
 ## Usage (mockup)
 
@@ -16,7 +16,7 @@ jobs:
   project:
 
     runs-on: ubuntu-latest
-    
+
     steps:
     - id: get-release-name
       name: Get release name with github-script
@@ -43,3 +43,17 @@ jobs:
   ```
 
 *Note: this example won't totally work yet, pending actions/github-script#7*
+
+## Testing
+
+### Build container
+
+```bash
+docker build --build-arg HAB_LICENSE=accept -t hologit-projector-action . --no-cache
+```
+
+### Run container with shell
+
+```bash
+docker run -it --rm --entrypoint /bin/bash hologit-projector-action
+```
