@@ -6,7 +6,8 @@ ENV HAB_LICENSE=$HAB_LICENSE
 RUN hab pkg install \
     --binlink \
     core/git \
-    jarvus/hologit
+    jarvus/hologit \
+    core/tree
 
 COPY entrypoint.sh /entrypoint.sh
 
