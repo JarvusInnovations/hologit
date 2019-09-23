@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-git fetch origin "refs/heads/${INPUT_COMMIT-TO}"
+git update-ref "refs/heads/${INPUT_COMMIT-TO}" "refs/remotes/origin/${INPUT_COMMIT-TO}"
 
 PROJECTION_OUTPUT=$(git holo project "$@")
 
