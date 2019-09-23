@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+cat /entrypoint.sh
+
 # port hyphenated env to underscored, unless already set
 INPUT_COMMIT_TO_HYPHENATED='INPUT_COMMIT-TO'
 if [ -z "${INPUT_COMMIT_TO}" ] && [ -n "${!INPUT_COMMIT_TO_HYPHENATED}" ]; then
