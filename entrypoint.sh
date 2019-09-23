@@ -18,6 +18,10 @@ if [ -n "${INPUT_COMMIT_TO}" ]; then
     fi
 fi
 
+# configure author of HEAD as author of any commits in this session
+git config --global user.name "$(git --no-pager log -1 --pretty=format:'%an')"
+git config --global user.email "$(git --no-pager log -1 --pretty=format:'%ae')"
+
 # run projection and return output
 PROJECTION_OUTPUT=$(git holo project "$@")
 echo ::set-output "name=last-projection::${PROJECTION_OUTPUT}"
