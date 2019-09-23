@@ -1,5 +1,5 @@
 name: 'Hologit Projector'
-description: 'Project one or more holobranch'
+description: 'Generate and push a holobranch projection'
 inputs:
     holobranch:
       description: 'Name of holobranch to project'
