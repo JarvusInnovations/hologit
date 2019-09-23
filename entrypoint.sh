@@ -12,7 +12,10 @@ fi
 
 # grab local copy of commit-to ref
 if [ -n "${INPUT_COMMIT_TO}" ]; then
-    git update-ref "refs/heads/${INPUT_COMMIT_TO}" "refs/remotes/origin/${INPUT_COMMIT_TO}"
+    COMMIT_TO_HASH=$(git rev-parse --verify "refs/remotes/origin/${INPUT_COMMIT_TO}" 2>&- || true)
+    if [ -n "${COMMIT_TO_HASH}" ]; then
+        git update-ref "refs/heads/${INPUT_COMMIT_TO}" "${COMMIT_TO_HASH}"
+    fi
 fi
 
 # run projection and return output
