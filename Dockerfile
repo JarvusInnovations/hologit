@@ -1,6 +1,6 @@
 FROM jarvus/hologit-actions-base:v1
 
-LABEL version="1"
+LABEL version="1.0"
 LABEL repository="http://github.com/JarvusInnovations/hologit"
 LABEL homepage="http://github.com/JarvusInnovations/hologit"
 LABEL maintainer="Chris Alfano <chris@jarv.us>"
