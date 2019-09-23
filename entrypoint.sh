@@ -10,16 +10,11 @@ if [ -z "${INPUT_COMMIT_TO}" ]; then
     done </proc/self/environ
 fi
 
-# resolve full ref name for commit-to
-if [ -n "${INPUT_COMMIT_TO}" ]; then
-    INPUT_COMMIT_TO_REF=$(git rev-parse --symbolic-full-name "${INPUT_COMMIT_TO}")
-fi
-
 # grab local copy of commit-to ref
-if [ -n "${INPUT_COMMIT_TO_REF}" ]; then
+if [ -n "${INPUT_COMMIT_TO}" ]; then
     COMMIT_TO_HASH=$(git rev-parse --verify "refs/remotes/origin/${INPUT_COMMIT_TO}" 2>&- || true)
     if [ -n "${COMMIT_TO_HASH}" ]; then
-        git update-ref "${INPUT_COMMIT_TO_REF}" "${COMMIT_TO_HASH}"
+        git update-ref "refs/heads/${INPUT_COMMIT_TO}" "${COMMIT_TO_HASH}"
     fi
 fi
 
@@ -32,6 +27,6 @@ PROJECTION_OUTPUT=$(git holo project "$@")
 echo ::set-output "name=last-projection::${PROJECTION_OUTPUT}"
 
 # push output
-if [ -n "${INPUT_COMMIT_TO_REF}" ]; then
-    git push origin "${INPUT_COMMIT_TO_REF}"
+if [ -n "${INPUT_COMMIT_TO}" ]; then
+    git push origin "${INPUT_COMMIT_TO}"
 fi
