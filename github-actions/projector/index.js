@@ -144,6 +144,15 @@ async function run() {
     }
 
 
+    let oldTreeHash;
+    try {
+        oldTreeHash = await getTreeHash(commitToRef);
+    } catch (err) {
+        oldTreeHash = null;
+    }
+
+
+    let newCommitHash, newTreeHash;
     try {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
         const projectionArgs = [
@@ -161,26 +170,52 @@ async function run() {
             projectionArgs.push('--no-lens');
         }
 
-        await exec('hab studio run', [
+        newCommitHash = await execOutput('hab studio run', [
             'hab pkg exec jarvus/hologit',
             'git holo project',
             ...projectionArgs
         ]);
+
+        newTreeHash = await getTreeHash(newCommitHash);
     } catch (err) {
         core.setFailed(`Failed to project holobranch: ${err.message}`);
         return;
     } finally {
         core.endGroup();
+        core.info(`newCommitHash: ${newCommitHash}`);
+        core.info(`newTreeHash: ${newTreeHash}`);
     }
 
 
-    try {
-        core.startGroup(`Pushing: ${commitToRef}`);
-        await exec('git push', ['origin', commitToRef]);
-    } catch (err) {
-        core.setFailed(`Failed to push commit-to ref: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
+    if (newTreeHash == oldTreeHash) {
+        core.info('Tree unchanged, skipping push');
+    } else {
+        try {
+            core.startGroup(`Pushing: ${commitToRef}`);
+            await exec('git push', ['origin', commitToRef]);
+        } catch (err) {
+            core.setFailed(`Failed to push commit-to ref: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
     }
+}
+
+async function execOutput(commandLine, args = [], options = {}) {
+    let stdout = '';
+
+    await exec(commandLine, args, {
+        ...options,
+        listeners: {
+            ...options.listeners,
+            stdout: buffer => stdout += buffer
+        }
+    });
+
+    return stdout.trim();
+}
+
+async function getTreeHash(ref) {
+    return execOutput('git rev-parse', [`${ref}^{tree}`]);
 }
