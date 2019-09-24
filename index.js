@@ -48,7 +48,7 @@ async function run() {
     ]);
     core.endGroup();
 
-    if (await io.which('hab')) {
+    if (!await io.which('hab')) {
         core.startGroup('Installing Chef Habitat');
         await exec('wget https://raw.githubusercontent.com/habitat-sh/habitat/master/components/hab/install.sh');
         await exec('sudo bash install.sh');
