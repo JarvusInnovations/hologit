@@ -9,9 +9,12 @@ const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF, GITHUB_SHA } 
 const holobranch = core.getInput('holobranch', { required: true });
 const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
-const commitToRef = commitTo == 'HEAD' || commitTo.startsWith('refs/')
-    ? commitTo
-    : `refs/heads/${commitTo}`;
+const commitToRef = commitTo
+    ? (
+        commitTo == 'HEAD' || commitTo.startsWith('refs/')
+        ? commitTo
+        : `refs/heads/${commitTo}`
+    ) : null;
 
 
 // run with error wrapper
@@ -58,18 +61,20 @@ async function run() {
     }
 
 
-    try {
-        core.startGroup(`Fetching: ${commitToRef}`);
-        await exec ('git fetch', [
-            '--no-recurse-submodules',
-            '--depth=1',
-            'origin',
-            `${commitToRef}:${commitToRef}`
-        ]);
-    } catch (err) {
-        core.info(`Failed to fetch commit-to ref: ${err.message}`);
-    } finally {
-        core.endGroup();
+    if (commitToRef) {
+        try {
+            core.startGroup(`Fetching: ${commitToRef}`);
+            await exec ('git fetch', [
+                '--no-recurse-submodules',
+                '--depth=1',
+                'origin',
+                `${commitToRef}:${commitToRef}`
+            ]);
+        } catch (err) {
+            core.info(`Failed to fetch commit-to ref: ${err.message}`);
+        } finally {
+            core.endGroup();
+        }
     }
 
     if (!await io.which('hab')) {
