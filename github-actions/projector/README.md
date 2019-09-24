@@ -5,7 +5,7 @@ A GitHub action for projecting holobranches with hologit
 ## Roadmap
 
 - [X] Convert to JavaScript action
-- [ ] Use hologit to project release branch with node_modules integrated
+- [ ] Use hologit to project `action-projector` release holobranch with node_modules integrated with source merged into `actions/` of main source tree
 - [ ] Patch hologit to handle generating empty initial commit parent for new commit-to ref
 - [ ] Update docs/usage/examples
 
