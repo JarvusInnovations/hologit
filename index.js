@@ -2,12 +2,14 @@ const core = require('@actions/core');
 const { exec } = require('@actions/exec');
 const io = require('@actions/io');
 
-const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF } = process.env;
+const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF, GITHUB_SHA } = process.env;
+
 const holobranch = core.getInput('holobranch', { required: true });
 const commitTo = core.getInput('commit-to', { required: false });
 const commitToRef = commitTo == 'HEAD' || commitTo.startsWith('refs/')
     ? commitTo
     : `refs/heads/${commitTo}`
+
 
 try {
     run();
