@@ -67,8 +67,7 @@ async function run() {
             `${commitToRef}:${commitToRef}`
         ]);
     } catch (err) {
-        core.setFailed(`Failed to fetch commit-to ref: ${err.message}`);
-        return;
+        core.info(`Failed to fetch commit-to ref: ${err.message}`);
     } finally {
         core.endGroup();
     }
