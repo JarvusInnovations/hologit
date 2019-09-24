@@ -72,6 +72,6 @@ async function run() {
     core.endGroup();
 
     core.startGroup(`Pushing: ${commitToRef}`);
-    await exec('git push', [commitToRef]);
+    await exec('git push', ['origin', commitToRef]);
     core.endGroup();
 }
