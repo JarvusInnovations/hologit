@@ -11,7 +11,7 @@ try {
 async function run() {
     core.startGroup('Installing Chef Habitat');
     await exec('wget https://raw.githubusercontent.com/habitat-sh/habitat/master/components/hab/install.sh');
-    await exec('bash install.sh');
+    await exec('sudo bash install.sh');
     await io.rmRF('install.sh');
     core.endGroup();
 }
