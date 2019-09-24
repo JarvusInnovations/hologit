@@ -2,12 +2,12 @@
 
 A GitHub action for projecting holobranches with hologit
 
-## TODO: Convert to JavaScript action
+## Roadmap
 
-Could this be better implemented as a javascript action that invokes hologit, letting it
-handle invoking docker only if necessary and using a dockerhub-hosted image?
-
-Could a javascript action handle turning the virtual environment into a pseudo-studio that habitat can be run natively within?
+- [X] Convert to JavaScript action
+- [ ] Use hologit to project release branch with node_modules integrated
+- [ ] Patch hologit to handle generating empty initial commit parent for new commit-to ref
+- [ ] Update docs/usage/examples
 
 ## Usage (mockup)
 
