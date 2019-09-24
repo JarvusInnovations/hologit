@@ -10,8 +10,5 @@ outputs:
   commit:
     description: 'Commit hash for last projection'
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.holobranch }}
-    - "--commit-to=${{ inputs.commit-to }}"
+  using: 'node12'
+  main: 'index.js'
