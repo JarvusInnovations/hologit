@@ -146,9 +146,12 @@ async function run() {
 
     let oldTreeHash;
     try {
+        core.startGroup(`Saving hash of current tree: ${holobranch}`);
         oldTreeHash = await getTreeHash(commitToRef);
     } catch (err) {
         oldTreeHash = null;
+    } finally {
+        core.endGroup();
     }
 
 
