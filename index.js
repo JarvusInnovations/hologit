@@ -112,11 +112,25 @@ async function run() {
 
     try {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
+        const projectionArgs = [
+            holobranch,
+            `--ref=${GITHUB_SHA}`
+        ];
+
+        if (commitToRef) {
+            projectionArgs.push(`--commit-to=${commitToRef}`);
+        }
+
+        if (lens == 'true') {
+            projectionArgs.push('--lens');
+        } else if (lens == 'false') {
+            projectionArgs.push('--no-lens');
+        }
+
         await exec('hab studio run', [
             'hab pkg exec jarvus/hologit',
-            'git holo project emergence-site',
-            `--ref=${GITHUB_SHA}`,
-            `--commit-to=${commitToRef}`
+            'git holo project',
+            ...projectionArgs
         ]);
     } catch (err) {
         core.setFailed(`Failed to project holobranch: ${err.message}`);
