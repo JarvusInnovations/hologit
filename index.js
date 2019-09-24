@@ -1,8 +1,12 @@
 const core = require('@actions/core');
-const exec = require('@actions/exec');
+const { exec } = require('@actions/exec');
 const io = require('@actions/io');
 
-run();
+try {
+    run();
+} catch(err) {
+    core.setFailed(err.message);
+}
 
 async function run() {
     core.startGroup('Installing Chef Habitat');
