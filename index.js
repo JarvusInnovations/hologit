@@ -77,6 +77,7 @@ async function run() {
         }
     }
 
+
     if (!await io.which('hab')) {
         try {
             core.startGroup('Installing Chef Habitat');
@@ -117,8 +118,12 @@ async function run() {
     let userName = '', userEmail = '';
     try {
         core.startGroup(`Reading author user name+email from ${GITHUB_REF}`);
-        await exec('git --no-pager log', ['-1', '--pretty=format:%an'], { stdout: buffer => userName += buffer });
-        await exec('git --no-pager log', ['-1', '--pretty=format:%ae'], { stdout: buffer => userEmail += buffer });
+        await exec('git --no-pager log', ['-1', '--pretty=format:%an'], {
+            listeners: { stdout: buffer => userName += buffer }
+        });
+        await exec('git --no-pager log', ['-1', '--pretty=format:%ae'], {
+            listeners: { stdout: buffer => userEmail += buffer }
+        });
     } catch (err) {
         core.setFailed(`Failed to read user name+email: ${err.message}`);
         return;
