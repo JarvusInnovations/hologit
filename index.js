@@ -109,6 +109,31 @@ async function run() {
     }
 
 
+    let userName = '', userEmail = '';
+    try {
+        core.startGroup(`Reading author user name+email from ${GITHUB_REF}`);
+        await exec('git --no-pager log', ['-1', '--pretty=format:%an'], { stdout: buffer => userName += buffer });
+        await exec('git --no-pager log', ['-1', '--pretty=format:%ae'], { stdout: buffer => userEmail += buffer });
+    } catch (err) {
+        core.setFailed(`Failed to read user name+email: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
+    }
+
+
+    try {
+        core.startGroup(`Setting git user: ${userName} <${userEmail}>`);
+        await exec('git config user.name', [userName]);
+        await exec('git config user.email', [userEmail]);
+    } catch (err) {
+        core.setFailed(`Failed to set git user: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
+    }
+
+
     try {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
         const projectionArgs = [
