@@ -1,6 +1,6 @@
 # hologit-projector-action
 
-A GitHub action for hologit
+A GitHub action for projecting holobranches with hologit
 
 ## TODO: Convert to JavaScript action
 
