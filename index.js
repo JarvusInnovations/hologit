@@ -6,6 +6,7 @@ const io = require('@actions/io');
 // gather input
 const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF, GITHUB_SHA } = process.env;
 
+const debug = core.getInput('debug');
 const holobranch = core.getInput('holobranch', { required: true });
 const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
@@ -163,6 +164,10 @@ async function run() {
             holobranch,
             `--ref=${GITHUB_SHA}`
         ];
+
+        if (debug) {
+            projectionArgs.push('--debug');
+        }
 
         if (commitToRef) {
             projectionArgs.push(`--commit-to=${commitToRef}`);
