@@ -74,7 +74,7 @@ exports.handler = async function exportTree ({
             GIT_DIR: repo.gitDir,
             GIT_WORK_TREE: scratchPath,
             GIT_INDEX_FILE: `${scratchPath}.index`,
-            DEBUG: process.env.DEBUG
+            DEBUG: process.env.DEBUG || ''
         }
     );
     logger.debug('lens environment:', env);
