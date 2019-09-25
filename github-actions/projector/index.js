@@ -26,8 +26,10 @@ try {
 }
 
 async function run() {
-    const repoInitialized = await exec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
+    core.exportVariable('HAB_NONINTERACTIVE', 'true');
 
+
+    const repoInitialized = await exec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
     if (!repoInitialized) {
         core.startGroup(`Initializing git repository: ${GITHUB_REPOSITORY}`);
         try {
