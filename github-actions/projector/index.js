@@ -118,10 +118,10 @@ async function run() {
     let userName = '', userEmail = '';
     try {
         core.startGroup(`Reading author user name+email from ${GITHUB_REF}`);
-        await exec('git --no-pager log', ['-1', '--pretty=format:%an'], {
+        await exec('git --no-pager log', ['-1', '--pretty=format:%an', GITHUB_SHA], {
             listeners: { stdout: buffer => userName += buffer }
         });
-        await exec('git --no-pager log', ['-1', '--pretty=format:%ae'], {
+        await exec('git --no-pager log', ['-1', '--pretty=format:%ae', GITHUB_SHA], {
             listeners: { stdout: buffer => userEmail += buffer }
         });
     } catch (err) {
