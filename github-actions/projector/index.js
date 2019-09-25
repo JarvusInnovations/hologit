@@ -189,8 +189,9 @@ async function run() {
 
 
     if (commitToRef) {
+        core.startGroup(`Saving hash of new tree: ${holobranch}`);
         const newTreeHash = await getTreeHash(commitToRef);
-        core.info(`newTreeHash: ${newTreeHash}`);
+        core.endGroup();
 
         if (newTreeHash === oldTreeHash) {
             core.info('Tree unchanged, skipping push');
