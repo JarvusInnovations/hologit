@@ -145,17 +145,18 @@ async function run() {
 
 
     let oldTreeHash;
-    try {
-        core.startGroup(`Saving hash of current tree: ${holobranch}`);
-        oldTreeHash = await getTreeHash(commitToRef);
-    } catch (err) {
-        oldTreeHash = null;
-    } finally {
-        core.endGroup();
+    if (commitToRef) {
+        try {
+            core.startGroup(`Saving hash of current tree: ${holobranch}`);
+            oldTreeHash = await getTreeHash(commitToRef);
+        } catch (err) {
+            oldTreeHash = null;
+        } finally {
+            core.endGroup();
+        }
     }
 
 
-    let newCommitHash, newTreeHash;
     try {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
         const projectionArgs = [
@@ -173,34 +174,36 @@ async function run() {
             projectionArgs.push('--no-lens');
         }
 
-        newCommitHash = await execOutput('hab studio run', [
+        await execOutput('hab studio run', [
             'hab pkg exec jarvus/hologit',
             'git holo project',
             ...projectionArgs
         ]);
 
-        newTreeHash = await getTreeHash(newCommitHash);
     } catch (err) {
         core.setFailed(`Failed to project holobranch: ${err.message}`);
         return;
     } finally {
         core.endGroup();
-        core.info(`newCommitHash: ${newCommitHash}`);
-        core.info(`newTreeHash: ${newTreeHash}`);
     }
 
 
-    if (newTreeHash == oldTreeHash) {
-        core.info('Tree unchanged, skipping push');
-    } else {
-        try {
-            core.startGroup(`Pushing: ${commitToRef}`);
-            await exec('git push', ['origin', commitToRef]);
-        } catch (err) {
-            core.setFailed(`Failed to push commit-to ref: ${err.message}`);
-            return;
-        } finally {
-            core.endGroup();
+    if (commitToRef) {
+        const newTreeHash = await getTreeHash(commitToRef);
+        core.info(`newTreeHash: ${newTreeHash}`);
+
+        if (newTreeHash === oldTreeHash) {
+            core.info('Tree unchanged, skipping push');
+        } else {
+            try {
+                core.startGroup(`Pushing: ${commitToRef}`);
+                await exec('git push', ['origin', commitToRef]);
+            } catch (err) {
+                core.setFailed(`Failed to push commit-to ref: ${err.message}`);
+                return;
+            } finally {
+                core.endGroup();
+            }
         }
     }
 }
