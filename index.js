@@ -4,9 +4,10 @@ const io = require('@actions/io');
 
 
 // gather input
-const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF, GITHUB_SHA } = process.env;
+const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF } = process.env;
 
 const debug = core.getInput('debug');
+const ref = core.getInput('ref') || GITHUB_REF;
 const holobranch = core.getInput('holobranch', { required: true });
 const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
@@ -48,16 +49,19 @@ async function run() {
 
 
     try {
-        core.startGroup(`Fetching: ${GITHUB_REF}`);
-        await exec ('git fetch', [
+        core.startGroup(`Fetching: ${ref}`);
+        await exec('git fetch', [
             '--tags',
             '--no-recurse-submodules',
             '--depth=1',
             'origin',
-            `${GITHUB_REF}:${GITHUB_REF}`
+            `${ref}:${ref}`
         ]);
+
+        const fetchedHash = await execOutput('git rev-parse', [ref]);
+        core.info(`Fetched: ${fetchedHash}`);
     } catch (err) {
-        core.setFailed(`Failed to fetch GITHUB_REF: ${err.message}`);
+        core.setFailed(`Failed to fetch ref: ${err.message}`);
         return;
     } finally {
         core.endGroup();
@@ -120,11 +124,11 @@ async function run() {
 
     let userName = '', userEmail = '';
     try {
-        core.startGroup(`Reading author user name+email from ${GITHUB_REF}`);
-        await exec('git --no-pager log', ['-1', '--pretty=format:%an', GITHUB_SHA], {
+        core.startGroup(`Reading author user name+email from ${ref}`);
+        await exec('git --no-pager log', ['-1', '--pretty=format:%an', ref], {
             listeners: { stdout: buffer => userName += buffer }
         });
-        await exec('git --no-pager log', ['-1', '--pretty=format:%ae', GITHUB_SHA], {
+        await exec('git --no-pager log', ['-1', '--pretty=format:%ae', ref], {
             listeners: { stdout: buffer => userEmail += buffer }
         });
     } catch (err) {
@@ -164,7 +168,7 @@ async function run() {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
         const projectionArgs = [
             holobranch,
-            `--ref=${GITHUB_SHA}`
+            `--ref=${ref}`
         ];
 
         if (debug) {
