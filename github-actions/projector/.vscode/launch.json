@@ -9,9 +9,11 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}/index.js",
+            "cwd": "${workspaceFolder:hologit-debug-context}",
             "env": {
-                "GITHUB_REF": "refs/heads/master",
-                "INPUT_HOLOBRANCH": "emergence-layer"
+                "GITHUB_REF": "refs/heads/develop",
+                "INPUT_HOLOBRANCH": "emergence-layer",
+                "INPUT_REF": "refs/heads/releases/v1"
             }
         }
     ]
