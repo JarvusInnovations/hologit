@@ -15,7 +15,7 @@
     "dockerode": "^2.5.8",
     "fb-watchman": "^2.0.0",
     "git-client": "^1.6.2",
-    "hab-client": "^1.0.3",
+    "hab-client": "^1.1.0",
     "handlebars": "^4.3.1",
     "minimatch": "^3.0.4",
     "mz": "^2.4.0",
