@@ -84,6 +84,7 @@ exports.handler = async function exportTree ({
     logger.info(`executing lens command: ${command}`);
     const lensProcess = await hab.pkg('exec', spec.package, ...shellParse(command), {
         $env: env,
+        $cwd: scratchPath,
         $spawn: true
     });
 
