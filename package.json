@@ -3,7 +3,7 @@
   "version": "0.22.1",
   "description": "Hologit automates the projection of layered composite file trees based on flat, declarative plans",
   "repository": "https://github.com/EmergencePlatform/hologit",
-  "main": "bin/cli.js",
+  "main": "lib/index.js",
   "preferGlobal": true,
   "author": "Chris Alfano <chris@jarv.us>",
   "license": "MIT",
