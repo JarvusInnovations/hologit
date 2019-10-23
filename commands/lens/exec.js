@@ -18,7 +18,7 @@ exports.handler = async function exportTree ({
     refresh=false,
     save=true
 }) {
-    const { Lens } = require('../../lib');
+    const Lens = require('../../lib/Lens.js');
 
     const lensedTreeHash = await Lens.executeSpec(specHash, { refresh, save });
 
