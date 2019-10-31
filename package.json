@@ -1,6 +1,6 @@
 {
   "name": "hologit",
-  "version": "0.24.2",
+  "version": "0.25.0",
   "description": "Hologit automates the projection of layered composite file trees based on flat, declarative plans",
   "repository": "https://github.com/EmergencePlatform/hologit",
   "main": "lib/index.js",
