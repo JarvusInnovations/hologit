@@ -1,6 +1,0 @@
-#!/bin/bash -e
-
-# build app with sencha cmd
-sencha \
-  ant \
-  build
