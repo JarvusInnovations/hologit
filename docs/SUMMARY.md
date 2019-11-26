@@ -9,6 +9,7 @@
   - [Hololenses](./grand-tour/hololenses.md)
   - [Holoreactors](./grand-tour/holoreactors.md)
 - Workflows
+  - [Work on Sources](./workflows/work-on-sources.md)
   - Publish a `docs/` tree to Gitbook and `gh-pages`
   - Publish a Static Website
   - Operationalize a Data Set
