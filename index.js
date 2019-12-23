@@ -30,6 +30,43 @@ async function run() {
     core.exportVariable('HAB_NONINTERACTIVE', 'true');
 
 
+    if (!await io.which('hab')) {
+        try {
+            core.startGroup('Installing Chef Habitat');
+            await exec('wget https://raw.githubusercontent.com/habitat-sh/habitat/master/components/hab/install.sh');
+            await exec('sudo bash install.sh');
+            await io.rmRF('install.sh');
+        } catch (err) {
+            core.setFailed(`Failed to install Chef Habitat: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
+    }
+
+
+    try {
+        core.startGroup('Initializing Habitat Studio');
+        await exec('hab studio new');
+    } catch (err) {
+        core.setFailed(`Failed to initialize Habitat Studio: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
+    }
+
+
+    try {
+        core.startGroup('Installing Jarvus Hologit into Habitat Studio');
+        await exec('hab studio run hab pkg install jarvus/hologit');
+    } catch (err) {
+        core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
+    }
+
+
     const repoInitialized = await exec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
     if (!repoInitialized) {
         core.startGroup(`Initializing git repository: ${GITHUB_REPOSITORY}`);
@@ -82,43 +119,6 @@ async function run() {
         } finally {
             core.endGroup();
         }
-    }
-
-
-    if (!await io.which('hab')) {
-        try {
-            core.startGroup('Installing Chef Habitat');
-            await exec('wget https://raw.githubusercontent.com/habitat-sh/habitat/master/components/hab/install.sh');
-            await exec('sudo bash install.sh');
-            await io.rmRF('install.sh');
-        } catch (err) {
-            core.setFailed(`Failed to install Chef Habitat: ${err.message}`);
-            return;
-        } finally {
-            core.endGroup();
-        }
-    }
-
-
-    try {
-        core.startGroup('Initializing Habitat Studio');
-        await exec('hab studio new');
-    } catch (err) {
-        core.setFailed(`Failed to initialize Habitat Studio: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
-    }
-
-
-    try {
-        core.startGroup('Installing Jarvus Hologit into Habitat Studio');
-        await exec('hab studio run hab pkg install jarvus/hologit');
-    } catch (err) {
-        core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
     }
 
 
