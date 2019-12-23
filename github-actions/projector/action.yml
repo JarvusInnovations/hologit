@@ -6,6 +6,7 @@ inputs:
       required: true
     commit-to:
       description: 'Name of branch/ref to optionally commit result to'
+      required: false
 outputs:
   commit:
     description: 'Commit hash for last projection'
