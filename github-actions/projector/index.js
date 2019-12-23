@@ -185,7 +185,7 @@ async function run() {
             projectionArgs.push('--no-lens');
         }
 
-        await execOutput('hab studio run', [
+        await exec('hab studio run', [
             'hab pkg exec jarvus/hologit',
             'git holo project',
             ...projectionArgs
