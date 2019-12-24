@@ -33,6 +33,10 @@ exports.builder = {
         type: 'boolean',
         default: false
     },
+    'parent-source': {
+        describe: 'One or more source names to use additional parent(s) with commit-to',
+        type: 'string'
+    },
     'cache-to': {
         describe: 'Set a remote to push caches to',
         type: 'string'
@@ -53,11 +57,12 @@ exports.handler = async function project ({
     watch = false,
     commitTo = null,
     commitMessage = null,
+    parentSource = null,
     cacheFrom = null,
     cacheTo = null
 }) {
     const logger = require('../lib/logger.js');
-    const { Repo, Projection } = require('../lib');
+    const { Repo, Projection, ParentsBag } = require('../lib');
 
 
     // check inputs
@@ -111,6 +116,14 @@ exports.handler = async function project ({
     }
 
 
+    // parse parent source
+    let parentsBag = null;
+    // TODO: append from env and split?
+    if (parentSource) {
+        parentsBag = new ParentsBag(parentSource);
+    }
+
+
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
     const parentCommit = await repo.resolveRef();
@@ -137,6 +150,7 @@ exports.handler = async function project ({
         commitTo,
         commitMessage,
         parentCommit,
+        parentsBag,
         fetch,
         cacheFrom,
         cacheTo

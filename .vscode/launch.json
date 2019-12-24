@@ -102,25 +102,30 @@
 
             "name": "project",
             "preLaunchTask": "purge hologit studios",
-            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "cwd": "${workspaceFolder:brigade-project-index}",
             "env": {
-                "DEBUG": "1"
+                "DEBUG": "1",
+                // "HOLO_CACHE_FROM": "local"
             },
             "outputCapture": "std",
             "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "project",
                 "--working",
-                "--watch",
+                // "--watch",
                 "--debug",
                 // "--no-lens",
-                // "--fetch",
+                "--fetch=index-v1",
                 // "--ref=develop",
-                "--commit-to=refs/holo/branch/site",
+                "--commit-to=gh-pages",
+                // "--no-cache-from",
+                "--cache-from=origin",
+                "--cache-to=origin",
+                "--parent-source=index-v1"
                 // "--commit-message=foo",
 
                 // holobranch
-                "emergence-site"
+                "gh-pages"
             ]
         },
         {
