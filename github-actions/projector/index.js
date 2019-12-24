@@ -164,7 +164,9 @@ async function run() {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
         const projectionArgs = [
             holobranch,
-            `--ref=${ref}`
+            `--ref=${ref}`,
+            '--cache-from=origin',
+            '--cache-to=origin'
         ];
 
         if (debug) {
