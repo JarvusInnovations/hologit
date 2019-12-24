@@ -32,6 +32,14 @@ exports.builder = {
         describe: 'Set to continously output updated output',
         type: 'boolean',
         default: false
+    },
+    'cache-to': {
+        describe: 'Set a remote to push caches to',
+        type: 'string'
+    },
+    'cache-from': {
+        describe: 'Set a remote to pull caches from',
+        type: 'string'
     }
 };
 
@@ -44,7 +52,9 @@ exports.handler = async function project ({
     fetch = null,
     watch = false,
     commitTo = null,
-    commitMessage = null
+    commitMessage = null,
+    cacheFrom = null,
+    cacheTo = null
 }) {
     const logger = require('../lib/logger.js');
     const { Repo, Projection } = require('../lib');
@@ -77,6 +87,30 @@ exports.handler = async function project ({
     }
 
 
+    // parse cache from/to from env
+    if (cacheFrom === false) {
+        cacheFrom = null;
+    } else if (!cacheFrom) {
+        const cacheFromEnv = process.env.HOLO_CACHE_FROM;
+        if (cacheFromEnv) {
+            cacheFrom = cacheFromEnv;
+        } else {
+            cacheFrom = 'origin';
+        }
+    } else if (typeof cacheFrom != 'string') {
+        throw new Error(`cache-from must be a single string value`);
+    }
+
+    if (!cacheTo) {
+        const cacheToEnv = process.env.HOLO_CACHE_TO;
+        if (cacheToEnv) {
+            cacheTo = cacheToEnv;
+        }
+    } else if (typeof cacheTo != 'string') {
+        throw new Error(`cache-to must be a single string value`);
+    }
+
+
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
     const parentCommit = await repo.resolveRef();
@@ -103,7 +137,9 @@ exports.handler = async function project ({
         commitTo,
         commitMessage,
         parentCommit,
-        fetch
+        fetch,
+        cacheFrom,
+        cacheTo
     });
     console.log(outputHash);
 
@@ -120,7 +156,9 @@ exports.handler = async function project ({
                     lens,
                     commitTo,
                     commitMessage,
-                    parentCommit: newCommitHash
+                    parentCommit: newCommitHash,
+                    cacheFrom,
+                    cacheTo
                 });
                 console.log(outputHash);
             }
