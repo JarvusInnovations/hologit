@@ -35,6 +35,17 @@ async function run() {
     }
 
 
+    try {
+        core.startGroup('Installing Jarvus Hologit');
+        await exec('hab pkg install jarvus/hologit');
+    } catch (err) {
+        core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
+    }
+
+
     const repoInitialized = await exec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
     if (!repoInitialized) {
         core.startGroup(`Initializing git repository: ${GITHUB_REPOSITORY}`);
