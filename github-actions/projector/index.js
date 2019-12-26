@@ -46,7 +46,7 @@ async function run() {
     }
 
 
-    const repoInitialized = await exec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
+    const repoInitialized = await holoExec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
     if (!repoInitialized) {
         core.startGroup(`Initializing git repository: ${GITHUB_REPOSITORY}`);
         try {
@@ -74,7 +74,7 @@ async function run() {
             `${ref}:${ref}`
         ]);
 
-        const fetchedHash = await execOutput('git rev-parse', [ref]);
+        const fetchedHash = await execOutput('hab pkg exec core/git git rev-parse', [ref]);
         core.info(`Fetched: ${fetchedHash}`);
     } catch (err) {
         core.setFailed(`Failed to fetch ref: ${err.message}`);
@@ -104,8 +104,8 @@ async function run() {
     let userName = '', userEmail = '';
     try {
         core.startGroup(`Reading author user name+email from ${ref}`);
-        userName = await execOutput('git --no-pager log', ['-1', '--pretty=format:%an', ref]);
-        userEmail = await execOutput('git --no-pager log', ['-1', '--pretty=format:%ae', ref]);
+        userName = await execOutput('hab pkg exec core/git git --no-pager log', ['-1', '--pretty=format:%an', ref]);
+        userEmail = await execOutput('hab pkg exec core/git git --no-pager log', ['-1', '--pretty=format:%ae', ref]);
     } catch (err) {
         core.setFailed(`Failed to read user name+email: ${err.message}`);
         return;
@@ -192,10 +192,11 @@ async function run() {
     }
 }
 
-async function holoExec(command, args = []) {
+async function holoExec(command, args = [], options = {}) {
     return exec('hab pkg exec jarvus/hologit', [
         command,
-        ...args
+        ...args,
+        options
     ]);
 }
 
@@ -214,5 +215,5 @@ async function execOutput(commandLine, args = [], options = {}) {
 }
 
 async function getTreeHash(ref) {
-    return execOutput('git rev-parse', [`${ref}^{tree}`]);
+    return execOutput('hab pkg exec core/git git rev-parse', [`${ref}^{tree}`]);
 }
