@@ -51,7 +51,8 @@ async function run() {
         core.startGroup(`Initializing git repository: ${GITHUB_REPOSITORY}`);
         try {
             await gitExec('init', ['--bare']);
-            await gitExec('remote add', [
+            await gitExec('remote', [
+                'add',
                 'origin',
                 `https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git`
             ]);
@@ -162,7 +163,7 @@ async function run() {
             projectionArgs.push('--no-lens');
         }
 
-        await gitExec('holo project', projectionArgs);
+        await gitExec('holo', ['project', ...projectionArgs]);
     } catch (err) {
         core.setFailed(`Failed to project holobranch: ${err.message}`);
         return;
