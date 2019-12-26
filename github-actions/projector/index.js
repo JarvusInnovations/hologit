@@ -50,7 +50,7 @@ async function run() {
     if (!repoInitialized) {
         core.startGroup(`Initializing git repository: ${GITHUB_REPOSITORY}`);
         try {
-            await holoExec('git init --bare');
+            await holoExec('git init', ['--bare']);
             await holoExec('git remote add', [
                 'origin',
                 `https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git`
