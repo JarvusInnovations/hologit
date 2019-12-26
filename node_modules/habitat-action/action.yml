@@ -1,0 +1,9 @@
+name: 'Chef Habitat Studio'
+description: 'Set up the runner environment to serve as a Chef Habitat studio'
+inputs:
+    deps:
+      description: 'One or more package to install'
+      required: false
+runs:
+  using: 'node12'
+  main: 'index.js'

@@ -19,6 +19,7 @@
   "dependencies": {
     "@actions/core": "^1.1.1",
     "@actions/exec": "^1.0.1",
-    "@actions/io": "^1.0.1"
+    "@actions/io": "^1.0.1",
+    "habitat-action": "github:JarvusInnovations/habitat-action#master"
   }
 }
