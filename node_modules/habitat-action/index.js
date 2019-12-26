@@ -9,7 +9,7 @@ const deps = (core.getInput('deps') || '').split(/\s+/);
 
 // run with error wrapper
 try {
-    run();
+    module.exports = run();
 } catch(err) {
     core.setFailed(err.message);
 }
