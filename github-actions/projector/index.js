@@ -195,9 +195,8 @@ async function run() {
 async function holoExec(command, args = [], options = {}) {
     return exec('hab pkg exec jarvus/hologit', [
         command,
-        ...args,
-        options
-    ]);
+        ...args
+    ], options);
 }
 
 async function execOutput(commandLine, args = [], options = {}) {
