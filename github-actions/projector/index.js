@@ -28,7 +28,7 @@ try {
 
 async function run() {
     try {
-        require('habitat-nonexistant');
+        require('habitat-action');
     } catch (err) {
         core.setFailed(`Failed to run habitat-action: ${err.message}`);
         return;
