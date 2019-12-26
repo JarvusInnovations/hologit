@@ -1,5 +1,5 @@
-name: 'Chef Habitat Studio'
-description: 'Set up the runner environment to serve as a Chef Habitat studio'
+name: 'Chef Habitat Runner'
+description: 'Set up the runner environment to use Chef Habitat'
 inputs:
     deps:
       description: 'One or more package to install'
