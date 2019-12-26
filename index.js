@@ -46,12 +46,12 @@ async function run() {
     }
 
 
-    const repoInitialized = await holoExec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
+    const repoInitialized = await gitExec('rev-parse', ['--git-dir'], { ignoreReturnCode: true, silent: true }) === 0;
     if (!repoInitialized) {
         core.startGroup(`Initializing git repository: ${GITHUB_REPOSITORY}`);
         try {
-            await holoExec('git init', ['--bare']);
-            await holoExec('git remote add', [
+            await gitExec('init', ['--bare']);
+            await gitExec('remote add', [
                 'origin',
                 `https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git`
             ]);
@@ -66,7 +66,7 @@ async function run() {
 
     try {
         core.startGroup(`Fetching: ${ref}`);
-        await holoExec('git fetch', [
+        await gitExec('fetch', [
             '--tags',
             '--no-recurse-submodules',
             '--depth=1',
@@ -87,7 +87,7 @@ async function run() {
     if (commitToRef) {
         try {
             core.startGroup(`Fetching: ${commitToRef}`);
-            await holoExec('git fetch', [
+            await gitExec('fetch', [
                 '--no-recurse-submodules',
                 '--depth=1',
                 'origin',
@@ -116,8 +116,8 @@ async function run() {
 
     try {
         core.startGroup(`Setting git user: ${userName} <${userEmail}>`);
-        await holoExec('git config user.name', [userName]);
-        await holoExec('git config user.email', [userEmail]);
+        await gitExec('config', ['user.name', userName]);
+        await gitExec('config', ['user.email', userEmail]);
     } catch (err) {
         core.setFailed(`Failed to set git user: ${err.message}`);
         return;
@@ -162,7 +162,7 @@ async function run() {
             projectionArgs.push('--no-lens');
         }
 
-        await holoExec('git holo project', projectionArgs);
+        await gitExec('holo project', projectionArgs);
     } catch (err) {
         core.setFailed(`Failed to project holobranch: ${err.message}`);
         return;
@@ -181,7 +181,7 @@ async function run() {
         } else {
             try {
                 core.startGroup(`Pushing: ${commitToRef}`);
-                await holoExec('git push', ['origin', commitToRef]);
+                await gitExec('push', ['origin', commitToRef]);
             } catch (err) {
                 core.setFailed(`Failed to push commit-to ref: ${err.message}`);
                 return;
@@ -192,8 +192,9 @@ async function run() {
     }
 }
 
-async function holoExec(command, args = [], options = {}) {
+async function gitExec(command, args = [], options = {}) {
     return exec('hab pkg exec jarvus/hologit', [
+        'git',
         command,
         ...args
     ], options);
