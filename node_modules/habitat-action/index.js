@@ -4,7 +4,7 @@ const io = require('@actions/io');
 
 
 // gather input
-const deps = (core.getInput('deps') || '').split(/\s+/);
+const deps = (core.getInput('deps') || '').split(/\s+/).filter(pkg => Boolean(pkg));
 
 
 // run with error wrapper
