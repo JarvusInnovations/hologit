@@ -27,7 +27,12 @@ try {
 }
 
 async function run() {
-    require('habitat-action');
+    try {
+        require('habitat-nonexistant');
+    } catch (err) {
+        core.setFailed(`Failed to run habitat-action: ${err.message}`);
+        return;
+    }
 
 
     const repoInitialized = await exec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
