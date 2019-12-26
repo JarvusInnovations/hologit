@@ -21,7 +21,7 @@ const commitToRef = commitTo
 
 // run with error wrapper
 try {
-    run();
+    module.exports = run();
 } catch(err) {
     core.setFailed(err.message);
 }
