@@ -27,7 +27,7 @@ try {
 }
 
 async function run() {
-    require('habitat-studio');
+    require('habitat-action');
 
 
     const repoInitialized = await exec('git rev-parse --git-dir', [], { ignoreReturnCode: true, silent: true }) === 0;
