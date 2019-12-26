@@ -7,7 +7,7 @@ A GitHub action for projecting holobranches with hologit
 - [X] Convert to JavaScript action
 - [ ] Restore defaulting of git author
 - [ ] Use hologit to project `action-projector` release holobranch with node_modules integrated with source merged into `actions/` of main source tree
-- [ ] Patch hologit to handle generating empty initial commit parent for new commit-to ref
+- [X] Patch hologit to handle generating empty initial commit parent for new commit-to ref
 - [ ] Update docs/usage/examples
 - [ ] Make push optional so non-release branches can test builds
   - project all branches, and then only push refs and tags after everything succeeds
