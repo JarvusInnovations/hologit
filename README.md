@@ -37,3 +37,9 @@ info: projection ready
 100644 blob 78b8641798e8ac38ca7dd079757abe2ce3faf850    README.md
 100644 blob 1f53798bb4fe33c86020be7f10c44f29486fd190    robots.txt
 ```
+
+## Add parent source
+
+```bash
+git holo source create https://github.com/h5bp/html5-boilerplate
+```
