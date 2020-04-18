@@ -1,0 +1,10 @@
+[holomapping]
+# holosource = "html5-boilerplate" # implied by filename
+before = "*" # apply before any other layer
+root = "dist"
+files = [
+    "**",
+    "!**/.*", # exclude all dotfiles
+    "!browserconfig.xml",
+    "!doc/"
+]
