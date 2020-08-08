@@ -6,9 +6,10 @@ pkg_license=("MIT")
 pkg_maintainer="Chris Alfano <chris@jarv.us>"
 
 pkg_build_deps=(
-  core/hab/0.79.0 # last version before new license
+  core/hab
 )
 pkg_deps=(
+  core/coreutils
   jarvus/hologit
 )
 
@@ -16,6 +17,7 @@ pkg_exports=(
   [debug.port]=debug.port
 )
 pkg_exposes=(debug.port)
+pkg_svc_user="root"
 pkg_svc_run="git-holo studio --socket ${pkg_svc_var_path}/studio.sock"
 
 

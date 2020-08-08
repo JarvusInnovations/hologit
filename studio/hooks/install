@@ -1,0 +1,9 @@
+#!{{pkgPathFor "core/bash"}}/bin/bash -e
+
+exec 2>&1
+
+# ensure /usr/bin/env exists at install time -- it will take root privs to get in there and lens' need it around
+if [[ ! -r /usr/bin/env ]]; then
+  mkdir -vp /usr/bin
+  ln -vs '{{pkgPathFor "core/coreutils"}}/bin/env' /usr/bin/env
+fi
