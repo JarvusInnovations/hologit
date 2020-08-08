@@ -1,6 +1,6 @@
 {
   "name": "hologit",
-  "version": "0.31.0",
+  "version": "0.32.0",
   "description": "Hologit automates the projection of layered composite file trees based on flat, declarative plans",
   "repository": "https://github.com/EmergencePlatform/hologit",
   "main": "lib/index.js",
@@ -8,13 +8,13 @@
   "author": "Chris Alfano <chris@jarv.us>",
   "license": "MIT",
   "dependencies": {
-    "@iarna/toml": "^2.2.3",
+    "@iarna/toml": "^2.2.5",
     "async-exit-hook": "^2.0.1",
-    "axios": "^0.19.0",
-    "chokidar": "^2.1.6",
+    "axios": "^0.19.2",
+    "chokidar": "^2.1.8",
     "debounce": "^1.2.0",
-    "dockerode": "^3.0.2",
-    "fb-watchman": "^2.0.0",
+    "dockerode": "^3.2.1",
+    "fb-watchman": "^2.0.1",
     "git-client": "^1.7.1",
     "hab-client": "^1.1.0",
     "handlebars": "^4.7.6",
@@ -26,8 +26,8 @@
     "shell-quote-word": "^1.0.1",
     "sort-keys": "^2.0.0",
     "toposort": "^2.0.2",
-    "winston": "^2.4.3",
-    "yargs": "^14.2.0"
+    "winston": "^2.4.5",
+    "yargs": "^14.2.3"
   },
   "bin": {
     "git-holo": "./bin/cli.js"
@@ -48,8 +48,8 @@
     "projection"
   ],
   "devDependencies": {
-    "@types/jest": "^24.0.16",
-    "jest": "^24.8.0"
+    "@types/jest": "^24.9.1",
+    "jest": "^24.9.0"
   },
   "jest": {
     "testEnvironment": "node"
