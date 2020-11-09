@@ -1,6 +1,9 @@
 name: 'Hologit Projector'
 description: 'Generate and push a holobranch projection'
 inputs:
+    ref:
+      description: 'Name of branch/ref to read source tree from'
+      required: false
     holobranch:
       description: 'Name of holobranch to project'
       required: true
