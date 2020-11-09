@@ -4,6 +4,9 @@ inputs:
     deps:
       description: 'One or more package to install'
       required: false
+    supervisor:
+      description: 'One or more supervisor service to load, or just "true" to start supervisor'
+      required: false
 runs:
   using: 'node12'
   main: 'index.js'
