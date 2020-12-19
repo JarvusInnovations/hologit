@@ -1,0 +1,6 @@
+[holomapping]
+root = "github-actions/projector"
+files = [
+    "**",
+    "!.vscode/"
+]
