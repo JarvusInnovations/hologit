@@ -1,17 +1,18 @@
 name: 'Hologit Projector'
 description: 'Generate and push a holobranch projection'
 inputs:
+    ref:
+      description: 'Name of branch/ref to read source tree from'
+      required: false
     holobranch:
       description: 'Name of holobranch to project'
       required: true
     commit-to:
       description: 'Name of branch/ref to optionally commit result to'
+      required: false
 outputs:
   commit:
     description: 'Commit hash for last projection'
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.holobranch }}
-    - "--commit-to=${{ inputs.commit-to }}"
+  using: 'node12'
+  main: 'index.js'
