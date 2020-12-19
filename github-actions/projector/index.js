@@ -163,7 +163,15 @@ async function run() {
             projectionArgs.push('--no-lens');
         }
 
-        await gitExec('holo', ['project', ...projectionArgs]);
+        const projectionHash = await gitExec('holo', ['project', ...projectionArgs]);
+
+        // set output
+        if (commitToRef) {
+            core.setOutput('commit', projectionHash);
+            core.setOutput('tree', await getTreeHash(projectionHash));
+        } else {
+            core.setOutput('tree', projectionHash);
+        }
     } catch (err) {
         core.setFailed(`Failed to project holobranch: ${err.message}`);
         return;
