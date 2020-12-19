@@ -75,7 +75,7 @@ async function run() {
             `${ref}:${ref}`
         ]);
 
-        const fetchedHash = await execOutput('hab pkg exec core/git git rev-parse', [ref]);
+        const fetchedHash = await gitExecOutput('rev-parse', [ref]);
         core.info(`Fetched: ${fetchedHash}`);
     } catch (err) {
         core.setFailed(`Failed to fetch ref: ${err.message}`);
@@ -105,8 +105,8 @@ async function run() {
     let userName = '', userEmail = '';
     try {
         core.startGroup(`Reading author user name+email from ${ref}`);
-        userName = await execOutput('hab pkg exec core/git git --no-pager log', ['-1', '--pretty=format:%an', ref]);
-        userEmail = await execOutput('hab pkg exec core/git git --no-pager log', ['-1', '--pretty=format:%ae', ref]);
+        userName = await gitExecOutput('log', ['-1', '--pretty=format:%an', ref]);
+        userEmail = await gitExecOutput('log', ['-1', '--pretty=format:%ae', ref]);
     } catch (err) {
         core.setFailed(`Failed to read user name+email: ${err.message}`);
         return;
@@ -163,7 +163,15 @@ async function run() {
             projectionArgs.push('--no-lens');
         }
 
-        await gitExec('holo', ['project', ...projectionArgs]);
+        const projectionHash = await gitExecOutput('holo', ['project', ...projectionArgs]);
+
+        // set output
+        if (commitToRef) {
+            core.setOutput('commit', projectionHash);
+            core.setOutput('tree', await getTreeHash(projectionHash));
+        } else {
+            core.setOutput('tree', projectionHash);
+        }
     } catch (err) {
         core.setFailed(`Failed to project holobranch: ${err.message}`);
         return;
@@ -196,6 +204,16 @@ async function run() {
 async function gitExec(command, args = [], options = {}) {
     return exec('hab pkg exec jarvus/hologit', [
         'git',
+        '--no-pager',
+        command,
+        ...args
+    ], options);
+}
+
+async function gitExecOutput(command, args = [], options = {}) {
+    return execOutput('hab pkg exec jarvus/hologit', [
+        'git',
+        '--no-pager',
         command,
         ...args
     ], options);
@@ -216,5 +234,5 @@ async function execOutput(commandLine, args = [], options = {}) {
 }
 
 async function getTreeHash(ref) {
-    return execOutput('hab pkg exec core/git git rev-parse', [`${ref}^{tree}`]);
+    return gitExecOutput('rev-parse', [`${ref}^{tree}`]);
 }

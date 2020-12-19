@@ -11,8 +11,10 @@ inputs:
       description: 'Name of branch/ref to optionally commit result to'
       required: false
 outputs:
+  tree:
+    description: 'Tree hash for last projection'
   commit:
-    description: 'Commit hash for last projection'
+    description: 'Commit hash for last projection (if commit-to is configured)'
 runs:
   using: 'node12'
   main: 'index.js'
