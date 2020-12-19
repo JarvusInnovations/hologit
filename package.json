@@ -11,7 +11,7 @@
     "@iarna/toml": "^2.2.5",
     "async-exit-hook": "^2.0.1",
     "axios": "^0.19.2",
-    "chokidar": "^2.1.8",
+    "chokidar": "^3.4.3",
     "debounce": "^1.2.0",
     "dockerode": "^3.2.1",
     "fb-watchman": "^2.0.1",
