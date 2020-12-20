@@ -36,7 +36,7 @@ exports.handler = async function createSource ({
 
     // generate source name if not specified
     if (!name) {
-        logger.debug('computing name from url:', url);
+        logger.debug(`computing name from url: ${url}`);
         const nameStack = url.split(path.sep);
         name = nameStack.pop();
 
