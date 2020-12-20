@@ -5,6 +5,7 @@ const cache = require('@actions/cache');
 const fs = require('fs');
 
 
+const CACHE_KEY = 'habitat-action-pkgs';
 const CACHE_LOCK_PATH = '/hab/pkgs/.cached';
 const RESTORE_LOCK_PATH = '/hab/pkgs/.restored';
 
@@ -101,7 +102,7 @@ async function run() {
             fs.writeFileSync(RESTORE_LOCK_PATH, '');
 
             console.info('Calling restoreCache...')
-            const cacheKey = await cache.restoreCache(['/hab/pkgs'], 'hab-pkgs');
+            const cacheKey = await cache.restoreCache(['/hab/pkgs'], CACHE_KEY);
 
             core.info(cacheKey ? `Restored cache ${cacheKey}` : 'No cache restored');
 

@@ -3,6 +3,7 @@ const cache = require('@actions/cache');
 const fs = require('fs');
 
 
+const CACHE_KEY = 'habitat-action-pkgs';
 const CACHE_LOCK_PATH = '/hab/pkgs/.cached';
 
 
@@ -28,7 +29,7 @@ async function run() {
             fs.writeFileSync(CACHE_LOCK_PATH, '');
 
             core.info('Calling saveCache...');
-            const cacheId = await cache.saveCache(['/hab/pkgs'], 'hab-pkgs');
+            const cacheId = await cache.saveCache(['/hab/pkgs'], CACHE_KEY);
 
             core.info(cacheId ? `Saved cache ${cacheId}` : 'No cache saved');
         } catch (err) {
