@@ -1,6 +1,7 @@
 const core = require('@actions/core');
 const { exec } = require('@actions/exec');
 const io = require('@actions/io');
+const cache = require('@actions/cache');
 
 
 // gather input
@@ -81,6 +82,19 @@ async function run() {
         } finally {
             core.endGroup();
         }
+    }
+
+
+    // restore cache
+    try {
+        core.startGroup(`Restoring package cache`);
+        const cacheKey = await cache.restoreCache(['/hab/pkgs'], 'hab-pkgs');
+        core.info(cacheKey ? `Restored cache ${cacheKey}` : 'No cache restored');
+    } catch (err) {
+        core.setFailed(`Failed to restore package cache: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
     }
 
 
