@@ -3,17 +3,19 @@
 
 // setup logger
 const logger = require('winston');
-
-logger.add(new logger.transports.Console({
+const loggerConsole = new logger.transports.Console({
     level: process.env.DEBUG ? 'debug' : 'info',
     format: logger.format.combine(
         logger.format.colorize(),
+        logger.format.prettyPrint(),
+        logger.format.splat(),
         logger.format.simple(),
     ),
 
     // all logger output to STDERR
     stderrLevels: Object.keys(require('winston/lib/winston/config').cli.levels)
-}));
+});
+logger.add(loggerConsole);
 
 module.exports = { logger };
 
@@ -35,9 +37,9 @@ require('yargs')
     })
     .check(function (argv) {
         if (argv.debug) {
-            logger.level = 'debug';
+            loggerConsole.level = 'debug';
         } else if (argv.quiet) {
-            logger.level = 'error';
+            loggerConsole.level = 'error';
         }
 
         return true;

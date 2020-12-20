@@ -53,5 +53,5 @@ exports.handler = async function watch ({ socket }) {
         });
     }).listen(socket);
 
-    logger.info('listening on', socket);
+    logger.info('listening on %o', socket);
 };

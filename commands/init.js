@@ -14,16 +14,16 @@ exports.handler = async function init ({ name = null } = {}) {
 
     // get repo interface
     const repo = await Repo.getFromEnvironment({ working: true });
-    logger.debug('instantiated repository:', repo);
+    logger.debug('instantiated repository: %o', repo);
 
 
     // compute repo name
     if (!name) {
         if (repo.workTree) {
-            logger.debug('computing name from work tree:', repo.workTree);
+            logger.debug('computing name from work tree: %o', repo.workTree);
             name = path.basename(repo.workTree);
         } else {
-            logger.debug('computing name from git dir:', repo.gitDir);
+            logger.debug('computing name from git dir: %o', repo.gitDir);
             const nameStack = repo.gitDir.split(path.sep);
             name = nameStack.pop();
 
@@ -41,7 +41,7 @@ exports.handler = async function init ({ name = null } = {}) {
     // read workspace config
     const workspace = await repo.getWorkspace();
     let repoConfig = await workspace.readConfig();
-    logger.debug('loaded existing holorepo config:', repoConfig);
+    logger.debug('loaded existing holorepo config: %o', repoConfig);
 
 
     // initialize repo config
