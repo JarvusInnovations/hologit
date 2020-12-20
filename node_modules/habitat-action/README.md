@@ -26,8 +26,9 @@ jobs:
       with:
         path: /hab/cache/artifacts
         key: hab-cache-artifacts
+
     - name: 'Initialize Chef Habitat environment'
-      uses: JarvusInnovations/habitat-action@master
+      uses: JarvusInnovations/habitat-action@action/v1
       env:
         HAB_LICENSE: accept
       with:
@@ -39,6 +40,7 @@ jobs:
           core/mysql
           emergence/php-runtime --bind="database:mysql.default"
           emergence/nginx --bind="backend:php-runtime.default"
+
     - run: hab pkg exec core/git git clone https://github.com/JarvusInnovations/habitat-compose
     - run: hab origin key generate jarvus
     - run: hab pkg build ./habitat-compose/
