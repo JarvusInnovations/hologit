@@ -6,6 +6,7 @@ const fs = require('fs');
 
 
 const CACHE_LOCK_PATH = '/hab/pkgs/.cached';
+const RESTORE_LOCK_PATH = '/hab/pkgs/.restored';
 
 
 // gather input
@@ -90,25 +91,35 @@ async function run() {
 
 
     // restore cache
-    try {
-        core.startGroup(`Restoring package cache`);
+    if (fs.existsSync(RESTORE_LOCK_PATH)) {
+        core.info(`Skipping restoring, ${RESTORE_LOCK_PATH} already exists`);
+    } else {
+        try {
+            core.startGroup(`Restoring package cache`);
 
-        console.info('Calling restoreCache...')
-        const cacheKey = await cache.restoreCache(['/hab/pkgs'], 'hab-pkgs');
+            core.info(`Writing restore lock: ${RESTORE_LOCK_PATH}`);
+            fs.writeFileSync(RESTORE_LOCK_PATH, '');
 
-        core.info(cacheKey ? `Restored cache ${cacheKey}` : 'No cache restored');
+            console.info('Calling restoreCache...')
+            const cacheKey = await cache.restoreCache(['/hab/pkgs'], 'hab-pkgs');
 
-        // .cached file is written at beginning of caching, and removed after restore to
-        // guard against multiple post scripts trying to save the same cache
-        if (fs.existsSync(CACHE_LOCK_PATH)) {
-            core.info(`Erasing cache lock: ${CACHE_LOCK_PATH}`);
-            await exec(`rm -v "${CACHE_LOCK_PATH}"`);
+            core.info(cacheKey ? `Restored cache ${cacheKey}` : 'No cache restored');
+
+            core.info(`Re-writing restore lock: ${RESTORE_LOCK_PATH}`);
+            fs.writeFileSync(RESTORE_LOCK_PATH, '');
+
+            // .cached file is written at beginning of caching, and removed after restore to
+            // guard against multiple post scripts trying to save the same cache
+            if (fs.existsSync(CACHE_LOCK_PATH)) {
+                core.info(`Erasing cache lock: ${CACHE_LOCK_PATH}`);
+                await exec(`rm -v "${CACHE_LOCK_PATH}"`);
+            }
+        } catch (err) {
+            core.setFailed(`Failed to restore package cache: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
         }
-    } catch (err) {
-        core.setFailed(`Failed to restore package cache: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
     }
 
 
