@@ -3,17 +3,19 @@
 
 // setup logger
 const logger = require('winston');
+
+logger.add(new logger.transports.Console({
+    level: process.env.DEBUG ? 'debug' : 'info',
+    format: logger.format.combine(
+        logger.format.colorize(),
+        logger.format.simple(),
+    ),
+
+    // all logger output to STDERR
+    stderrLevels: Object.keys(require('winston/lib/winston/config').cli.levels)
+}));
+
 module.exports = { logger };
-
-if (process.env.DEBUG) {
-    logger.level = 'debug';
-}
-
-
-// all logger output to STDERR
-for (const level in logger.levels) {
-    logger.default.transports.console.stderrLevels[level] = true;
-}
 
 
 // route command line
