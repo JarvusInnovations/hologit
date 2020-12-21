@@ -2,6 +2,12 @@ const core = require('@actions/core');
 const { exec } = require('@actions/exec');
 const io = require('@actions/io');
 const cache = require('@actions/cache');
+const fs = require('fs');
+
+
+const CACHE_KEY = 'habitat-action-pkgs';
+const CACHE_LOCK_PATH = '/hab/pkgs/.cached';
+const RESTORE_LOCK_PATH = '/hab/pkgs/.restored';
 
 
 // gather input
@@ -86,15 +92,35 @@ async function run() {
 
 
     // restore cache
-    try {
-        core.startGroup(`Restoring package cache`);
-        const cacheKey = await cache.restoreCache(['/hab/pkgs'], 'hab-pkgs');
-        core.info(cacheKey ? `Restored cache ${cacheKey}` : 'No cache restored');
-    } catch (err) {
-        core.setFailed(`Failed to restore package cache: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
+    if (fs.existsSync(RESTORE_LOCK_PATH)) {
+        core.info(`Skipping restoring, ${RESTORE_LOCK_PATH} already exists`);
+    } else {
+        try {
+            core.startGroup(`Restoring package cache`);
+
+            core.info(`Writing restore lock: ${RESTORE_LOCK_PATH}`);
+            fs.writeFileSync(RESTORE_LOCK_PATH, '');
+
+            console.info('Calling restoreCache...')
+            const cacheKey = await cache.restoreCache(['/hab/pkgs'], CACHE_KEY);
+
+            core.info(cacheKey ? `Restored cache ${cacheKey}` : 'No cache restored');
+
+            core.info(`Re-writing restore lock: ${RESTORE_LOCK_PATH}`);
+            fs.writeFileSync(RESTORE_LOCK_PATH, '');
+
+            // .cached file is written at beginning of caching, and removed after restore to
+            // guard against multiple post scripts trying to save the same cache
+            if (fs.existsSync(CACHE_LOCK_PATH)) {
+                core.info(`Erasing cache lock: ${CACHE_LOCK_PATH}`);
+                await exec(`rm -v "${CACHE_LOCK_PATH}"`);
+            }
+        } catch (err) {
+            core.setFailed(`Failed to restore package cache: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
     }
 
 
