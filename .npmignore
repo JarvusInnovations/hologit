@@ -6,9 +6,11 @@
 **/plan.sh
 **/test/
 **/*.test.js
-/studio/
+/.github/
+/.holo/
 /docs/
-/lenses/
+/github-actions
+/studio/
 .bldr.toml
 .eslintrc.json
 jsconfig.json
