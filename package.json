@@ -1,6 +1,6 @@
 {
   "name": "hologit",
-  "version": "0.34.2",
+  "version": "0.34.3",
   "description": "Hologit automates the projection of layered composite file trees based on flat, declarative plans",
   "repository": "https://github.com/EmergencePlatform/hologit",
   "main": "lib/index.js",
@@ -10,8 +10,8 @@
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "async-exit-hook": "^2.0.1",
-    "axios": "^0.21.0",
-    "chokidar": "^3.4.3",
+    "axios": "^0.21.1",
+    "chokidar": "^3.5.0",
     "debounce": "^1.2.0",
     "dockerode": "^3.2.1",
     "fb-watchman": "^2.0.1",
@@ -24,7 +24,7 @@
     "object-squish": "^1.1.0",
     "parse-url": "^5.0.1",
     "shell-quote-word": "^1.0.1",
-    "sort-keys": "^4.1.0",
+    "sort-keys": "^4.2.0",
     "toposort": "^2.0.2",
     "winston": "^3.3.3",
     "yargs": "^14.2.3"
