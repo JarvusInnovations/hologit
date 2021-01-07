@@ -27,7 +27,7 @@
     "sort-keys": "^4.1.0",
     "toposort": "^2.0.2",
     "winston": "^3.3.3",
-    "yargs": "^14.2.3"
+    "yargs": "^16.2.0"
   },
   "bin": {
     "git-holo": "./bin/cli.js"
@@ -48,7 +48,7 @@
     "projection"
   ],
   "devDependencies": {
-    "@types/jest": "^24.9.1",
+    "@types/jest": "^26.0.20",
     "jest": "^24.9.0"
   },
   "jest": {
