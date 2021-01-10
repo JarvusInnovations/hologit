@@ -1,4 +1,4 @@
-# Hologit Documentation
+# Getting Started
 
 Hologit lets you declaratively define virtual sub-branches within any Git branch
 
