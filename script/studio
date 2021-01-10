@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# script/studio: Enter a Chef Habitat studio for the application.
+
+set -e
+cd "$(dirname "$0")/.."
+
+
+script/-studio-bootstrap
+
+
+echo
+echo "==> studio: configuring Chef Habitat studio Docker options…"
+STUDIO_NAME="${STUDIO_NAME:-hologit-studio}"
+export HAB_DOCKER_OPTS="
+    --name ${STUDIO_NAME}
+    -p 9088:8000
+    -v $(cd ~/.ssh; pwd)/known_hosts:/root/.ssh/known_hosts:ro
+    --env STUDIO_DEVELOPER_UID=$(id -u)
+    --env STUDIO_DEVELOPER_GID=$(id -g)
+"
+echo "${HAB_DOCKER_OPTS}"
+
+
+echo
+echo "==> studio: launching Docker-powered Chef Habitat studio…"
+hab studio enter -D
