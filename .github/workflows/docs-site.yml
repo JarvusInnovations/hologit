@@ -1,0 +1,19 @@
+name: Docs Site
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  docs-projection:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Projecting docs-site holobranch onto gh-pages'
+      uses: JarvusInnovations/hologit@actions/projector/v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HAB_LICENSE: accept
+      with:
+        ref: develop
+        holobranch: docs-site
+        commit-to: gh-pages

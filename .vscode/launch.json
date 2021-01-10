@@ -102,7 +102,7 @@
 
             "name": "project",
             "preLaunchTask": "purge hologit studios",
-            "cwd": "${workspaceFolder:hologit-debug-context}",
+            "cwd": "${workspaceFolder}",
             "env": {
                 "DEBUG": "1"
             },
@@ -110,17 +110,17 @@
             "program": "${workspaceFolder:hologit}/bin/cli.js",
             "args": [
                 "project",
-                "--working",
-                "--watch",
+                // "--working",
+                // "--watch",
                 "--debug",
                 // "--no-lens",
                 // "--fetch",
                 // "--ref=develop",
-                "--commit-to=refs/holo/branch/site",
+                // "--commit-to=refs/holo/branch/site",
                 // "--commit-message=foo",
 
                 // holobranch
-                "emergence-site"
+                "github-action-projector"
             ]
         },
         {
