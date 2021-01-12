@@ -39,7 +39,7 @@ do_build() {
   npm install
 
   build_line "Fixing interpreter"
-  sed -e "s#\#\!/usr/bin/env node#\#\!$(pkg_path_for node)/bin/node#" --in-place "node-bin/cli.js"
+  sed -e "s#\#\!/usr/bin/env node#\#\!$(pkg_path_for node12)/bin/node#" --in-place "node-bin/cli.js"
 
   popd > /dev/null
 }
