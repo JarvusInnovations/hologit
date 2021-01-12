@@ -2,6 +2,15 @@
 
 Hologit lets you declaratively define virtual sub-branches (called holobranches) within any Git branch that mix together content from their host branch, content from other repositories/branches, and executable-driven transformations.
 
+## Features
+
+- Track and merge remote code from multiple sources
+- Advanced merge, filter, and sourcing strategies
+- Apply arbitrary executable steps efficiently and consistently via Chef Habitat packages
+- Content-based git-distributed caching of build steps
+- GitHub Action for materializing holobranches to real branches
+- `--watch` command to produce live updates (currently lazy/slow, theoretically can be made near-instant)
+
 ## Introduction
 
 **Hologit** is a [free and open](https://www.fsf.org/about/what-is-free-software) framework for code and content automation inside your local git repository. It makes it simple, fast, and reliable for projects to automate complex editing and publishing workflows that can involve multiple source repositories, languages, and build tools. Aiming to make working on software easier for everyone—pro and beginner alike—hologit gets rid of the need to think about or even know what needs to happen after you change files. There should just be content, and it goes places when you change it.
