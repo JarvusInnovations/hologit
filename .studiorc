@@ -1,4 +1,36 @@
-hab pkg install -b \
+#!/bin/bash
+
+
+# install dependencies
+echo
+echo "--> Installing project development dependencies..."
+hab pkg install \
+    jarvus/mkdocs-studio \
+    jarvus/studio-toolkit \
     core/node \
     core/git
-    # jarvus/watchman
+
+hab pkg binlink core/node core/git
+hab pkg binlink core/coreutils env --dest /usr/bin
+
+
+# load studio toolkit
+source "$(hab pkg path jarvus/studio-toolkit)/studio.sh"
+
+
+# load MkDocs studio
+export DOCS_HOLOBRANCH="docs-site"
+source "$(hab pkg path jarvus/mkdocs-studio)/studio.sh"
+
+
+
+## final init and output
+studio-help
+
+echo
+echo "--> Developer studio ready!"
+echo "    Run `docs-watch` to start+watch MkDocs site in foreground, and access at http://localhost:9088"
+
+
+# final blank line
+echo

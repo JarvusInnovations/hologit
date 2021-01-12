@@ -1,8 +1,21 @@
 # hologit
 
+Hologit lets you declaratively define virtual sub-branches (called holobranches) within any Git branch that mix together content from their host branch, content from other repositories/branches, and executable-driven transformations.
+
+## Features
+
+- Track and merge remote code from multiple sources
+- Advanced merge, filter, and sourcing strategies
+- Apply arbitrary executable steps efficiently and consistently via Chef Habitat packages
+- Content-based git-distributed caching of build steps
+- GitHub Action for materializing holobranches to real branches
+- `--watch` command to produce live updates (currently lazy/slow, theoretically can be made near-instant)
+
+## Introduction
+
 **Hologit** is a [free and open](https://www.fsf.org/about/what-is-free-software) framework for code and content automation inside your local git repository. It makes it simple, fast, and reliable for projects to automate complex editing and publishing workflows that can involve multiple source repositories, languages, and build tools. Aiming to make working on software easier for everyone—pro and beginner alike—hologit gets rid of the need to think about or even know what needs to happen after you change files. There should just be content, and it goes places when you change it.
 
-This works by enabling a project's git repository to define virtual "holobranches" that can be continuously and efficiently "projected" from a source branch. The projection process handles combining code from remote sources ("compositing") and executing build tools on the result ("lensing") to produce an output file tree and optionally commit it to a branch/ref.
+This works by enabling a project's git repository to define virtual "holobranches" that can be continuously and efficiently "projected" from any source branch. The projection process handles combining code from remote sources ("compositing") and executing build tools on the result ("lensing") to produce an output file tree and optionally commit it to a branch/ref.
 
 **Compositing** offers deeper control over which files are pulled from a remote repository and where they are integrated than [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) alone, while being more dependable and tracable than language-specific package managers like [npm](https://www.npmjs.com/) and [composer](https://getcomposer.org/). Instead of copying and moving files around on disk, hologit takes a git-native approach to minimize disk activity by computing new git trees in memory. Computed trees may be written to disk later or used as input to another process without the overhead.
 

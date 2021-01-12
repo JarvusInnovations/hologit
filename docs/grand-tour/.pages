@@ -1,0 +1,8 @@
+arrange:
+- README.md
+- installation.md
+- repository-setup.md
+- holobranches.md
+- holosources.md
+- hololenses.md
+- ...
