@@ -1,5 +1,5 @@
 # common base for both stages
-FROM habitat/default-studio-x86_64-linux:0.79.1 as base
+FROM habitat/default-studio-x86_64-linux:0.79.0 as base
 
 ARG HAB_LICENSE=no-accept
 ENV HAB_LICENSE=$HAB_LICENSE
@@ -9,7 +9,7 @@ ENTRYPOINT ["hab", "sup", "run"]
 CMD ["jarvus/hologit-studio"]
 
 RUN hab pkg install \
-        core/hab-sup/0.79.1 \
+        core/hab-sup/0.79.0 \
         core/hab-launcher/10180 \
         core/tar \
         core/gcc \
