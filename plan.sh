@@ -10,7 +10,7 @@ pkg_build_deps=(
 
 pkg_deps=(
   core/git
-  jarvus/node12 # newer than core/node12
+  jarvus/node14 # newer than core/node12
   core/hab/0.79.1 # last version before new license
 )
 
@@ -39,7 +39,7 @@ do_build() {
   npm install
 
   build_line "Fixing interpreter"
-  sed -e "s#\#\!/usr/bin/env node#\#\!$(pkg_path_for node12)/bin/node#" --in-place "node-bin/cli.js"
+  sed -e "s#\#\!/usr/bin/env node#\#\!$(pkg_path_for node14)/bin/node#" --in-place "node-bin/cli.js"
 
   popd > /dev/null
 }

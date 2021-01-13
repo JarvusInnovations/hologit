@@ -7,10 +7,10 @@ echo "--> Installing project development dependencies..."
 hab pkg install \
     jarvus/mkdocs-studio \
     jarvus/studio-toolkit \
-    jarvus/node12 \
+    jarvus/node14 \
     core/git
 
-hab pkg binlink jarvus/node12 core/git
+hab pkg binlink jarvus/node14 core/git
 hab pkg binlink core/coreutils env --dest /usr/bin
 
 
