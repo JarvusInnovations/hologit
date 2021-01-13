@@ -6,10 +6,10 @@ pkg_license=("MIT")
 pkg_maintainer="Chris Alfano <chris@jarv.us>"
 
 pkg_build_deps=(
-  core/hab
+  core/hab/0.79.1
 )
 pkg_deps=(
-  core/coreutils
+  core/busybox-static
   jarvus/hologit
 )
 
