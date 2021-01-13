@@ -10,7 +10,7 @@ pkg_build_deps=(
 )
 pkg_deps=(
   core/busybox-static
-  jarvus/hologit
+  ${HOLOGIT_PACKAGE:-jarvus/hologit}
 )
 
 pkg_exports=(
@@ -22,7 +22,7 @@ pkg_svc_run="git-holo studio --socket ${pkg_svc_var_path}/studio.sock"
 
 
 pkg_version() {
-  hab pkg path jarvus/hologit | cut -d/ -f6
+  hab pkg path ${HOLOGIT_PACKAGE:-jarvus/hologit} | cut -d/ -f6
 }
 
 # implement build workflow
