@@ -1,11 +1,12 @@
-name: Docs Site
+name: Publish Website
 
 on:
   push:
     branches: [ develop ]
 
+
 jobs:
-  docs-projection:
+  publish-website:
     runs-on: ubuntu-latest
     steps:
     - name: 'Projecting docs-site holobranch onto gh-pages'

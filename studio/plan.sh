@@ -6,11 +6,11 @@ pkg_license=("MIT")
 pkg_maintainer="Chris Alfano <chris@jarv.us>"
 
 pkg_build_deps=(
-  core/hab
+  core/hab/0.79.1
 )
 pkg_deps=(
-  core/coreutils
-  jarvus/hologit
+  core/busybox-static
+  ${HOLOGIT_PACKAGE:-jarvus/hologit}
 )
 
 pkg_exports=(
@@ -22,7 +22,7 @@ pkg_svc_run="git-holo studio --socket ${pkg_svc_var_path}/studio.sock"
 
 
 pkg_version() {
-  hab pkg path jarvus/hologit | cut -d/ -f6
+  hab pkg path ${HOLOGIT_PACKAGE:-jarvus/hologit} | cut -d/ -f6
 }
 
 # implement build workflow
