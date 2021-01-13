@@ -1,4 +1,4 @@
-name: Public Actions to develop stream
+name: Publish Actions to develop stream
 
 on:
   push:

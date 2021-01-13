@@ -1,8 +1,8 @@
-name: Public Actions to v1 stream
+name: Publish Actions to v1 stream
 
 on:
   push:
-    branches: [master]
+    tags: [ 'v*' ]
 
 
 jobs:
