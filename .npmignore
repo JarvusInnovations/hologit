@@ -10,9 +10,11 @@
 /.holo/
 /docs/
 /github-actions
+/script/
 /studio/
 .bldr.toml
 .eslintrc.json
 jsconfig.json
 *.md
+mkdocs.yml
 !README.md
