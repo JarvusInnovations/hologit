@@ -1,0 +1,49 @@
+name: Publish Habitat package and studio
+
+on:
+  push:
+    branches: [ 'develop' ]
+    # tags: [ 'v*' ]
+
+env:
+  HAB_LICENSE: accept-no-persist
+
+
+jobs:
+  publish-habitat:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Initialize Chef Habitat environment'
+      uses: JarvusInnovations/habitat-action@action/v1
+      with:
+        deps: |
+          core/hab-plan-build
+
+    - uses: actions/checkout@v2
+    - name: Place tag in environment
+      run: |
+        echo "SOURCE_TAG=v0.0.1" >> $GITHUB_ENV
+        # echo "SOURCE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
+        echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+    - name: Import origin key
+      run: |
+        hab origin key import <<END_OF_KEY
+        ${{ secrets.HAB_ORIGIN_KEY }}
+        END_OF_KEY
+
+    - name: Setting package.json version
+      run: npm version --no-git-tag-version "${SOURCE_TAG#v}"
+
+    - name: Build jarvus/hologit
+      run: hab pkg exec core/hab-plan-build hab-plan-build .
+
+    - name: Patching studio plan to force version
+      run: |
+        source results/last_build.env
+        sed -i'' "s#jarvus/hologit#jarvus/hologit/${pkg_version}/${pkg_release}#" studio/plan.sh
+
+    - name: Build jarvus/hologit-studio
+      run: hab pkg exec core/hab-plan-build hab-plan-build studio
+
+    - uses: mxschmitt/action-tmate@v3
