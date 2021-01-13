@@ -28,4 +28,6 @@ RUN mkdir -m 1777 -p /tmp \
 
 ARG HOLOGIT_STUDIO_PACKAGE=jarvus/hologit-studio
 RUN hab pkg install $HOLOGIT_STUDIO_PACKAGE \
-    && hab pkg exec core/coreutils rm -rf /hab/cache/{artifacts,src}/
+    && rm -rf /hab/cache/{artifacts,src}/ \
+    && chgrp -R developer /hab \
+    && chmod -R g=u /hab
