@@ -91,6 +91,7 @@ async function run() {
             await gitExec('fetch', [
                 '--no-recurse-submodules',
                 '--depth=1',
+                '--force',
                 'origin',
                 `${commitToRef}:${commitToRef}`
             ]);
