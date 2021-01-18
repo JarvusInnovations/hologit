@@ -71,6 +71,7 @@ async function run() {
             '--tags',
             '--no-recurse-submodules',
             '--depth=1',
+            '--force',
             'origin',
             `${ref}:${ref}`
         ]);
