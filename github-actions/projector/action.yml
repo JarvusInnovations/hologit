@@ -4,6 +4,10 @@ inputs:
     ref:
       description: 'Name of branch/ref to read source tree from'
       required: false
+    fetch:
+      description: 'Whether to fetch the configured ref'
+      required: false
+      default: 'true'
     holobranch:
       description: 'Name of holobranch to project'
       required: true
