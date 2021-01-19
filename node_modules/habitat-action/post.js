@@ -7,6 +7,10 @@ const CACHE_KEY = 'habitat-action-pkgs';
 const CACHE_LOCK_PATH = '/hab/pkgs/.cached';
 
 
+// gather input
+const cacheKey = core.getInput('cache-key') || `${process.env.GITHUB_WORKFLOW}:/hab/pkgs`;
+
+
 // run with error wrapper
 try {
     module.exports = run();
@@ -29,9 +33,9 @@ async function run() {
             fs.writeFileSync(CACHE_LOCK_PATH, '');
 
             try {
-                core.info('Calling saveCache...');
-                const cacheId = await cache.saveCache(['/hab/pkgs'], CACHE_KEY);
-                core.info(cacheId ? `Saved cache ${cacheId}` : 'No cache saved');
+                core.info(`Calling saveCache: ${cacheKey}`);
+                const savedCache = await cache.saveCache(['/hab/pkgs'], cacheKey);
+                core.info(savedCache ? `Saved cache ${savedCache}` : 'No cache saved');
             } catch (err) {
                 core.warning(`Failed to save cache: ${err.message}`);
             }

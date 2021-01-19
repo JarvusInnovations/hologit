@@ -5,7 +5,6 @@ const cache = require('@actions/cache');
 const fs = require('fs');
 
 
-const CACHE_KEY = 'habitat-action-pkgs';
 const CACHE_LOCK_PATH = '/hab/pkgs/.cached';
 const RESTORE_LOCK_PATH = '/hab/pkgs/.restored';
 
@@ -19,6 +18,7 @@ const supervisor = core.getInput('supervisor') == 'true'
         ? false
         : core.getInput('supervisor').trim().split(/\s*\n\s*/).filter(svc => Boolean(svc))
     );
+const cacheKey = core.getInput('cache-key') || `${process.env.GITHUB_WORKFLOW}:/hab/pkgs`;
 
 
 // run with error wrapper
@@ -101,10 +101,10 @@ async function run() {
             core.info(`Writing restore lock: ${RESTORE_LOCK_PATH}`);
             fs.writeFileSync(RESTORE_LOCK_PATH, '');
 
-            console.info('Calling restoreCache...')
-            const cacheKey = await cache.restoreCache(['/hab/pkgs'], CACHE_KEY);
+            console.info(`Calling restoreCache: ${cacheKey}`);
+            const restoredCache = await cache.restoreCache(['/hab/pkgs'], cacheKey);
 
-            core.info(cacheKey ? `Restored cache ${cacheKey}` : 'No cache restored');
+            core.info(restoredCache ? `Restored cache ${restoredCache}` : 'No cache restored');
 
             core.info(`Re-writing restore lock: ${RESTORE_LOCK_PATH}`);
             fs.writeFileSync(RESTORE_LOCK_PATH, '');
