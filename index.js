@@ -8,6 +8,7 @@ const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF } = process.en
 
 const debug = core.getInput('debug');
 const ref = core.getInput('ref') || GITHUB_REF;
+const fetch = core.getInput('fetch') !== 'false';
 const holobranch = core.getInput('holobranch', { required: true });
 const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
@@ -65,24 +66,28 @@ async function run() {
     }
 
 
-    try {
-        core.startGroup(`Fetching: ${ref}`);
-        await gitExec('fetch', [
-            '--tags',
-            '--no-recurse-submodules',
-            '--depth=1',
-            '--force',
-            'origin',
-            `${ref}:${ref}`
-        ]);
+    if (fetch) {
+        try {
+            core.startGroup(`Fetching: ${ref}`);
+            await gitExec('fetch', [
+                '--tags',
+                '--no-recurse-submodules',
+                '--depth=1',
+                '--force',
+                'origin',
+                `${ref}:${ref}`
+            ]);
 
-        const fetchedHash = await gitExecOutput('rev-parse', [ref]);
-        core.info(`Fetched: ${fetchedHash}`);
-    } catch (err) {
-        core.setFailed(`Failed to fetch ref: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
+            const fetchedHash = await gitExecOutput('rev-parse', [ref]);
+            core.info(`Fetched: ${fetchedHash}`);
+        } catch (err) {
+            core.setFailed(`Failed to fetch ref: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
+    } else {
+        core.info('Skipping fetch');
     }
 
 
