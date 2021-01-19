@@ -7,6 +7,9 @@ inputs:
     supervisor:
       description: 'One or more supervisor service to load, or just "true" to start supervisor'
       required: false
+    cache-key:
+      description: 'Key to use for caching /hab/pkgs, defaults to ${GITHUB_WORKFLOW}:/hab/pkgs'
+      required: false
 runs:
   using: 'node12'
   main: 'index.js'
