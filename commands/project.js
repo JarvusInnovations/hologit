@@ -113,7 +113,7 @@ exports.handler = async function project ({
 
     // load holorepo
     const repo = await Repo.getFromEnvironment({ ref, working });
-    const parentCommit = await repo.resolveRef();
+    const parentCommit = await repo.resolveRef(`${ref}^{commit}`);
 
 
     // load workspace
