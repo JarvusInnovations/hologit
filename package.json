@@ -48,7 +48,7 @@
     "projection"
   ],
   "devDependencies": {
-    "@types/jest": "^24.9.1",
+    "@types/jest": "^26.0.21",
     "jest": "^24.9.0"
   },
   "jest": {
