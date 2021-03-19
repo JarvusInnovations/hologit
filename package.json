@@ -12,7 +12,7 @@
     "async-exit-hook": "^2.0.1",
     "axios": "^0.21.1",
     "chokidar": "^3.5.1",
-    "debounce": "^1.2.0",
+    "debounce": "^1.2.1",
     "dockerode": "^3.2.1",
     "fb-watchman": "^2.0.1",
     "git-client": "^1.8.3",
@@ -48,7 +48,7 @@
     "projection"
   ],
   "devDependencies": {
-    "@types/jest": "^24.9.1",
+    "@types/jest": "^26.0.21",
     "jest": "^24.9.0"
   },
   "jest": {

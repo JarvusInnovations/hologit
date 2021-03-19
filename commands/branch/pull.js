@@ -42,10 +42,10 @@ exports.handler = async function pull ({ name, all, force }) {
     // get remote refs
     const remoteRefs = (await git.forEachRef('refs/remotes', { format: '%(refname)' })).split('\n');
 
-    
+
     // check each remote ref
     for (const remoteRef of remoteRefs) {
-        const [remoteCommit, remoteHolobranch] = (await git.show(remoteRef, { format: 'format:%H\n%(trailers:key=Source-holobranch,valueonly)' })).split('\n');
+        const [remoteCommit, remoteHolobranch] = (await git.show(remoteRef, { format: 'format:%H\n%(trailers:key=Source-holobranch,valueonly)', 'no-patch': true })).split('\n');
 
         // skip remotes without documented source holobranch on their latest commit
         if (!remoteHolobranch) {
