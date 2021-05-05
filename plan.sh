@@ -10,7 +10,7 @@ pkg_build_deps=(
 
 pkg_deps=(
   core/git
-  jarvus/node14 # newer than core/node12
+  core/node14
   core/hab/0.79.0 # last version before new license
 )
 
