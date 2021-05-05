@@ -6,7 +6,7 @@ on:
     types: [closed]
 
 env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
 
 jobs:
   release-deploy:
@@ -40,8 +40,6 @@ jobs:
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: '${{ env.RELEASE_TAG }}'
         release_name: '${{ env.RELEASE_TAG }}'
