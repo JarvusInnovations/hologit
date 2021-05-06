@@ -1,0 +1,34 @@
+name: 'PR: Test'
+
+on:
+  pull_request:
+    branches: [develop]
+
+env:
+  HAB_LICENSE: accept-no-persist
+
+jobs:
+  pr-test:
+
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: 'Initialize Chef Habitat environment'
+      uses: JarvusInnovations/habitat-action@action/v1
+      with:
+        deps: |
+          core/hab-plan-build
+
+    - uses: actions/checkout@v2
+
+    - name: 'Generate origin key: jarvus'
+      run: hab origin key generate jarvus
+
+    - name: Build jarvus/hologit
+      run: hab pkg exec core/hab-plan-build hab-plan-build .
+
+    - name: 'Test projection: docs-site'
+      run: hab pkg exec jarvus/hologit git-holo project --no-cache-from --cache-to=origin docs-site
+
+    - name: 'Test projection: github-action-projector'
+      run: hab pkg exec jarvus/hologit git-holo project --no-cache-from --cache-to=origin github-action-projector
