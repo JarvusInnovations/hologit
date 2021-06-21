@@ -26,7 +26,7 @@ jobs:
       run: sudo --preserve-env hab pkg exec core/hab-plan-build hab-plan-build .
 
     - name: 'Test projection: docs-site'
-      run: hab pkg exec jarvus/hologit git-holo project --no-cache-from --cache-to=origin docs-site
+      run: hab pkg exec jarvus/hologit/0.0.1 git-holo project --no-cache-from --cache-to=origin docs-site
 
     - name: 'Test projection: github-action-projector'
-      run: hab pkg exec jarvus/hologit git-holo project --no-cache-from --cache-to=origin github-action-projector
+      run: hab pkg exec jarvus/hologit/0.0.1 git-holo project --no-cache-from --cache-to=origin github-action-projector
