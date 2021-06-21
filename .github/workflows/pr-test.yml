@@ -1,8 +1,6 @@
 name: 'PR: Test'
 
-on:
-  pull_request:
-    branches: [develop]
+on: pull_request
 
 env:
   HAB_LICENSE: accept-no-persist
