@@ -23,7 +23,7 @@ jobs:
       run: hab origin key generate jarvus
 
     - name: Build jarvus/hologit
-      run: sudo --preserve-env hab pkg exec core/hab-plan-build hab-plan-build .
+      run: hab pkg exec core/hab-plan-build hab-plan-build .
 
     - name: 'Test projection: docs-site'
       run: hab pkg exec jarvus/hologit/0.0.1 git-holo project --no-cache-from --cache-to=origin docs-site
