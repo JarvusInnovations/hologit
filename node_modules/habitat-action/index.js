@@ -70,18 +70,6 @@ async function run() {
         }
 
 
-        // enable `hab pkg install` without sudo
-        try {
-            core.startGroup('Enabling setuid and setgid for hab command');
-            await exec('sudo chmod ug+s /usr/bin/hab');
-        } catch (err) {
-            core.setFailed(`Failed to enable setuid and setgid for hab command: ${err.message}`);
-            return;
-        } finally {
-            core.endGroup();
-        }
-
-
         // verify installation (and initialize license)
         try {
             await exec('hab --version');
@@ -105,6 +93,20 @@ async function run() {
     }
 
 
+    // ensure /hab/cache exists and has correct ownership/permissions before cache is restored
+    try {
+        core.startGroup('Updating cache ownership');
+        await exec(`sudo mkdir -p /hab/cache`);
+        await exec(`sudo chown -R runner:docker /hab/cache`);
+        await exec(`sudo chmod g+s /hab/cache`);
+    } catch (err) {
+        core.setFailed(`Failed to update cache ownership: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
+    }
+
+
     // restore cache
     if (fs.existsSync(RESTORE_LOCK_PATH)) {
         core.info(`Skipping restoring, ${RESTORE_LOCK_PATH} already exists`);
@@ -112,9 +114,8 @@ async function run() {
         try {
             core.startGroup(`Restoring package cache`);
 
-            core.info(`Initializing runner-writable /hab/cache/artifacts`);
-            await exec(`sudo mkdir -p /hab/cache/artifacts`);
-            await exec(`sudo chown runner -R /hab/cache/artifacts`);
+            core.info(`Initializing runner-writable /hab/cache`);
+            await exec(`mkdir -p /hab/cache/artifacts`);
 
             core.info(`Writing restore lock: ${RESTORE_LOCK_PATH}`);
             fs.writeFileSync(RESTORE_LOCK_PATH, '');
@@ -146,7 +147,7 @@ async function run() {
     if (deps.length) {
         try {
             core.startGroup(`Installing deps: ${deps.join(' ')}`);
-            await exec('hab pkg install', deps, { env: habEnv });
+            await exec('sudo --preserve-env hab pkg install', deps, { env: habEnv });
         } catch (err) {
             core.setFailed(`Failed to install deps: ${err.message}`);
             return;
@@ -162,6 +163,13 @@ async function run() {
             core.startGroup('Starting supervisor');
             await exec(`sudo mkdir -p /hab/sup/default`);
             await exec('sudo --preserve-env setsid bash', ['-c', 'hab sup run > /hab/sup/default/sup.log 2>&1 &'], { env: habEnv });
+
+            core.info('Waiting for supervisor secret...');
+            await exec('bash', ['-c', 'until test -f /hab/sup/default/CTL_SECRET; do echo -n "."; sleep .1; done; echo']);
+
+            core.info('Enabling sudoless access to supervisor API...');
+            await exec('sudo chgrp docker /hab/sup/default/CTL_SECRET');
+            await exec('sudo chmod g+r /hab/sup/default/CTL_SECRET');
 
             core.info('Waiting for supervisor...');
             await exec('bash', ['-c', 'until hab svc status; do echo -n "."; sleep .1; done; echo']);
@@ -185,6 +193,18 @@ async function run() {
                 }
             }
         }
+    }
+
+    // ensure /hab/cache exists and has correct ownership/permissions before cache is restored
+    try {
+        core.startGroup('Enabling sudoless package installation');
+        await exec(`sudo chown -R runner:docker /hab/pkgs`);
+        await exec(`find /hab/pkgs -maxdepth 3 -type d -exec sudo chmod g+ws {} \;`);
+    } catch (err) {
+        core.setFailed(`Failed to enable sudoless package installation: ${err.message}`);
+        return;
+    } finally {
+        core.endGroup();
     }
 }
 
