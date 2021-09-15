@@ -2,8 +2,8 @@ name: 'Release: Validate PR'
 
 on:
   pull_request:
-    branches: [master]
-    types: [opened, edited, reopened, synchronize]
+    branches: [ master ]
+    types: [ opened, edited, reopened, synchronize ]
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
