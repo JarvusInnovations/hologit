@@ -22,12 +22,12 @@
     "mz": "^2.4.0",
     "mz-modules": "^2.1.0",
     "object-squish": "^1.1.0",
-    "parse-url": "^5.0.1",
+    "parse-url": "^7.0.2",
     "shell-quote-word": "^1.0.1",
     "sort-keys": "^4.2.0",
     "toposort": "^2.0.2",
     "winston": "^3.5.1",
-    "yargs": "^14.2.3"
+    "yargs": "^17.5.1"
   },
   "bin": {
     "git-holo": "./bin/cli.js"
@@ -48,7 +48,7 @@
     "projection"
   ],
   "devDependencies": {
-    "@types/jest": "^27.4.0",
+    "@types/jest": "^28.1.4",
     "jest": "^28.1.0"
   },
   "jest": {
