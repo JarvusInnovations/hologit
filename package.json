@@ -27,7 +27,7 @@
     "sort-keys": "^4.2.0",
     "toposort": "^2.0.2",
     "winston": "^3.5.1",
-    "yargs": "^14.2.3"
+    "yargs": "^17.5.1"
   },
   "bin": {
     "git-holo": "./bin/cli.js"
