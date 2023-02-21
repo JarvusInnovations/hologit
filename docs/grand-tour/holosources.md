@@ -24,7 +24,7 @@ HOLO_SOURCE_PARENT_BLUEPRINT="https://github.com/myorg/myfork"
 Local paths work too:
 
 ```bash
-HOLO_SOURCE_PARENT_BLUEPRINT="/src/myfork"
+HOLO_SOURCE_PARENT_BLUEPRINT="file:///src/myfork"
 ```
 
 ### Change ref
@@ -48,11 +48,11 @@ HOLO_SOURCE_PARENT_BLUEPRINT="=>helm-chart"
 You can reconfigure an entire source:
 
 ```bash
-HOLO_SOURCE_PARENT_BLUEPRINT="/src/myfork#refs/heads/develop=>helm-chart"
+HOLO_SOURCE_PARENT_BLUEPRINT="file:///src/myfork#refs/heads/develop=>helm-chart"
 ```
 
 Or clear out a declared holobranch component to use a native ref directly:
 
 ```bash
-HOLO_SOURCE_PARENT_BLUEPRINT="/src/myfork#refs/heads/develop=>"
+HOLO_SOURCE_PARENT_BLUEPRINT="file:///src/myfork#refs/heads/develop=>"
 ```

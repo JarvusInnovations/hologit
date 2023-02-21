@@ -26,15 +26,15 @@ export HOLO_SOURCE_SKELETON_V1="=>emergence-vfs-site" # use existing url+ref, ov
 export HOLO_SOURCE_SKELETON_V1="=>" # use existing url+ref, clear holobranch
 export HOLO_SOURCE_SKELETON_V1="#refs/heads/develop" # use existing url, change ref, clear holobranch
 export HOLO_SOURCE_SKELETON_V1="#refs/heads/develop=>emergence-skeleton" # use existing url, change ref, keep holobranch
-export HOLO_SOURCE_SKELETON_V1="/src/skeleton-v1" # change url, clear ref+holobranch
-export HOLO_SOURCE_SKELETON_V1="/src/skeleton-v1#refs/heads/develop=>emergence-skeleton" # change url+ref, keep holobranch
+export HOLO_SOURCE_SKELETON_V1="file:///src/skeleton-v1" # change url, clear ref+holobranch
+export HOLO_SOURCE_SKELETON_V1="file:///src/skeleton-v1#refs/heads/develop=>emergence-skeleton" # change url+ref, keep holobranch
 ```
 
 Environmental source overrides will be honored at every depth when using subprojections as sources, so while working on a project using `skeleton-v2` as a source, you could work on `skeleton-v2` and its source `skeleton-v1` simultaneously:
 
 ```bash
-export HOLO_SOURCE_SKELETON_V2="/src/skeleton-v2#refs/heads/develop=>emergence-skeleton"
-export HOLO_SOURCE_SKELETON_V1="/src/skeleton-v1#refs/heads/develop=>emergence-skeleton"
+export HOLO_SOURCE_SKELETON_V2="file:///src/skeleton-v2#refs/heads/develop=>emergence-skeleton"
+export HOLO_SOURCE_SKELETON_V1="file:///src/skeleton-v1#refs/heads/develop=>emergence-skeleton"
 ```
 
 While working like this, you likely also want to environmentally instruct all hologit commands to always fetch the latest for these sources. This won't add an appreciable delay for local sources, but could slow down working against remote sources that aren't changing anyway:
