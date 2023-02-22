@@ -24,7 +24,7 @@
     "object-squish": "^1.1.0",
     "parse-url": "^8.1.0",
     "shell-quote-word": "^1.0.1",
-    "sort-keys": "^4.2.0",
+    "sort-keys": "^5.0.0",
     "toposort": "^2.0.2",
     "winston": "^3.5.1",
     "yargs": "^17.5.1"
