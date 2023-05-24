@@ -29,5 +29,5 @@ exports.handler = async function exportTree ({ treeish }) {
 
 
     // delete anything on disk and not in index
-    await git.clean({ d: true, force: true });
+    await git.clean({ d: true, force: true, x: true });
 };
