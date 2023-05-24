@@ -20,6 +20,6 @@
     "@actions/core": "^1.10.0",
     "@actions/exec": "^1.1.1",
     "@actions/io": "^1.1.3",
-    "habitat-action": "github:JarvusInnovations/habitat-action#v0.3.0"
+    "habitat-action": "^1.0.1"
   }
 }
