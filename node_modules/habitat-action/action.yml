@@ -11,6 +11,6 @@ inputs:
       description: 'Key to use for caching /hab/pkgs, defaults to ${GITHUB_WORKFLOW}:/hab/pkgs'
       required: false
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'index.js'
   post: 'post.js'
