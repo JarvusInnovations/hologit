@@ -1,5 +1,5 @@
 [hololens]
-package = "holo/lens-npm-install"
+package = "holo/lens-npm-install/16"
 
 [hololens.input]
 files = [
