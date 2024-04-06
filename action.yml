@@ -20,6 +20,6 @@ outputs:
   commit:
     description: 'Commit hash for last projection (if commit-to is configured)'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'index.js'
   post: 'post.js'
