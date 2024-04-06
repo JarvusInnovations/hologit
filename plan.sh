@@ -10,7 +10,7 @@ pkg_build_deps=(
 
 pkg_deps=(
   core/git
-  core/node16
+  "jarvus/node20" # use jarvus build until merged: https://github.com/habitat-sh/core-plans/pull/4708
   core/hab/0.79.0 # last version before new license
 )
 
@@ -39,7 +39,7 @@ do_build() {
   npm install
 
   build_line "Fixing interpreter"
-  sed -e "s#\#\!/usr/bin/env node#\#\!$(pkg_path_for node16)/bin/node#" --in-place "node-bin/cli.js"
+  sed -e "s#\#\!/usr/bin/env node#\#\!$(pkg_path_for node20)/bin/node#" --in-place "node-bin/cli.js"
 
   popd > /dev/null
 }
