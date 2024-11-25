@@ -2,6 +2,7 @@ const http = require('http');
 const { spawn } = require('child_process');
 const Backend = require('git-http-backend');
 const path = require('path');
+const zlib = require('zlib');
 
 /**
  * @typedef {Object} GitServerOptions
@@ -64,6 +65,13 @@ function createGitServer({ port = 9000, gitDir = null, authenticate }) {
     function handleGitRequest(req, res) {
         console.log('[GitServer] Creating git-http-backend instance for request');
 
+        // Handle gzip encoded requests
+        const reqStream = req.headers['content-encoding'] === 'gzip'
+            ? req.pipe(zlib.createGunzip())
+            : req;
+
+        console.log('[GitServer] Request encoding:', req.headers['content-encoding'] || 'none');
+
         // Create git-http-backend instance
         const backend = new Backend(req.url, (err, service) => {
             if (err) {
@@ -106,7 +114,7 @@ function createGitServer({ port = 9000, gitDir = null, authenticate }) {
             ps.stdout.pipe(service.createStream()).pipe(ps.stdin);
         });
 
-        req.pipe(backend).pipe(res);
+        reqStream.pipe(backend).pipe(res);
     }
 
     // Add server event handlers
