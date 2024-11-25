@@ -17,13 +17,24 @@ const path = require('path');
  * @returns {http.Server} The created HTTP server instance
  */
 function createGitServer({ port = 9000, repoDir = null, authenticate }) {
+    console.log('[GitServer] Creating server instance with options:', {
+        port,
+        repoDir,
+        hasAuthenticator: !!authenticate
+    });
+
     if (!repoDir) {
+        console.error('[GitServer] ERROR: repoDir option is required');
         throw new Error('repoDir option is required');
     }
 
     const server = http.createServer((req, res) => {
+        console.log(`[GitServer] Incoming ${req.method} request to ${req.url}`);
+        console.log('[GitServer] Request headers:', req.headers);
+
         // Handle CORS preflight requests
         if (req.method === 'OPTIONS') {
+            console.log('[GitServer] Handling CORS preflight request');
             res.writeHead(200, {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
@@ -39,26 +50,57 @@ function createGitServer({ port = 9000, repoDir = null, authenticate }) {
 
         // Handle authentication if provided
         if (typeof authenticate === 'function') {
-            authenticate(req, res, () => handleGitRequest(req, res));
+            console.log('[GitServer] Executing authentication middleware');
+            authenticate(req, res, () => {
+                console.log('[GitServer] Authentication successful, proceeding to git handler');
+                handleGitRequest(req, res);
+            });
         } else {
+            console.log('[GitServer] No authentication configured, proceeding to git handler');
             handleGitRequest(req, res);
         }
     });
 
     function handleGitRequest(req, res) {
+        console.log('[GitServer] Creating git-http-backend instance for request');
+
         // Create git-http-backend instance
         const backend = new Backend(req.url, (err, service) => {
             if (err) {
+                console.error('[GitServer] Backend error:', err);
                 res.writeHead(500);
                 res.end(err.toString());
                 return;
             }
 
+            console.log('[GitServer] Service details:', {
+                type: service.type,
+                action: service.action,
+                cmd: service.cmd,
+                args: service.args
+            });
+
             res.setHeader('content-type', service.type);
 
             // Spawn git process with correct directory
-            const ps = spawn(service.cmd, service.args, {
+            console.log(`[GitServer] Spawning git process: ${service.cmd} ${service.args.join(' ')}`);
+            console.log(`[GitServer] Working directory: ${repoDir}`);
+
+            const ps = spawn(service.cmd, service.args.concat(repoDir), {
                 cwd: repoDir
+            });
+
+            // Log process events
+            ps.on('error', (error) => {
+                console.error('[GitServer] Git process error:', error);
+            });
+
+            ps.stderr.on('data', (data) => {
+                console.log('[GitServer] Git process stderr:', data.toString());
+            });
+
+            ps.on('exit', (code, signal) => {
+                console.log('[GitServer] Git process exited:', { code, signal });
             });
 
             ps.stdout.pipe(service.createStream()).pipe(ps.stdin);
@@ -67,10 +109,27 @@ function createGitServer({ port = 9000, repoDir = null, authenticate }) {
         req.pipe(backend).pipe(res);
     }
 
+    // Add server event handlers
+    server.on('error', (error) => {
+        console.error('[GitServer] Server error:', error);
+    });
+
+    server.on('close', () => {
+        console.log('[GitServer] Server closed');
+    });
+
     // Start the server
     server.listen(port, () => {
-        console.log(`Git HTTP server listening on port ${port}`);
-        console.log(`Serving git repository from: ${repoDir}`);
+        console.log(`[GitServer] Server listening on port ${port}`);
+        console.log(`[GitServer] Serving git repository from: ${repoDir}`);
+        console.log('[GitServer] Server configuration:', {
+            port,
+            repoDir,
+            hasAuthenticator: !!authenticate,
+            nodeVersion: process.version,
+            platform: process.platform,
+            arch: process.arch
+        });
     });
 
     return server;
