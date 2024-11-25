@@ -6,7 +6,7 @@ const path = require('path');
 /**
  * @typedef {Object} GitServerOptions
  * @property {number} [port=9000] Port to listen on
- * @property {string} repoDir Absolute path to git repository directory
+ * @property {string} gitDir Absolute path to git repository directory
  * @property {Function} [authenticate] Optional authentication function(req, res, next)
  */
 
@@ -16,16 +16,16 @@ const path = require('path');
  * @param {GitServerOptions} options Server configuration options
  * @returns {http.Server} The created HTTP server instance
  */
-function createGitServer({ port = 9000, repoDir = null, authenticate }) {
+function createGitServer({ port = 9000, gitDir = null, authenticate }) {
     console.log('[GitServer] Creating server instance with options:', {
         port,
-        repoDir,
+        gitDir,
         hasAuthenticator: !!authenticate
     });
 
-    if (!repoDir) {
-        console.error('[GitServer] ERROR: repoDir option is required');
-        throw new Error('repoDir option is required');
+    if (!gitDir) {
+        console.error('[GitServer] ERROR: gitDir option is required');
+        throw new Error('gitDir option is required');
     }
 
     const server = http.createServer((req, res) => {
@@ -84,10 +84,10 @@ function createGitServer({ port = 9000, repoDir = null, authenticate }) {
 
             // Spawn git process with correct directory
             console.log(`[GitServer] Spawning git process: ${service.cmd} ${service.args.join(' ')}`);
-            console.log(`[GitServer] Working directory: ${repoDir}`);
+            console.log(`[GitServer] Working directory: ${gitDir}`);
 
-            const ps = spawn(service.cmd, service.args.concat(repoDir), {
-                cwd: repoDir
+            const ps = spawn(service.cmd, service.args.concat(gitDir), {
+                cwd: gitDir
             });
 
             // Log process events
@@ -121,10 +121,10 @@ function createGitServer({ port = 9000, repoDir = null, authenticate }) {
     // Start the server
     server.listen(port, () => {
         console.log(`[GitServer] Server listening on port ${port}`);
-        console.log(`[GitServer] Serving git repository from: ${repoDir}`);
+        console.log(`[GitServer] Serving git repository from: ${gitDir}`);
         console.log('[GitServer] Server configuration:', {
             port,
-            repoDir,
+            gitDir,
             hasAuthenticator: !!authenticate,
             nodeVersion: process.version,
             platform: process.platform,

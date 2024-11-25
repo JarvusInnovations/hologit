@@ -24,7 +24,7 @@ EXPOSE 9000
 
 # Set environment variables
 ENV PORT=9000
-ENV REPO_DIR=/repo
+ENV GIT_DIR=/repo
 
 # Start the server
 CMD ["node", "server.js"]

@@ -18,8 +18,8 @@ const PORT = parseInt(process.env.PORT || '9000', 10);
 console.log('[Server] Configured port:', PORT, 'from env:', process.env.PORT);
 
 // Get repository directory from environment variable or use default
-const REPO_DIR = process.env.REPO_DIR || '/repo';
-console.log('[Server] Configured repo directory:', REPO_DIR, 'from env:', process.env.REPO_DIR);
+const GIT_DIR = process.env.GIT_DIR || '/repo';
+console.log('[Server] Configured repo directory:', GIT_DIR, 'from env:', process.env.GIT_DIR);
 
 // Log all environment variables
 console.log('[Server] Full environment:', Object.keys(process.env).reduce((acc, key) => {
@@ -71,7 +71,7 @@ process.on('SIGINT', () => handleShutdown('SIGINT'));
 console.log('[Server] Initializing git HTTP server');
 const server = createGitServer({
     port: PORT,
-    repoDir: REPO_DIR,
+    gitDir: GIT_DIR,
     authenticate: (req, res, next) => {
         console.log('[Server] Authentication request:', {
             method: req.method,
