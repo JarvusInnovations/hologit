@@ -1,0 +1,15 @@
+{
+  "name": "lens-container",
+  "version": "1.0.0",
+  "description": "Git HTTP server container for hololens",
+  "main": "server.js",
+  "dependencies": {
+    "git-http-backend": "JarvusInnovations/git-http-backend#1.1.2"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
