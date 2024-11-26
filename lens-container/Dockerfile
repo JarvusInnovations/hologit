@@ -3,11 +3,15 @@ FROM node:20-alpine
 # Install git
 RUN apk add --no-cache git
 
-# Create app directory
-WORKDIR /lens
-
 # Create repository directory
-RUN mkdir /repo
+RUN git init --bare /repo
+
+# Configure default committer
+RUN git config --global user.email "hololens@container" \
+    && git config --global user.name "Holo lens"
+
+# Create directory for lens-server
+WORKDIR /lens-server
 
 # Copy package files
 COPY package*.json ./
@@ -18,6 +22,7 @@ RUN npm ci
 # Copy application files
 COPY lib ./lib
 COPY server.js ./
+COPY git-hooks/ /repo/hooks/
 
 # Expose default port
 EXPOSE 9000
@@ -27,4 +32,9 @@ ENV PORT=9000
 ENV GIT_DIR=/repo
 
 # Start the server
-CMD ["node", "server.js"]
+CMD ["node", "/lens-server/server.js"]
+
+# Set up lens template
+ENV HOLOLENS_ENTRYPOINT=/lens/lens-tree
+WORKDIR /lens
+COPY lens-tree .

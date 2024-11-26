@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# Read stdin line by line
+while read oldrev newrev refname; do
+    >&2 echo "::holo:: Executing lens ${refname}: ${newrev}"
+
+    lens_command="$HOLOLENS_ENTRYPOINT ${newrev}"
+    output_cache=$(mktemp)
+
+    tree_hash=$($lens_command 2> >(tee $output_cache >&2))
+    commit_hash=$(git commit-tree "${tree_hash}" -p "${newrev}" -m "${lens_command}" -F $output_cache)
+
+    echo "${refname}:${commit_hash}"
+    git update-ref "${refname}" "${commit_hash}"
+done
+
+exit 0

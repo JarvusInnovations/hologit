@@ -308,6 +308,20 @@
                 "4e78f11a2d8ba8cc462e8e6ace46d2a71d002774",
                 "da4534092d66f23e29c69e485f544f88636639c0"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**/*.js"
+            ],
+
+            "name": "lens-container/server",
+            "cwd": "${workspaceFolder}/lens-container",
+            "env": {
+                "GIT_DIR": "${workspaceFolder}/lens-container/test-repo"
+            },
+            "program": "${workspaceFolder:hologit}/lens-container/server.js"
         }
     ]
 }
