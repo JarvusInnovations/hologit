@@ -1,4 +1,0 @@
-#!/bin/sh
-
-echo "TODO: implement lens for tree ${INPUT_TREE}"
-exit 1
