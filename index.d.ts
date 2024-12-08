@@ -4,12 +4,6 @@ declare module 'git-client' {
     }
 }
 
-declare module 'dockerode' {
-    export class Docker {
-        constructor(options: { socketPath: string });
-    }
-}
-
 declare module 'hologit' {
     import { Git as GitClient } from 'git-client';
     import { Docker } from 'dockerode';
