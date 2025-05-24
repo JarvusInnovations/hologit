@@ -4,9 +4,12 @@ declare module 'git-client' {
     }
 }
 
+declare module '@iarna/toml' {
+    export function parse(content: string): any;
+}
+
 declare module 'hologit' {
     import { Git as GitClient } from 'git-client';
-    import { Docker } from 'dockerode';
 
     export interface GitOptions {
         gitDir: string;
@@ -63,6 +66,30 @@ declare module 'hologit' {
         fetch?: boolean | string[];
         cacheFrom?: string | null;
         cacheTo?: string | null;
+    }
+
+    export interface DockerExecOptions {
+        $relayStderr?: boolean;
+        $relayStdout?: boolean;
+    }
+
+    export interface StudioContainer {
+        id?: string;
+        type?: 'studio';
+        env?: { [key: string]: string };
+        defaultUser?: string;
+    }
+
+    export interface HoloSpec {
+        holospec: {
+            lens: {
+                input: string;
+                container?: string;
+                package?: string;
+                command?: string;
+                [key: string]: any;
+            };
+        };
     }
 
     export class Git {
@@ -297,13 +324,13 @@ declare module 'hologit' {
     export class Studio {
         static cleanup(): Promise<void>;
         static getHab(): Promise<any>;
-        static getDocker(): Promise<Docker>;
         static isEnvironmentStudio(): Promise<boolean>;
         static get(gitDir: string): Promise<Studio>;
+        static execDocker(args: string[], options?: DockerExecOptions): Promise<string>;
 
-        constructor(options: { gitDir: string; container: any });
+        constructor(options: { gitDir: string; container: StudioContainer });
 
-        container: any;
+        container: StudioContainer;
         gitDir: string;
 
         isLocal(): boolean;

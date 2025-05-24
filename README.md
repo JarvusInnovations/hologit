@@ -1,328 +1,111 @@
 # hologit
 
-Hologit lets you declaratively define virtual sub-branches (called holobranches) within any Git branch that mix together content from their host branch, content from other repositories/branches, and executable-driven transformations.
+A Git-native framework for declarative code automation that makes it simple to combine code from multiple sources and apply transformations efficiently.
 
-## Features
+## Overview
 
-- Track and merge remote code from multiple sources
-- Advanced merge, filter, and sourcing strategies
-- Apply arbitrary executable steps efficiently and consistently via Chef Habitat packages
-- Content-based git-distributed caching of build steps
-- GitHub Action for materializing holobranches to real branches
-- `--watch` command to produce live updates (currently lazy/slow, theoretically can be made near-instant)
+Hologit enables you to define virtual "holobranches" within your Git repository that can:
 
-## Introduction
+1. Mix together content from:
+   - The host branch
+   - Other repositories/branches
+   - Generated/transformed content
 
-**Hologit** is a [free and open](https://www.fsf.org/about/what-is-free-software) framework for code and content automation inside your local git repository. It makes it simple, fast, and reliable for projects to automate complex editing and publishing workflows that can involve multiple source repositories, languages, and build tools. Aiming to make working on software easier for everyone—pro and beginner alike—hologit gets rid of the need to think about or even know what needs to happen after you change files. There should just be content, and it goes places when you change it.
+2. Apply transformations through "hololenses" using:
+   - Docker containers
+   - Chef Habitat packages
 
-This works by enabling a project's git repository to define virtual "holobranches" that can be continuously and efficiently "projected" from any source branch. The projection process handles combining code from remote sources ("compositing") and executing build tools on the result ("lensing") to produce an output file tree and optionally commit it to a branch/ref.
+3. Project changes efficiently by:
+   - Computing new git trees in memory
+   - Caching results based on content
+   - ~~Watching for live updates~~ *Coming Soon*
 
-**Compositing** offers deeper control over which files are pulled from a remote repository and where they are integrated than [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) alone, while being more dependable and tracable than language-specific package managers like [npm](https://www.npmjs.com/) and [composer](https://getcomposer.org/). Instead of copying and moving files around on disk, hologit takes a git-native approach to minimize disk activity by computing new git trees in memory. Computed trees may be written to disk later or used as input to another process without the overhead.
+## Key Concepts
 
-**Lensing** can execute any existing code or build tool consistently by leveraging [habitat](https://www.habitat.sh/) and using containers where necessary. However, it also opens the door to a new generation of git-native build tools that do as much of their work as possible in memory, reading and writing to git's object database instead of a working tree on disk.
+### Holobranches
 
-## Quickstart
+A holobranch is a virtual branch defined in `.holo/branches/` that specifies:
 
-The guide will walk you through an illustrative minimal use of hologit to publish a GitHub Pages branch.
+- What content to include from which sources
+- How to transform that content through lenses
+- Where the content should be placed in the output tree
 
-Each heading links to [branches in the hologit/examples repository](https://github.com/hologit/examples/branches/all?query=basic%2F) showing the final state of the example project at the end of the section.
+Unlike regular Git branches, holobranches are computed on-demand and can mix content from multiple sources while maintaining clean history.
 
-### Create a repository with some minimal code [\[example branch\]](https://github.com/hologit/examples/tree/basic/01-init-repo)
+### Holosources
 
-To start this example, we'll use [the starter template from Bootstrap's *Getting Started* guide](https://getbootstrap.com/docs/4.2/getting-started/introduction/#starter-template) to create a website:
+Sources let you pull in code from:
 
-```console
-$ git init holo-example
-Initialized empty Git repository in /Users/chris/holo-example/.git/
-$ cd holo-example/
-$ curl -s https://raw.githubusercontent.com/hologit/examples/basic/01-init-repo/index.html > index.html
-$ git add index.html
-$ git commit -m "Add Bootstrap's starter template as index.html"
-[master (root-commit) 9fe77ec] Add Bootstrap's starter template as index.html
- 1 file changed, 22 insertions(+)
- create mode 100644 index.html
+- Other repositories via Git submodules
+- Other branches in the same repository
+- Remote Git repositories
+- Output from local or remote holobranches
+
+Sources are configured in `.holo/sources/` and can be referenced by holobranches to include specific files or directories.
+
+### Hololenses
+
+Lenses are transformations that can be applied to source content through:
+
+- Docker containers that process input trees
+- Habitat packages that provide build tools
+
+Lenses are configured in `.holo/lenses/` and can be chained together to form complex build pipelines.
+
+## Getting Started
+
+1. Initialize hologit configuration:
+
+```bash
+git holo init
 ```
 
-### Install hologit
+2. Create a holobranch:
 
-See [docs/grand-tour/installation.md](docs/grand-tour/installation.md)
-
-### Initialize .holo/ configuration [\[example branch\]](https://github.com/hologit/examples/tree/basic/02-init-holo)
-
-Hologit configuration is stored under the `.holo/` tree at the root of a repository. Initialize it in each branch that will generate projections:
-
-```console
-$ git holo init
-name=holo-example
-initialized .holo/config.toml
-$ cat .holo/config.toml
-[holo]
-name = "holo-example"
-$ git commit -m "Initialize .holo/ configuration"
-[master 881b0b6] Initialize .holo/ configuration
- 1 file changed, 2 insertions(+)
- create mode 100644 .holo/config.toml
+```bash
+git holo branch create my-branch
 ```
 
-To start, this configuration file only assigns a name for the code in the current source branch, which can be used later as an alternative to remote sources. The name `holo-example` was detected from the name of the repository's working tree, but could have been chosen by passing `--name ${my_project_name}` for the `init` command or just by editing the `./holo/config.toml` file later.
+3. Add a source:
 
-### Define a holobranch [\[example branch\]](https://github.com/hologit/examples/tree/basic/03-create-holobranch)
-
-A holobranch can be defined by creating a holobranch config file at `.holo/branches/${my_holobranch_name}.toml` or any number of holomapping config files within `.holo/branches/${my_holobranch_name}/**.toml`. Generate a minimal "passthrough" holobranch that will copy all files from the current source branch:
-
-```console
-$ git holo branch create --template=passthrough gh-pages
-initialized .holo/branches/gh-pages/_holo-example.toml
-$ cat .holo/branches/gh-pages/_holo-example.toml
-[holomapping]
-files = "**"
-$ git commit -m "Initialize .holo/branches/gh-pages configuration"
-[master 4b9aa68] Initialize .holo/branches/gh-pages configuration
- 1 file changed, 2 insertions(+)
- create mode 100644 .holo/branches/gh-pages/_holo-example.toml
+```bash
+git holo source create https://github.com/example/repo
 ```
 
-This defines a holobranch named `gh-pages` with all files from holosource `holo-example` matching the [glob pattern](https://github.com/isaacs/minimatch) `**` populating its root directory. There are several elements of convention on display here:
+4. Project your holobranch:
 
-- The underscore prefixing the filename of`/_holo-example.toml` indicates that any files produced by the holomapping should be merged into the root directory of the projected holobranch.
-  - If the filename were just `/holo-example.toml`, a subdirectory name `/holo-example/` would be created to contain all the files produced by the holomapping.
-  - A holomapping config prefixed with an underscore could be named anything, all such holomappings at the same path will have their files merged to populate the directory.
-- There are only two required configuration options for each holomapping:
-  - `holosource`: The name of a configured holosource referencing a repository to pull files from
-    - Ommitted in the generated holomapping config
-    - Defaults to the name of the file with the `.toml` extension and any `_` prefix stripped
-  - `files`: A string or array for strings containing [glob patterns](https://github.com/isaacs/minimatch) for matching or excluding files
-    - A value of just `'**'`, as in the generated config, matches all files in the source
-
-### Project holobranch for first time
-
-With a holobranch defined with at least one holomapping, we have enough for our first tree projection:
-
-```console
-$ git holo project gh-pages
-info: reading mappings from holobranch: gitDir=/Users/chris/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
-info: compositing tree...
-info: merging holo-example:{**} -> /
-info: stripping .holo/ tree from output tree...
-info: writing final output tree...
-info: projection ready:
-ff954bb0a1e4878db424cb1033a0c356dac8d350
-$ git cat-file -t ff954bb0a1e4878db424cb1033a0c356dac8d350
-tree
-$ git ls-tree -r ff954bb0a1e4878db424cb1033a0c356dac8d350
-100644 blob 8092fa2adb4a9a395ac291fbdc9717b68be669aa    index.html
+```bash
+git holo project my-branch
 ```
 
-The output of the `project` command seen above is the git hash of a [**tree** object](https://git-scm.com/book/en/v2/Git-Internals-Git-Objects) that has been generated, if needed, within your git repository's object database. This hash *does not* reference a commit object like most git hashes most commonly seen. A tree object is the main ingrediant of a commit obect: the tree represents a complete unique state of all the files and a commit attaches the tree to a point in your chain of commits with timestamp and authorship information.
+See the [Installation Guide](docs/grand-tour/installation.md) and [Grand Tour](docs/grand-tour/README.md) for detailed setup and usage instructions.
 
-A tree can be used directly:
+## Key Features
 
-```console
-$ git archive --format=zip $(git holo project gh-pages) > website.zip
-info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
-info: compositing tree...
-info: merging holo-example:{**} -> /
-info: stripping .holo/ tree from output tree...
-info: writing final output tree...
-info: projection ready:
-$ unzip -l website.zip
-Archive:  website.zip
-  Length      Date    Time    Name
----------  ---------- -----   ----
-     1230  12-23-2018 20:32   index.html
----------                     -------
-     1230                     1 file
-```
+- **Git-native**: Works directly with Git's object database for maximum efficiency
+- **Content-based caching**: Automatically caches build results based on input content, optionally sharing with other users and CI/CD via the same Git server hosting your project
+- **Declarative configuration**: Define complex automation workflows in TOML files
+- ~~**Live updates**: Watch mode for continuous projection of changes~~ *Coming Soon*
+- **GitHub Action**: Materialize holobranches to real branches in CI/CD
+- **Flexible transformations**: Use any build tool through containers or packages
 
-or wrapped in a commit:
+## Use Cases
 
-```console
-$ git commit-tree -m "Update gh-pages"  $(git holo project gh-pages)
-info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
-info: compositing tree...
-info: merging holo-example:{**} -> /
-info: stripping .holo/ tree from output tree...
-info: writing final output tree...
-info: projection ready:
-846a551ce356d5fa4088e58b3ad0f0d05aa6d389
-$ git cat-file -t 846a551ce356d5fa4088e58b3ad0f0d05aa6d389
-commit
-$ git cat-file -p 846a551ce356d5fa4088e58b3ad0f0d05aa6d389
-tree ff954bb0a1e4878db424cb1033a0c356dac8d350
-author Chris Alfano <chris@jarv.us> 1545615571 -0500
-committer Chris Alfano <chris@jarv.us> 1545615571 -0500
+- **Monorepo Management**: Combine code from multiple repositories while maintaining clean history
+- **Build Automation**: Create efficient, reproducible build pipelines
+- **Documentation**: Generate and publish documentation from multiple sources
+- **Deployment**: Prepare deployment artifacts with consistent transformations
+- **Code Generation**: Automate code generation and transformation workflows
 
-Update gh-pages
-```
+## Documentation
 
-With the `--commit-branch` option, you can commit the generated tree to a give branch and output the new commit's hash instead:
+- [Installation Guide](docs/grand-tour/installation.md)
+- [Repository Setup](docs/grand-tour/repository-setup.md)
+- [Working with Sources](docs/workflows/work-on-sources.md)
+- [Holobranches Guide](docs/grand-tour/holobranches.md)
+- [Hololenses Guide](docs/grand-tour/hololenses.md)
+- [Holoreactors Guide](docs/grand-tour/holoreactors.md)
 
-```console
-$ git cat-file -p $(git holo project gh-pages --commit-branch=gh-pages)
-info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
-info: compositing tree...
-info: merging holo-example:{**} -> /
-info: stripping .holo/ tree from output tree...
-info: writing final output tree...
-info: committed new tree to "gh-pages": 734f7dc034868af4e2bd23daf23e119faca1e0b8
-info: projection ready:
-tree ff954bb0a1e4878db424cb1033a0c356dac8d350
-author Chris Alfano <chris@jarv.us> 1545616786 -0500
-committer Chris Alfano <chris@jarv.us> 1545616786 -0500
+## License
 
-Projected gh-pages from 4b9aa68
-```
-
-### Merge external code via a holosource [\[example branch\]](https://github.com/hologit/examples/tree/basic/04-create-holosource)
-
-The first step to using external code in your projections is defining a holosource:
-
-```console
-$ git holo source create https://github.com/twbs/bootstrap --ref=v4.2.1
-info: listing https://github.com/twbs/bootstrap#v4.2.1
-info: fetching https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e94747bd698f4f61d48ed54c9c6d4d199bd32
-fetched https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e94747bd698f4f61d48ed54c9c6d4d199bd32
-initialized .holo/sources/bootstrap.toml
-$ cat .holo/sources/bootstrap.toml
-[holosource]
-url = "https://github.com/twbs/bootstrap"
-ref = "refs/tags/v4.2.1"
-$ git commit -m "Initialize .holo/sources/bootstrap configuration"
-[master 64ef9fc] Initialize .holo/sources/bootstrap configuration
- 1 file changed, 3 insertions(+)
- create mode 100644 .holo/sources/bootstrap.toml
-```
-
-Now this source can be referenced in holobranch mappings, this example takes advantage of the holosource being automatically set from the mapping filename:
-
-```console
-$ mkdir .holo/branches/gh-pages/{js,css}
-$ cat > .holo/branches/gh-pages/css/_bootstrap.toml <<- END_OF_TOML
-[holomapping]
-root = "dist/css"
-files = "*.min.css"
-END_OF_TOML
-$ cat > .holo/branches/gh-pages/js/_bootstrap.toml <<- END_OF_TOML
-[holomapping]
-root = "dist/js"
-files = "*.min.js"
-END_OF_TOML
-$ git add --all
-$ git commit -am "Add css and js mappings for bootstrap to gh-pages holobranch"
-[master 4180e45] Add css and js mappings for bootstrap to gh-pages holobranch
- 2 files changed, 6 insertions(+)
- create mode 100644 .holo/branches/gh-pages/css/_bootstrap.toml
- create mode 100644 .holo/branches/gh-pages/js/_bootstrap.toml
-```
-
-Projecting the `gh-pages` tree now shows the files merged from bootstrap:
-
-```console
-$ git ls-tree -r $(git holo project gh-pages)
-info: reading mappings from holobranch: gitDir=/Users/chris/Repositories/holo-example/.git, ref=HEAD, workTree=false, name=gh-pages
-info: compositing tree...
-info: merging holo-example:{**} -> /
-info: merging bootstrap:dist/css/{*.min.css} -> /css/
-info: merging bootstrap:dist/js/{*.min.js} -> /js/
-info: stripping .holo/ tree from output tree...
-info: writing final output tree...
-info: projection ready:
-100644 blob b3e6881a586c99b55e2d1878839eede6fb3fa9d7    css/bootstrap-grid.min.css
-100644 blob 0668a8cd93bba140c00bc0c410ad54c61af71d9e    css/bootstrap-reboot.min.css
-100644 blob e6b4977799e3a3a377e475ee765eb4a9961c6c71    css/bootstrap.min.css
-100644 blob 8092fa2adb4a9a395ac291fbdc9717b68be669aa    index.html
-100644 blob 97f14c05c3d5960129caf3e4666f661dfdb8228a    js/bootstrap.bundle.min.js
-100644 blob 9df6b6c2ced14a60259171e1fdacc2534ddee183    js/bootstrap.min.js
-```
-
-For reference, here is what the holobranch definition that projected this tree looks like at this point:
-
-```console
-$ tree .holo/branches/gh-pages
-.holo/branches/gh-pages
-├── _holo-example.toml
-├── css
-│   └── _bootstrap.toml
-└── js
-    └── _bootstrap.toml
-```
-
-Before projecting again, you might want to update all remote sources to their latest commits:
-
-```console
-$ git holo source fetch --all
-fetched bootstrap https://github.com/twbs/bootstrap#refs/heads/v4-dev@dc17c924e86948ae514d72f8ccc67f9d77657f6b
-```
-
-### Assemble the complete source code via a holo lens
-
-- Apply sass compilation and compression via generic lenses
-
-### Work upstream by checking out a holosource
-
-To work on changes to code being pulled in from remote repositories, any or all sources can be checkout out as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
-
-```console
-$ git holo source checkout --all
-checked out .holo/sources/bootstrap from https://github.com/twbs/bootstrap#refs/tags/v4.2.1@9e4e9474
-$ git commit -m "Initialize .holo/sources/bootstrap submodule"
-[basic/05-checkout-holosource ee39b88] Initialize .holo/sources/bootstrap submodule
- 2 files changed, 5 insertions(+)
- create mode 100644 .gitmodules
- create mode 160000 .holo/sources/bootstrap
-```
-
-- Make commits inside submodule, project with --working
-- Commit gitlink outside submodule, change all projections
-
-### Make use of a projected tree
-
-- Archive tree-ish
-- Write to a real branch
-- Push to github gh-pages
-
-## Advanced Usage
-
-### Overlay a project
-
-### Build new holo lenses
-
-## Roadmap
-
-- [~] (in progress) Complete getting started tour, break into sections in another doc format
-- [ ] Develop shorter quickstart
-- [~] `* --ref` (in progress) option to use a specific ref instead of HEAD
-- [~] `* ---no-working` (in progress) option to ignore working directory and only use ref
-- [ ] `project --watch` option to keep running and automatically update projection with changes to input
-- [ ] `project --audit` option to produce audit commits chain
-- [ ] Implement `holoreactor` objects: defined like lenses within the projected branches, the handle piping result subtrees into single-run or persistent processes running in the studio via `hab exec` or `hab svc load`
-  - [ ] Implement a `holoreactor` for serving static websites
-  - [ ] Implement a `holoreactor` for running/restarting a node app
-  - [ ] Implement a `holoreactor` for running an emergence app locally or on a remote cluster
-- [ ] Expose from the studio's HTTP interface a *virtual* holospace that can be mutated via git push or WebDAV
-- [ ] Add option to `[holosource]` config to override submodule checkout path
-- [ ] Leverage lower-overhead chroot environments instead of Docker containers on Linux systems
-- [ ] Enable running and connecting to a persistent background studio for quick on-demand projection
-  - Build a studio docker image that extends Habitat's studio image with hologit pre-installed
-  - Wrap around opening interactive shells
-  - Wrap around entrypoint to start holostudio process
-- [ ] Implement in-memory tree hashing to avoid calls to `git mktree` for tree hashes that are known in the tree cache to already exist in the repo
-- [ ] Visual Studio Code extension
-  - Top-level hologit section with views of sources and branches
-  - Commands via context menu and command palette
-  - Ability to graphically toggle watch mode for each source
-  - Open holobranches in workspace via filesystem provider for read-only browsing of either composited or lensed content
-  - Enable writing to mounted holobranches by routing writes to estimated source via reverse-compositing, checking out submodules on-the-fly
-- [ ] Isolate lens environments further from source
-  - Currently, `.git` directory is mounted into lensing environment, so working tree is safe but repo is exposed to damage by lens code
-  - Lensing only needs to exchange object hashes, so objects tree could be mounted read-write and the rest could be empty
-  - More robust options might include using git's fetch/push mechanism and/or mounting objects tree as read-only alternates
-    - A git SmartHTTP server could be exposed via the studio socket, but could objects be exchanged as efficiently as just bind-mounting the objects database directly?
-- [ ] Enable running web-based code editor as a holoreactor to your code base
-
-## Reference
-
-## TODO
-
-- [ ] Have `project` fetch and read source HEAD if no submodule commit is found
-- [ ] Refactor `source add` and `source fetch` to use common code, leave things in same state
+This project is [free and open source](https://www.fsf.org/about/what-is-free-software) software.
