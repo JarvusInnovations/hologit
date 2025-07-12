@@ -16,11 +16,11 @@ jobs:
 
       - run: npm install
 
-      - name: 'Test projection: docs-site'
-        run: node bin/cli.js project --no-cache-from --cache-to=origin docs-site
-
       - name: 'Test projection: github-action-projector'
         run: node bin/cli.js project --no-cache-from --cache-to=origin github-action-projector
+
+      - name: 'Test projection: docs-site'
+        run: node bin/cli.js project --no-cache-from --cache-to=origin docs-site
 
   test-action:
 
@@ -36,12 +36,13 @@ jobs:
       - run: npm install
         working-directory: github-actions/projector
 
-      - name: 'Test projection action: docs-site'
-        uses: ./github-actions/projector/
-        with:
-          holobranch: docs-site
-
       - name: 'Test projection action: github-action-projector'
         uses: ./github-actions/projector/
         with:
           holobranch: github-action-projector
+
+
+      - name: 'Test projection action: docs-site'
+        uses: ./github-actions/projector/
+        with:
+          holobranch: docs-site
