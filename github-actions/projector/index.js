@@ -29,16 +29,8 @@ try {
 
 async function run() {
     try {
-        await require('habitat-action');
-    } catch (err) {
-        core.setFailed(`Failed to run habitat-action: ${err.message}`);
-        return;
-    }
-
-
-    try {
         core.startGroup('Installing Jarvus Hologit');
-        await exec('hab pkg install jarvus/hologit');
+        await exec('npm install -g hologit');
     } catch (err) {
         core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
         return;
