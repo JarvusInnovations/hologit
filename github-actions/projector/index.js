@@ -1,6 +1,5 @@
 const core = require('@actions/core');
 const { exec } = require('@actions/exec');
-const io = require('@actions/io');
 
 
 // gather input
