@@ -200,8 +200,7 @@ async function run() {
 }
 
 async function gitExec(command, args = [], options = {}) {
-    return exec('hab pkg exec jarvus/hologit', [
-        'git',
+    return exec('git', [
         '--no-pager',
         command,
         ...args
@@ -209,8 +208,7 @@ async function gitExec(command, args = [], options = {}) {
 }
 
 async function gitExecOutput(command, args = [], options = {}) {
-    return execOutput('hab pkg exec jarvus/hologit', [
-        'git',
+    return execOutput('git', [
         '--no-pager',
         command,
         ...args
