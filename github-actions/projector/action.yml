@@ -14,6 +14,10 @@ inputs:
     commit-to:
       description: 'Name of branch/ref to optionally commit result to'
       required: false
+    cache:
+      description: 'Whether to use cache (true/false)'
+      required: false
+      default: 'true'
 outputs:
   tree:
     description: 'Tree hash for last projection'
@@ -22,4 +26,3 @@ outputs:
 runs:
   using: 'node20'
   main: 'index.js'
-

@@ -11,6 +11,7 @@ const fetch = core.getInput('fetch') !== 'false';
 const holobranch = core.getInput('holobranch', { required: true });
 const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
+const cache = core.getInput('cache') !== 'false';
 const commitToRef = commitTo
     ? (
         commitTo == 'HEAD' || commitTo.startsWith('refs/')
@@ -149,10 +150,14 @@ async function run() {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
         const projectionArgs = [
             holobranch,
-            `--ref=${ref}`,
-            '--cache-from=origin',
-            '--cache-to=origin'
+            `--ref=${ref}`
         ];
+
+        if (cache) {
+            projectionArgs.push('--cache-from=origin', '--cache-to=origin');
+        } else {
+            projectionArgs.push('--no-cache-from', '--no-cache-to');
+        }
 
         if (debug) {
             projectionArgs.push('--debug');

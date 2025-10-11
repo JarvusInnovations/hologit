@@ -50,8 +50,10 @@ jobs:
         uses: ./github-actions/projector/
         with:
           holobranch: github-action-projector
+          cache: false
 
       - name: 'Test projection action: docs-site'
         uses: ./github-actions/projector/
         with:
           holobranch: docs-site
+          cache: false
