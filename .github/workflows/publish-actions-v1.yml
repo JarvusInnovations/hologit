@@ -13,7 +13,6 @@ jobs:
       uses: ./github-actions/projector/
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        HAB_LICENSE: accept
       with:
         ref: master
         holobranch: github-action-projector
