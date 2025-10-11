@@ -41,11 +41,13 @@ jobs:
       - run: npm install
         working-directory: github-actions/projector
 
+      - name: Install local hologit
+        run: npm install -g .
+
       - name: 'Test projection action: github-action-projector'
         uses: ./github-actions/projector/
         with:
           holobranch: github-action-projector
-
 
       - name: 'Test projection action: docs-site'
         uses: ./github-actions/projector/

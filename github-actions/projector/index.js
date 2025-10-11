@@ -27,14 +27,21 @@ try {
 }
 
 async function run() {
-    try {
-        core.startGroup('Installing Jarvus Hologit');
-        await exec('npm install -g hologit');
-    } catch (err) {
-        core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
+    // check if git-holo is already installed
+    const isInstalled = await exec('which', ['git-holo'], { ignoreReturnCode: true, silent: true }) === 0;
+
+    if (isInstalled) {
+        core.info('Hologit is already installed, skipping npm install');
+    } else {
+        try {
+            core.startGroup('Installing Jarvus Hologit');
+            await exec('npm install -g hologit');
+        } catch (err) {
+            core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
     }
 
 
