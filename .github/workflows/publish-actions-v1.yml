@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: 'Update holobranch: actions/projector/v1'
-      uses: ./github-actions/projector/
+      uses: JarvusInnovations/hologit@actions/projector/v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
