@@ -1,5 +1,7 @@
 [hololens]
-package = "holo/lens-mkdocs"
+container = "ghcr.io/hologit/lenses/mkdocs:latest"
+
+[hololens.mkdocs]
 requirements = [
     "mkdocs-material",
     "mkdocs-awesome-pages-plugin",

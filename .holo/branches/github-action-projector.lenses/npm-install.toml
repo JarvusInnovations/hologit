@@ -1,5 +1,5 @@
 [hololens]
-package = "holo/lens-npm-install/16"
+container = "ghcr.io/hologit/lenses/npm-install:latest"
 
 [hololens.input]
 files = [
