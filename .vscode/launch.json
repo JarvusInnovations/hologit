@@ -308,6 +308,20 @@
                 "4e78f11a2d8ba8cc462e8e6ace46d2a71d002774",
                 "da4534092d66f23e29c69e485f544f88636639c0"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "github-actions/projector",
+            "program": "${workspaceFolder}/github-actions/projector/index.js",
+            "cwd": "${workspaceFolder}/.scratch/test-wd",
+            "env": {
+                "GITHUB_ACTOR": "github-action",
+                "GITHUB_REPOSITORY": "JarvusInnovations/hologit",
+                "GITHUB_REF": "refs/heads/develop",
+                "INPUT_HOLOBRANCH": "github-action-projector",
+                "INPUT_REF": "refs/heads/develop"
+            }
         }
     ]
 }

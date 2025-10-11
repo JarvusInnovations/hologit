@@ -1,6 +1,5 @@
 const core = require('@actions/core');
 const { exec } = require('@actions/exec');
-const io = require('@actions/io');
 
 
 // gather input
@@ -12,6 +11,7 @@ const fetch = core.getInput('fetch') !== 'false';
 const holobranch = core.getInput('holobranch', { required: true });
 const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
+const cache = core.getInput('cache') !== 'false';
 const commitToRef = commitTo
     ? (
         commitTo == 'HEAD' || commitTo.startsWith('refs/')
@@ -28,22 +28,21 @@ try {
 }
 
 async function run() {
-    try {
-        await require('habitat-action');
-    } catch (err) {
-        core.setFailed(`Failed to run habitat-action: ${err.message}`);
-        return;
-    }
+    // check if git-holo is already installed
+    const isInstalled = await exec('which', ['git-holo'], { ignoreReturnCode: true, silent: true }) === 0;
 
-
-    try {
-        core.startGroup('Installing Jarvus Hologit');
-        await exec('hab pkg install jarvus/hologit');
-    } catch (err) {
-        core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
+    if (isInstalled) {
+        core.info('Hologit is already installed, skipping npm install');
+    } else {
+        try {
+            core.startGroup('Installing Jarvus Hologit');
+            await exec('npm install -g hologit');
+        } catch (err) {
+            core.setFailed(`Failed to install Jarvus Hologit: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
     }
 
 
@@ -151,10 +150,14 @@ async function run() {
         core.startGroup(`Projecting holobranch: ${holobranch}`);
         const projectionArgs = [
             holobranch,
-            `--ref=${ref}`,
-            '--cache-from=origin',
-            '--cache-to=origin'
+            `--ref=${ref}`
         ];
+
+        if (cache) {
+            projectionArgs.push('--cache-from=origin', '--cache-to=origin');
+        } else {
+            projectionArgs.push('--no-cache-from', '--no-cache-to');
+        }
 
         if (debug) {
             projectionArgs.push('--debug');
@@ -209,8 +212,7 @@ async function run() {
 }
 
 async function gitExec(command, args = [], options = {}) {
-    return exec('hab pkg exec jarvus/hologit', [
-        'git',
+    return exec('git', [
         '--no-pager',
         command,
         ...args
@@ -218,8 +220,7 @@ async function gitExec(command, args = [], options = {}) {
 }
 
 async function gitExecOutput(command, args = [], options = {}) {
-    return execOutput('hab pkg exec jarvus/hologit', [
-        'git',
+    return execOutput('git', [
         '--no-pager',
         command,
         ...args
