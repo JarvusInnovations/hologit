@@ -17,6 +17,10 @@ inputs:
     commit-message:
       description: 'Custom commit message to use when committing (requires commit-to)'
       required: false
+    commit-source-parent:
+      description: 'Include the source commit as a second parent in the projection commit'
+      required: false
+      default: 'true'
     cache:
       description: 'Whether to use cache (true/false)'
       required: false
