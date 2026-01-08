@@ -14,6 +14,9 @@ inputs:
     commit-to:
       description: 'Name of branch/ref to optionally commit result to'
       required: false
+    commit-message:
+      description: 'Custom commit message to use when committing (requires commit-to)'
+      required: false
     cache:
       description: 'Whether to use cache (true/false)'
       required: false
