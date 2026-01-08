@@ -11,6 +11,7 @@ const fetch = core.getInput('fetch') !== 'false';
 const holobranch = core.getInput('holobranch', { required: true });
 const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
+const commitMessage = core.getInput('commit-message', { required: false });
 const cache = core.getInput('cache') !== 'false';
 const commitToRef = commitTo
     ? (
@@ -165,6 +166,10 @@ async function run() {
 
         if (commitToRef) {
             projectionArgs.push(`--commit-to=${commitToRef}`);
+        }
+
+        if (commitMessage) {
+            projectionArgs.push(`--commit-message=${commitMessage}`);
         }
 
         if (lens == 'true') {

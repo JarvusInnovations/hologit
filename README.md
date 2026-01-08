@@ -12,6 +12,20 @@ A GitHub action for projecting holobranches with hologit
 - [ ] Make push optional so non-release branches can test builds
   - project all branches, and then only push refs and tags after everything succeeds
 
+## Inputs
+
+- `holobranch` (required): Name of holobranch to project
+- `ref`: Name of branch/ref to read source tree from
+- `fetch`: Whether to fetch the configured ref (default: `true`)
+- `commit-to`: Name of branch/ref to optionally commit result to
+- `commit-message`: Custom commit message to use when committing (requires `commit-to`)
+- `cache`: Whether to use cache (default: `true`)
+
+## Outputs
+
+- `tree`: Tree hash for last projection
+- `commit`: Commit hash for last projection (if `commit-to` is configured)
+
 ## Usage (mockup)
 
 ```yaml
@@ -40,8 +54,10 @@ jobs:
         projections:
           - holobranch: emergence-skeleton
             commit-to: emergence/skeleton/${{steps.get-release-name.outputs.result}}
+            commit-message: "Deploy skeleton v${{steps.get-release-name.outputs.result}}"
           - holobranch: emergence-layer
             commit-to: emergence/layer/${{steps.get-release-name.outputs.result}}
+            commit-message: "Deploy layer v${{steps.get-release-name.outputs.result}}"
     - name: Project docs holobranches
       uses: jarvus/hologit-action@v1
       with:
