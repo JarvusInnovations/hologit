@@ -24,7 +24,7 @@
     "object-squish": "^1.1.0",
     "parse-url": "^10.0.3",
     "shell-quote-word": "^1.0.1",
-    "sort-keys": "^4.2.0",
+    "sort-keys": "^6.0.0",
     "toposort": "^2.0.2",
     "winston": "^3.17.0",
     "yargs": "^17.5.1"
@@ -33,7 +33,7 @@
     "git-holo": "./bin/cli.js"
   },
   "engines": {
-    "node": ">=8.3.0"
+    "node": ">=20"
   },
   "os": [
     "darwin",
