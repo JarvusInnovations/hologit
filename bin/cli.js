@@ -21,7 +21,7 @@ module.exports = { logger };
 
 
 // route command line
-require('yargs')
+require('yargs')(process.argv.slice(2))
     .version(require('../package.json').version)
     .option('d', {
         alias: 'debug',
@@ -58,4 +58,4 @@ require('yargs')
     })
     .strict()
     .help()
-    .argv;
+    .parse();
