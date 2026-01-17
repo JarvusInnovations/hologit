@@ -20,6 +20,9 @@ jobs:
         node-version: '22.x'
         registry-url: 'https://registry.npmjs.org'
 
+    - name: Upgrade npm for trusted publishing
+      run: npm install -g npm@latest
+
     - name: Place tag in environment
       run: |
         echo "SOURCE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
