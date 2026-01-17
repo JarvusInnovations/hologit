@@ -27,13 +27,13 @@
     "sort-keys": "^6.0.0",
     "toposort": "^2.0.2",
     "winston": "^3.17.0",
-    "yargs": "^17.5.1"
+    "yargs": "^18.0.0"
   },
   "bin": {
     "git-holo": "./bin/cli.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || ^22.12.0 || >=23"
   },
   "os": [
     "darwin",
