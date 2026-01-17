@@ -10,6 +10,11 @@ exports.builder = {
         describe: 'A commit message to use if commit-branch is specified',
         type: 'string'
     },
+    'commit-source-parent': {
+        describe: 'Include the source commit as a second parent in the projection commit',
+        type: 'boolean',
+        default: true
+    },
     'ref': {
         describe: 'Commit ref to read holobranch from',
         default: 'HEAD'
@@ -53,6 +58,7 @@ exports.handler = async function project ({
     watch = false,
     commitTo = null,
     commitMessage = null,
+    commitSourceParent = true,
     cacheFrom = null,
     cacheTo = null
 }) {
@@ -136,7 +142,7 @@ exports.handler = async function project ({
         lens,
         commitTo,
         commitMessage,
-        parentCommit,
+        parentCommit: commitSourceParent ? parentCommit : null,
         fetch,
         cacheFrom,
         cacheTo
@@ -156,7 +162,7 @@ exports.handler = async function project ({
                     lens,
                     commitTo,
                     commitMessage,
-                    parentCommit: newCommitHash,
+                    parentCommit: commitSourceParent ? newCommitHash : null,
                     cacheFrom,
                     cacheTo
                 });
