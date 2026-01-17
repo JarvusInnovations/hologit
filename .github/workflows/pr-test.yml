@@ -3,6 +3,25 @@ name: 'PR: Test'
 on: pull_request
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "Github Action Test"
+          git config --global user.email "test@test.com"
+
+      - run: npm install
+
+      - name: Run tests
+        run: npm test
+
   test-cli:
 
     runs-on: ubuntu-latest
