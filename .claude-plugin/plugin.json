@@ -1,0 +1,11 @@
+{
+  "name": "hologit",
+  "description": "Skills for configuring and using hologit",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jarvus Innovations",
+    "email": "hello@jarv.us"
+  },
+  "repository": "https://github.com/JarvusInnovations/hologit",
+  "license": "MIT"
+}
