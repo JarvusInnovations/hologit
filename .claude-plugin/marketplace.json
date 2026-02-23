@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "hologit",
-      "source": ".",
+      "source": "./",
       "description": "Hologit configuration and CLI assistance",
       "skills": ["./skills/hologit"]
     }
