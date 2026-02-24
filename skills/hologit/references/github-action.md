@@ -14,6 +14,7 @@
 | `commit-to` | no | — | Branch/ref to commit the projected tree to |
 | `commit-message` | no | auto | Custom commit message (requires `commit-to`) |
 | `commit-source-parent` | no | `true` | Include source commit as second parent |
+| `author-from-ref` | no | `true` | Set git author from source ref commit (set to `false` to use pre-configured author) |
 | `cache` | no | `true` | Whether to use lens result caching |
 
 ## Outputs
