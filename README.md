@@ -60,19 +60,19 @@ Lenses are configured in `.holo/lenses/` and can be chained together to form com
 git holo init
 ```
 
-2. Create a holobranch:
+1. Create a holobranch:
 
 ```bash
 git holo branch create my-branch
 ```
 
-3. Add a source:
+1. Add a source:
 
 ```bash
 git holo source create https://github.com/example/repo
 ```
 
-4. Project your holobranch:
+1. Project your holobranch:
 
 ```bash
 git holo project my-branch
@@ -96,6 +96,17 @@ See the [Installation Guide](docs/grand-tour/installation.md) and [Grand Tour](d
 - **Documentation**: Generate and publish documentation from multiple sources
 - **Deployment**: Prepare deployment artifacts with consistent transformations
 - **Code Generation**: Automate code generation and transformation workflows
+
+## Claude Code Plugin
+
+Hologit includes a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude deep knowledge of hologit's configuration system, CLI, stock lenses, and workflows.
+
+```bash
+/plugin marketplace add JarvusInnovations/hologit
+/plugin install hologit@hologit
+```
+
+Once installed, Claude can help you configure `.holo/` files, set up sources and mappings, choose and configure stock lenses, and debug projection issues.
 
 ## Documentation
 

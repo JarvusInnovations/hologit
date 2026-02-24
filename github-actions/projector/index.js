@@ -13,6 +13,7 @@ const lens = core.getInput('lens');
 const commitTo = core.getInput('commit-to', { required: false });
 const commitMessage = core.getInput('commit-message', { required: false });
 const commitSourceParent = core.getInput('commit-source-parent') !== 'false';
+const authorFromRef = core.getInput('author-from-ref') !== 'false';
 const cache = core.getInput('cache') !== 'false';
 const commitToRef = commitTo
     ? (
@@ -110,28 +111,32 @@ async function run() {
     }
 
 
-    let userName = '', userEmail = '';
-    try {
-        core.startGroup(`Reading author user name+email from ${ref}`);
-        userName = await gitExecOutput('log', ['-1', '--pretty=format:%an', ref]);
-        userEmail = await gitExecOutput('log', ['-1', '--pretty=format:%ae', ref]);
-    } catch (err) {
-        core.setFailed(`Failed to read user name+email: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
-    }
+    if (authorFromRef) {
+        let userName = '', userEmail = '';
+        try {
+            core.startGroup(`Reading author user name+email from ${ref}`);
+            userName = await gitExecOutput('log', ['-1', '--pretty=format:%an', ref]);
+            userEmail = await gitExecOutput('log', ['-1', '--pretty=format:%ae', ref]);
+        } catch (err) {
+            core.setFailed(`Failed to read user name+email: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
 
 
-    try {
-        core.startGroup(`Setting git user: ${userName} <${userEmail}>`);
-        await gitExec('config', ['user.name', userName]);
-        await gitExec('config', ['user.email', userEmail]);
-    } catch (err) {
-        core.setFailed(`Failed to set git user: ${err.message}`);
-        return;
-    } finally {
-        core.endGroup();
+        try {
+            core.startGroup(`Setting git user: ${userName} <${userEmail}>`);
+            await gitExec('config', ['user.name', userName]);
+            await gitExec('config', ['user.email', userEmail]);
+        } catch (err) {
+            core.setFailed(`Failed to set git user: ${err.message}`);
+            return;
+        } finally {
+            core.endGroup();
+        }
+    } else {
+        core.info('Skipping git author configuration (author-from-ref=false)');
     }
 
 

@@ -21,6 +21,10 @@ inputs:
       description: 'Include the source commit as a second parent in the projection commit'
       required: false
       default: 'true'
+    author-from-ref:
+      description: 'Set the git author from the source ref commit (set to false to use pre-configured author)'
+      required: false
+      default: 'true'
     cache:
       description: 'Whether to use cache (true/false)'
       required: false

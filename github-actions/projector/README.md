@@ -20,6 +20,7 @@ A GitHub action for projecting holobranches with hologit
 - `commit-to`: Name of branch/ref to optionally commit result to
 - `commit-message`: Custom commit message to use when committing (requires `commit-to`)
 - `commit-source-parent`: Include the source commit as a second parent in the projection commit (default: `true`)
+- `author-from-ref`: Set the git author from the source ref commit (default: `true`, set to `false` to use pre-configured author)
 - `cache`: Whether to use cache (default: `true`)
 
 ## Outputs

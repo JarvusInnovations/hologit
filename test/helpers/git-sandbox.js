@@ -128,6 +128,20 @@ class GitSandbox {
     }
 
     /**
+     * Add an external lens configuration for a holobranch
+     * @param {string} branchName - Branch to attach the lens to
+     * @param {string} lensName - Name of the lens
+     * @param {Object} config - Lens configuration (container/package, input, output, etc.)
+     */
+    async addLens(branchName, lensName, config = {}) {
+        const lensToml = TOML.stringify({
+            hololens: config
+        });
+
+        await this.addFile(`.holo/branches/${branchName}.lenses/${lensName}.toml`, lensToml);
+    }
+
+    /**
      * Get a Repo instance for this sandbox
      */
     async getRepo(options = {}) {
