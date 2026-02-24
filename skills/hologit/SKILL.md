@@ -71,6 +71,7 @@ During projection, internal lenses execute first, then external lenses.
 | `git holo source checkout [<name>] [--all] [--submodule]` | Check out source worktrees |
 | `git holo branch create <name> [--template]` | Create a holobranch |
 | `git holo branch pull [<name>] [--all] [--force]` | Pull projected branches from remotes |
+| `git holo inspect [<holobranch>]` | Display fully resolved config (sources, mappings, lenses) |
 | `git holo project <holobranch> [options]` | Project a holobranch, output tree hash |
 | `git holo lens exec <spec-hash>` | Execute a lens spec |
 | `git holo lens export-tree <treeish>` | Export tree to working directory (destructive) |
@@ -152,6 +153,16 @@ root = "packages/core"
 ```
 
 This maps `packages/core/src/**` (excluding tests) from source `my-source` to the branch root.
+
+### Verify configuration
+
+After editing `.holo/` config files, run `inspect` to verify the resolved state before projecting:
+
+```bash
+git holo inspect my-branch
+```
+
+This shows the fully resolved mappings (auto-resolved source names, output paths, layer ordering) and lenses without running a projection. Use it to catch config mistakes early.
 
 ### Project and commit
 

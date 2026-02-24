@@ -10,6 +10,7 @@
 - [git holo source checkout](#git-holo-source-checkout)
 - [git holo branch create](#git-holo-branch-create)
 - [git holo branch pull](#git-holo-branch-pull)
+- [git holo inspect](#git-holo-inspect)
 - [git holo project](#git-holo-project)
 - [git holo lens exec](#git-holo-lens-exec)
 - [git holo lens export-tree](#git-holo-lens-export-tree)
@@ -140,6 +141,27 @@ git holo branch pull [<name>] [--all] [--force]
 One of `<name>` or `--all` is required.
 
 Scans remote refs for commits with a `Source-holobranch` trailer matching the requested branch name. Only pulls from remotes that share a common ancestor with the current branch. Updates local refs to match remote refs.
+
+## git holo inspect
+
+Display the fully resolved hologit configuration. Shows workspace name, sources, branches with their resolved mappings and lenses. No network calls — reads only local config.
+
+```
+git holo inspect [<holobranch>] [--ref <ref>] [--working]
+```
+
+| Argument/Option | Type | Default | Description |
+|-----------------|------|---------|-------------|
+| `<holobranch>` | string | — | Specific holobranch to inspect. If omitted, shows full workspace. |
+| `--ref` | string | `HEAD` | Commit ref to read configuration from |
+| `--working` | boolean | `false` | Use working tree contents (possibly uncommitted) |
+
+Output includes:
+
+- **Workspace mode** (no argument): workspace name, all sources, all branches with their mappings and lenses
+- **Branch mode** (with argument): single branch with resolved mappings (source, files, root, output, layer, before/after) and lenses (container/package, input, output, merge mode)
+
+All implicit values are resolved in the output: auto-derived source names, `_` prefix output paths, layer defaults, and topological ordering.
 
 ## git holo project
 
