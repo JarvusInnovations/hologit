@@ -229,6 +229,33 @@ extend = "base"
 
 The `production` branch inherits all mappings from `base`, then applies its own.
 
+## Lens Caching
+
+Hologit caches lens execution results using Git's own object database, enabling instant reruns and shared caches across machines.
+
+**How it works**: Before executing a lens, hologit builds a deterministic "spec" — a TOML blob containing the container image's manifest digest, the input tree hash, and lens configuration. The spec blob's git hash becomes the cache key. Results are stored as git refs at `refs/holo/lens/<spec-hash>`.
+
+**Cache lookup flow**:
+
+1. Check local ref `refs/holo/lens/<spec-hash>` → if exists, return cached output tree
+2. If miss and `--cache-from` is set, fetch the ref from the remote → if found, return it
+3. If still no hit, execute the lens in its container, save output to local ref
+4. If `--cache-to` is set, push the ref to the remote for other machines to use
+
+**Why it's deterministic**: Container images are pinned by manifest digest (queried from the registry via `docker buildx imagetools inspect`), not by mutable tags. The same input tree + same image digest + same config always produces the same spec hash, guaranteeing cache correctness even when `:latest` tags are updated.
+
+**CLI options**:
+
+- `--cache-from <remote>` (default: `origin`) — pull cached lens results before executing
+- `--cache-to <remote>` — push cached lens results after executing
+- Also configurable via `HOLO_CACHE_FROM` / `HOLO_CACHE_TO` environment variables
+
+**CI/CD pattern**: Use `--cache-from=origin --cache-to=origin` so the first CI run computes and pushes results, and subsequent runs with identical inputs get instant cache hits:
+
+```bash
+git holo project my-branch --commit-to=projected --fetch="*" --cache-from=origin --cache-to=origin
+```
+
 ## Environment Variables
 
 Key overrides (see [references/environment-variables.md](references/environment-variables.md)):
