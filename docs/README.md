@@ -10,6 +10,9 @@ Hologit lets you declaratively define virtual sub-branches within any Git branch
   - [Holobranches](./grand-tour/holobranches.md)
   - [Hololenses](./grand-tour/hololenses.md)
   - [Holoreactors](./grand-tour/holoreactors.md)
+- [Programmatic API](./programmatic-api/README.md)
+  - [Composition](./programmatic-api/composition.md)
+  - [ProjectionPlan](./programmatic-api/projection-plan.md)
 - Workflows
   - [Work on Sources](./workflows/work-on-sources.md)
   - Publish a `docs/` tree to Gitbook and `gh-pages`
