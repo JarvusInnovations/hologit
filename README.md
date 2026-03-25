@@ -108,14 +108,50 @@ Hologit includes a [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 
 Once installed, Claude can help you configure `.holo/` files, set up sources and mappings, choose and configure stock lenses, and debug projection issues.
 
+## Programmatic API
+
+Hologit can also be used as an npm module to compose git trees programmatically, without `.holo/` TOML files in the source repositories:
+
+```javascript
+const { Repo, Workspace, Branch, Projection } = require('hologit');
+
+const repo = new Repo({ gitDir: '/path/to/.git', ref: 'HEAD' });
+const rootTree = repo.createTree();
+await rootTree.writeChild('.holo/config.toml', '[holospace]\nname = "app"\n');
+
+const workspace = new Workspace({
+  root: rootTree,
+  sources: {
+    'base': { url: '/path/to/base', ref: 'refs/heads/main' },
+    'overlay': { url: '/path/to/overlay', ref: 'refs/heads/main' }
+  }
+});
+
+const branch = new Branch({
+  workspace,
+  name: 'composed',
+  phantom: {},
+  mappings: {
+    '_base': { holosource: 'base', files: ['**'] },
+    '_overlay': { holosource: 'overlay', files: ['**'], after: ['base'] }
+  }
+});
+
+const treeHash = await Projection.projectBranch(branch, { lens: false });
+```
+
+See the [Programmatic API docs](docs/programmatic-api/README.md) for full details and the [ProjectionPlan](docs/programmatic-api/projection-plan.md) fluent builder API.
+
 ## Documentation
 
 - [Installation Guide](docs/grand-tour/installation.md)
 - [Repository Setup](docs/grand-tour/repository-setup.md)
-- [Working with Sources](docs/workflows/work-on-sources.md)
 - [Holobranches Guide](docs/grand-tour/holobranches.md)
+- [Holosources Guide](docs/grand-tour/holosources.md)
 - [Hololenses Guide](docs/grand-tour/hololenses.md)
 - [Holoreactors Guide](docs/grand-tour/holoreactors.md)
+- [Working with Sources](docs/workflows/work-on-sources.md)
+- [Programmatic API](docs/programmatic-api/README.md)
 
 ## License
 

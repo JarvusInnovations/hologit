@@ -34,7 +34,7 @@ class GitSandbox {
             workTree: tmpDir
         });
 
-        await git.init();
+        await git.init({ 'initial-branch': 'main' });
         await git.config('user.email', 'test@hologit.test');
         await git.config('user.name', 'Hologit Test');
 
