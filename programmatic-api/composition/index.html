@@ -1,0 +1,1516 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hologit lets you declaratively define virtual sub-branches within any Git branch">
+      
+      
+        <meta name="author" content="Jarvus Innovations">
+      
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../projection-plan/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Programmatic Composition - Hologit Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="deep-purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#programmatic-composition" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Hologit Documentation" class="md-header__button md-logo" aria-label="Hologit Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Hologit Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Programmatic Composition
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/JarvusInnovations/hologit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../grand-tour/" class="md-tabs__link">
+          
+  
+  
+  Grand tour
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Programmatic api
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../workflows/" class="md-tabs__link">
+          
+  
+  
+  Workflows
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Hologit Documentation" class="md-nav__button md-logo" aria-label="Hologit Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Hologit Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/JarvusInnovations/hologit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grand tour
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Grand tour
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grand Tour: Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/repository-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repository setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/holobranches/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Holobranches
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/holosources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Holosources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/hololenses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hololenses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/holoreactors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Holoreactors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programmatic api
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Programmatic api
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programmatic API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programmatic Composition
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programmatic Composition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#creating-a-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a Repo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-phantom-mechanism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Phantom Mechanism
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constructing-a-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructing a Workspace
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructing a Workspace">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#source-config-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source config shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constructing-a-branch-with-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructing a Branch with Mappings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructing a Branch with Mappings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mapping-config-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping config shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapping-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ordering
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projecting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projecting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../projection-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ProjectionPlan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Workflows
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/work-on-sources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Work on Sources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#creating-a-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a Repo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-phantom-mechanism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Phantom Mechanism
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constructing-a-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructing a Workspace
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructing a Workspace">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#source-config-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source config shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constructing-a-branch-with-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructing a Branch with Mappings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructing a Branch with Mappings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mapping-config-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping config shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapping-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ordering
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projecting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projecting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="programmatic-composition">Programmatic Composition<a class="headerlink" href="#programmatic-composition" title="Permanent link"> ¶</a></h1>
+<p>This guide covers how to compose git trees programmatically using hologit&rsquo;s core classes. No <code>.holo/</code> TOML files are needed in the source repositories.</p>
+<h2 id="creating-a-repo">Creating a Repo<a class="headerlink" href="#creating-a-repo" title="Permanent link"> ¶</a></h2>
+<p>Every hologit operation starts with a <code>Repo</code> instance. The repo provides git object storage — hologit creates tree and blob objects in its object database.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+
+<span class="c1">// From a working directory</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Repo</span><span class="p">.</span><span class="nx">getFromEnvironment</span><span class="p">();</span>
+
+<span class="c1">// From explicit paths</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/.git&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">workTree</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/workdir&#39;</span><span class="w">  </span><span class="c1">// optional</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>The repo doesn&rsquo;t need to contain any project files — it&rsquo;s used purely for git object storage. You can point it at a bare repo created just for this purpose:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;child_process&#39;</span><span class="p">);</span>
+
+<span class="nx">execSync</span><span class="p">(</span><span class="s1">&#39;git init --bare /tmp/compose-store&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/tmp/compose-store&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<h2 id="the-phantom-mechanism">The Phantom Mechanism<a class="headerlink" href="#the-phantom-mechanism" title="Permanent link"> ¶</a></h2>
+<p>All hologit configuration objects (<code>Source</code>, <code>Branch</code>, <code>Mapping</code>, <code>Lens</code>) extend <code>Configurable</code>, which supports two config sources:</p>
+<ol>
+<li><strong>TOML from a git tree</strong> — the traditional mode, reading <code>.holo/sources/name.toml</code> etc.</li>
+<li><strong>Phantom config</strong> — an in-memory object passed at construction time</li>
+</ol>
+<p>When <code>phantom</code> config is provided, hologit uses it directly without reading any TOML files. This is the foundation of the programmatic API.</p>
+<h2 id="constructing-a-workspace">Constructing a Workspace<a class="headerlink" href="#constructing-a-workspace" title="Permanent link"> ¶</a></h2>
+<p>A <code>Workspace</code> is the container for sources and branches. It requires a root tree (which must contain a minimal <code>.holo/config.toml</code>).</p>
+<p>The <code>sources</code> parameter accepts a plain object of <code>{ name: config }</code> entries. Each config object is automatically wrapped in a phantom <code>Source</code> instance:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Workspace</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">rootTree</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">createTree</span><span class="p">();</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">&#39;.holo/config.toml&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[holospace]\nname = &quot;my-project&quot;\n&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">root</span><span class="o">:</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s1">&#39;framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://github.com/org/framework&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v2.0.0&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">&#39;app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/local/path/to/app&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">&#39;theme&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://github.com/org/theme&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div>
+<h3 id="source-config-shape">Source config shape<a class="headerlink" href="#source-config-shape" title="Permanent link"> ¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code></td>
+<td>yes</td>
+<td>Git URL or local filesystem path to the source repository</td>
+</tr>
+<tr>
+<td><code>ref</code></td>
+<td>yes</td>
+<td>Git ref to read from (<code>refs/heads/main</code>, <code>refs/tags/v1.0</code>, a commit hash)</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td>no</td>
+<td><code>{ holobranch: 'name' }</code> — if the source itself has holobranches, project through one before using</td>
+</tr>
+</tbody>
+</table>
+<p>Local filesystem paths are resolved as-is. Remote URLs are fetched into the repo&rsquo;s object database.</p>
+<p>You can also pass pre-constructed <code>Source</code> instances:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Source</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">workspace</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;...&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;...&#39;</span><span class="w"> </span><span class="p">}</span>
+<span class="p">});</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">root</span><span class="o">:</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="nx">source</span><span class="w"> </span><span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div>
+<h2 id="constructing-a-branch-with-mappings">Constructing a Branch with Mappings<a class="headerlink" href="#constructing-a-branch-with-mappings" title="Permanent link"> ¶</a></h2>
+<p>A <code>Branch</code> defines how sources are combined. The <code>mappings</code> parameter accepts a plain object of <code>{ key: config }</code> entries:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Branch</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Branch</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">workspace</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;composed&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">  </span><span class="nx">mappings</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s1">&#39;_framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">&#39;_app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">],</span>
+<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;framework&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">&#39;_theme&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;theme&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;styles/**&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;assets/**&#39;</span><span class="p">],</span>
+<span class="w">      </span><span class="nx">output</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;framework&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div>
+<h3 id="mapping-config-shape">Mapping config shape<a class="headerlink" href="#mapping-config-shape" title="Permanent link"> ¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>holosource</code></td>
+<td>yes</td>
+<td>—</td>
+<td>Name of the source to pull from</td>
+</tr>
+<tr>
+<td><code>files</code></td>
+<td>no</td>
+<td><code>['**']</code></td>
+<td>Glob patterns for which files to include</td>
+</tr>
+<tr>
+<td><code>root</code></td>
+<td>no</td>
+<td><code>'.'</code></td>
+<td>Subtree of the source to map from</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td>no</td>
+<td><code>'.'</code></td>
+<td>Target path in the output tree</td>
+</tr>
+<tr>
+<td><code>layer</code></td>
+<td>no</td>
+<td>source name</td>
+<td>Layer name for ordering</td>
+</tr>
+<tr>
+<td><code>after</code></td>
+<td>no</td>
+<td><code>null</code></td>
+<td>Array of source/layer names this mapping must come after</td>
+</tr>
+<tr>
+<td><code>before</code></td>
+<td>no</td>
+<td><code>null</code></td>
+<td>Array of source/layer names this mapping must come before</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mapping-keys">Mapping keys<a class="headerlink" href="#mapping-keys" title="Permanent link"> ¶</a></h3>
+<p>Mapping keys (the object property names) follow the hologit convention of underscore-prefixed names: <code>_framework</code>, <code>_app</code>, <code>_theme</code>. The key is used internally for identification and sorting.</p>
+<h3 id="ordering">Ordering<a class="headerlink" href="#ordering" title="Permanent link"> ¶</a></h3>
+<p>Mappings are topologically sorted based on <code>after</code> and <code>before</code> constraints. When two sources define a file at the same path, the mapping that comes later in the sort order wins (its file overwrites the earlier one).</p>
+<p>Use <code>after: ['*']</code> to ensure a mapping comes last (highest priority).</p>
+<h2 id="projecting">Projecting<a class="headerlink" href="#projecting" title="Permanent link"> ¶</a></h2>
+<p>Once you have a branch, project it to get a composed git tree hash:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">treeHash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Projection</span><span class="p">.</span><span class="nx">projectBranch</span><span class="p">(</span><span class="nx">branch</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">lens</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">     </span><span class="c1">// skip lens transformations</span>
+<span class="w">  </span><span class="nx">fetch</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="w">     </span><span class="c1">// don&#39;t fetch remote sources (they must already be available)</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>The returned <code>treeHash</code> is a standard git tree object hash. You can use it with any git command:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Inspect the tree</span>
+git<span class="w"> </span>ls-tree<span class="w"> </span>-r<span class="w"> </span>&lt;treeHash&gt;
+
+<span class="c1"># Read a specific file</span>
+git<span class="w"> </span>cat-file<span class="w"> </span>-p<span class="w"> </span>&lt;treeHash&gt;:path/to/file.js
+
+<span class="c1"># Check out to a directory</span>
+<span class="nv">GIT_DIR</span><span class="o">=</span>/path/to/.git<span class="w"> </span><span class="nv">GIT_WORK_TREE</span><span class="o">=</span>/output<span class="w"> </span>git<span class="w"> </span>read-tree<span class="w"> </span>&lt;treeHash&gt;
+<span class="nv">GIT_DIR</span><span class="o">=</span>/path/to/.git<span class="w"> </span><span class="nv">GIT_WORK_TREE</span><span class="o">=</span>/output<span class="w"> </span>git<span class="w"> </span>checkout-index<span class="w"> </span>-a<span class="w"> </span>-f
+</code></pre></div>
+<p>Or programmatically via hologit&rsquo;s git wrapper:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">git</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">getGit</span><span class="p">();</span>
+
+<span class="c1">// Read a file from the composed tree</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">content</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">catFile</span><span class="p">({</span><span class="w"> </span><span class="nx">p</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">treeHash</span><span class="si">}</span><span class="sb">:routes/api/people/index.ts`</span><span class="p">);</span>
+
+<span class="c1">// List all files</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">listing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">lsTree</span><span class="p">({</span><span class="w"> </span><span class="nx">r</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">treeHash</span><span class="p">);</span>
+
+<span class="c1">// Diff two composed trees</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">diff</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">diffTree</span><span class="p">({</span><span class="w"> </span><span class="nx">r</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;name-only&#39;</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">oldTreeHash</span><span class="p">,</span><span class="w"> </span><span class="nx">newTreeHash</span><span class="p">);</span>
+</code></pre></div>
+<h2 id="full-example">Full Example<a class="headerlink" href="#full-example" title="Permanent link"> ¶</a></h2>
+<p>Compose a framework layer with an application layer, where the application overrides specific files:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="p">,</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">,</span><span class="w"> </span><span class="nx">Branch</span><span class="p">,</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;child_process&#39;</span><span class="p">);</span>
+
+<span class="c1">// Set up a git repo for object storage</span>
+<span class="nx">execSync</span><span class="p">(</span><span class="s1">&#39;git init --bare /tmp/my-store&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/tmp/my-store&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">});</span>
+
+<span class="c1">// Build the workspace with two sources</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">rootTree</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">createTree</span><span class="p">();</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">&#39;.holo/config.toml&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[holospace]\nname = &quot;my-app&quot;\n&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">root</span><span class="o">:</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s1">&#39;framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/framework-repo&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v2.0.0&#39;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">&#39;app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/app-repo&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">});</span>
+
+<span class="c1">// Define the composition — app overlays framework</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Branch</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">workspace</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;production&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">  </span><span class="nx">mappings</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s1">&#39;_framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">&#39;_app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">],</span>
+<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;framework&#39;</span><span class="p">]</span><span class="w">  </span><span class="c1">// app files override framework files at same paths</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">});</span>
+
+<span class="c1">// Compose</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">treeHash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Projection</span><span class="p">.</span><span class="nx">projectBranch</span><span class="p">(</span><span class="nx">branch</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">lens</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Composed tree:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">treeHash</span><span class="p">);</span>
+
+<span class="c1">// Check out to a directory</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">git</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">getGit</span><span class="p">();</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">readTree</span><span class="p">(</span><span class="nx">treeHash</span><span class="p">);</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">checkoutIndex</span><span class="p">({</span><span class="w"> </span><span class="nx">a</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nx">f</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p>This produces a single git tree containing all of <code>framework</code>&rsquo;s files, with any files at the same path replaced by <code>app</code>&rsquo;s versions — the same copy-on-write overlay semantics as hologit&rsquo;s TOML-driven composition.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      2020 Jarvus Innovations
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

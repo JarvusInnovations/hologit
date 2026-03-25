@@ -1,0 +1,1462 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hologit lets you declaratively define virtual sub-branches within any Git branch">
+      
+      
+        <meta name="author" content="Jarvus Innovations">
+      
+      
+      
+        <link rel="prev" href="../composition/">
+      
+      
+        <link rel="next" href="../../workflows/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>ProjectionPlan - Hologit Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="deep-purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#projectionplan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Hologit Documentation" class="md-header__button md-logo" aria-label="Hologit Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Hologit Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ProjectionPlan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/JarvusInnovations/hologit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../grand-tour/" class="md-tabs__link">
+          
+  
+  
+  Grand tour
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Programmatic api
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../workflows/" class="md-tabs__link">
+          
+  
+  
+  Workflows
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Hologit Documentation" class="md-nav__button md-logo" aria-label="Hologit Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Hologit Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/JarvusInnovations/hologit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grand tour
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Grand tour
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grand Tour: Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/repository-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repository setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/holobranches/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Holobranches
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/holosources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Holosources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/hololenses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hololenses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grand-tour/holoreactors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Holoreactors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programmatic api
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Programmatic api
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programmatic API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../composition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programmatic Composition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ProjectionPlan
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ProjectionPlan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-projectionplanrepo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        new ProjectionPlan(repo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planaddsourcename-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.addSource(name, config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planaddmappingsourcename-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.addMapping(sourceName, config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planaddlayername-sourceconfig-mappingconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.addLayer(name, sourceConfig, mappingConfig?)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planprojectoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.project(options?)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layer-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Layer Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additive-directories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additive directories
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-example-emergence-style-layer-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Example: Emergence-style Layer Stack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-lower-level-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to Lower-Level API
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Workflows
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/work-on-sources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Work on Sources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-projectionplanrepo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        new ProjectionPlan(repo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planaddsourcename-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.addSource(name, config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planaddmappingsourcename-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.addMapping(sourceName, config)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planaddlayername-sourceconfig-mappingconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.addLayer(name, sourceConfig, mappingConfig?)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#planprojectoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan.project(options?)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layer-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Layer Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additive-directories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additive directories
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-example-emergence-style-layer-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Example: Emergence-style Layer Stack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-lower-level-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to Lower-Level API
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="projectionplan">ProjectionPlan<a class="headerlink" href="#projectionplan" title="Permanent link"> ¶</a></h1>
+<p><code>ProjectionPlan</code> is a fluent builder API for the common case of composing multiple git sources into a single layered tree. It wraps the lower-level <code>Workspace</code>, <code>Branch</code>, <code>Source</code>, <code>Mapping</code>, and <code>Projection</code> classes into a concise interface.</p>
+<h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link"> ¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ProjectionPlan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit/lib/ProjectionPlan&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/.git&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">});</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">plan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">ProjectionPlan</span><span class="p">(</span><span class="nx">repo</span><span class="p">);</span>
+<span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;base&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/base&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;overlay&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/overlay&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;base&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">treeHash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">plan</span><span class="p">.</span><span class="nx">project</span><span class="p">();</span>
+</code></pre></div>
+<h2 id="api">API<a class="headerlink" href="#api" title="Permanent link"> ¶</a></h2>
+<h3 id="new-projectionplanrepo"><code>new ProjectionPlan(repo)</code><a class="headerlink" href="#new-projectionplanrepo" title="Permanent link"> ¶</a></h3>
+<p>Create a new plan. Requires a <code>Repo</code> instance for git object storage.</p>
+<h3 id="planaddsourcename-config"><code>plan.addSource(name, config)</code><a class="headerlink" href="#planaddsourcename-config" title="Permanent link"> ¶</a></h3>
+<p>Register a named source. Returns <code>this</code> for chaining.</p>
+<p><strong>config shape:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code></td>
+<td>yes</td>
+<td>Git URL or local filesystem path</td>
+</tr>
+<tr>
+<td><code>ref</code></td>
+<td>yes</td>
+<td>Git ref (<code>refs/heads/main</code>, <code>refs/tags/v1.0</code>, commit hash)</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td>no</td>
+<td><code>{ holobranch: 'name' }</code> — project through a holobranch in the source</td>
+</tr>
+</tbody>
+</table>
+<h3 id="planaddmappingsourcename-config"><code>plan.addMapping(sourceName, config)</code><a class="headerlink" href="#planaddmappingsourcename-config" title="Permanent link"> ¶</a></h3>
+<p>Add a mapping for a previously registered source. Returns <code>this</code> for chaining.</p>
+<p><strong>config shape:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>files</code></td>
+<td><code>['**']</code></td>
+<td>Glob patterns for which files to include</td>
+</tr>
+<tr>
+<td><code>root</code></td>
+<td><code>'.'</code></td>
+<td>Subtree of the source to map from</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td><code>'.'</code></td>
+<td>Target path in the output tree</td>
+</tr>
+<tr>
+<td><code>layer</code></td>
+<td>source name</td>
+<td>Layer name for ordering</td>
+</tr>
+<tr>
+<td><code>after</code></td>
+<td><code>null</code></td>
+<td>Sources/layers this must come after</td>
+</tr>
+<tr>
+<td><code>before</code></td>
+<td><code>null</code></td>
+<td>Sources/layers this must come before</td>
+</tr>
+</tbody>
+</table>
+<h3 id="planaddlayername-sourceconfig-mappingconfig"><code>plan.addLayer(name, sourceConfig, mappingConfig?)</code><a class="headerlink" href="#planaddlayername-sourceconfig-mappingconfig" title="Permanent link"> ¶</a></h3>
+<p>Convenience method that calls <code>addSource</code> then <code>addMapping</code>. Returns <code>this</code> for chaining.</p>
+<p>This is the most common way to build a plan — each layer is a source that maps all its files (<code>**</code>) into the output tree:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;skeleton&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="nx">skeletonRepo</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;product&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="nx">productRepo</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v3.0&#39;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;skeleton&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;site&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="nx">siteRepo</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;product&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<h3 id="planprojectoptions"><code>plan.project(options?)</code><a class="headerlink" href="#planprojectoptions" title="Permanent link"> ¶</a></h3>
+<p>Compose all layers and return the git tree hash. This is an async operation.</p>
+<p><strong>options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lens</code></td>
+<td><code>false</code></td>
+<td>Whether to apply hololens transformations</td>
+</tr>
+<tr>
+<td><code>fetch</code></td>
+<td><code>false</code></td>
+<td>Whether to fetch remote sources</td>
+</tr>
+</tbody>
+</table>
+<h2 id="layer-ordering">Layer Ordering<a class="headerlink" href="#layer-ordering" title="Permanent link"> ¶</a></h2>
+<p>Layers are composed in topological order based on <code>after</code>/<code>before</code> constraints. When two layers contain a file at the same path, the layer that comes later wins.</p>
+<p>A typical pattern is to chain layers sequentially:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;skeleton&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="nx">skeletonUrl</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="nx">skeletonRef</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;product&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="nx">productUrl</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="nx">productRef</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;skeleton&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="s1">&#39;site&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="nx">siteUrl</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="nx">siteRef</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;product&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p>This ensures: skeleton files are laid down first, product files overlay them, site files overlay everything.</p>
+<h3 id="additive-directories">Additive directories<a class="headerlink" href="#additive-directories" title="Permanent link"> ¶</a></h3>
+<p>Files in different directories from different layers coexist naturally. If <code>skeleton</code> provides <code>config/search.config.d/people.ts</code> and <code>product</code> provides <code>config/search.config.d/sections.ts</code>, both files appear in the output. Only files at the <strong>same path</strong> are overridden.</p>
+<h2 id="full-example-emergence-style-layer-stack">Full Example: Emergence-style Layer Stack<a class="headerlink" href="#full-example-emergence-style-layer-stack" title="Permanent link"> ¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ProjectionPlan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit/lib/ProjectionPlan&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;child_process&#39;</span><span class="p">);</span>
+
+<span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">composeEmergenceSite</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="p">,</span><span class="w"> </span><span class="nx">layers</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">plan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">ProjectionPlan</span><span class="p">(</span><span class="nx">repo</span><span class="p">);</span>
+
+<span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="nx">prevName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">layer</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">layers</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">mappingConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">prevName</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">prevName</span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">    </span><span class="nx">plan</span><span class="p">.</span><span class="nx">addLayer</span><span class="p">(</span><span class="nx">layer</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="nx">layer</span><span class="p">.</span><span class="nx">url</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="nx">layer</span><span class="p">.</span><span class="nx">ref</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span>
+<span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="nx">mappingConfig</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">prevName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">layer</span><span class="p">.</span><span class="nx">name</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">plan</span><span class="p">.</span><span class="nx">project</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// Usage</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">treeHash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">composeEmergenceSite</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/object-store&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">layers</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;skeleton&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://github.com/org/skeleton&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v2.12.0&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;slate&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://github.com/org/slate&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v2.21.0&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;slate-cbl&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://github.com/org/slate-cbl&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v3.1.0&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;school-site&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/local/school-site&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">});</span>
+
+<span class="c1">// Check out the composed tree</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">git</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/object-store&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">})).</span><span class="nx">getGit</span><span class="p">();</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">readTree</span><span class="p">(</span><span class="nx">treeHash</span><span class="p">);</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">checkoutIndex</span><span class="p">({</span><span class="w"> </span><span class="nx">a</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nx">f</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<h2 id="relationship-to-lower-level-api">Relationship to Lower-Level API<a class="headerlink" href="#relationship-to-lower-level-api" title="Permanent link"> ¶</a></h2>
+<p><code>ProjectionPlan</code> is syntactic sugar over the <a href="../composition/">composition API</a>. Under the hood:</p>
+<ol>
+<li>Source configs become phantom <code>Source</code> instances via <code>Workspace({ sources: {...} })</code></li>
+<li>Mapping configs become phantom <code>Mapping</code> instances via <code>Branch({ mappings: {...} })</code></li>
+<li><code>project()</code> calls <code>Projection.projectBranch()</code> on the constructed branch</li>
+</ol>
+<p>Use <code>ProjectionPlan</code> for standard layer composition. Use the lower-level API when you need:</p>
+<ul>
+<li>Custom <code>root</code> or <code>output</code> paths per mapping</li>
+<li>Glob filtering (<code>files</code>) to include only specific file patterns from a source</li>
+<li>Lens transformations</li>
+<li>Multiple branches in one workspace</li>
+<li>Direct access to the <code>TreeObject</code> before projection</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      2020 Jarvus Innovations
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>
