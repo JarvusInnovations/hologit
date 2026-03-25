@@ -173,11 +173,10 @@ describe('deepSortKeys', () => {
         });
     });
 
-    describe('real-world hologit configs from production repos', () => {
+    describe('real-world hologit config patterns', () => {
         test('sorts parsed holosource with project config', () => {
-            // From gatekeeper-phila/.holo/sources/gatekeeper.toml
             const result = deepSortKeys({
-                url: 'https://github.com/JarvusInnovations/gatekeeper.git',
+                url: 'https://github.com/example-org/my-app.git',
                 ref: 'refs/tags/v2.2.5',
                 project: { holobranch: 'emergence-skeleton' }
             });
@@ -186,7 +185,6 @@ describe('deepSortKeys', () => {
         });
 
         test('sorts parsed holomapping with before constraint', () => {
-            // From elmos-frontend/.holo/branches/helm-chart/_menunet-network.toml
             const result = deepSortKeys({
                 holosource: '=>helm-chart',
                 files: '**',
@@ -196,32 +194,118 @@ describe('deepSortKeys', () => {
         });
 
         test('sorts parsed holomapping with file array and root', () => {
-            // From emergence-skeleton docs-site branch
             const result = deepSortKeys({
                 root: 'docs',
                 files: ['mkdocs.yml', 'mkdocs.*.yml']
             });
             expect(Object.keys(result)).toEqual(['files', 'root']);
-            // Array order preserved
             expect(result.files).toEqual(['mkdocs.yml', 'mkdocs.*.yml']);
         });
 
         test('sorts source spec derived from local path', () => {
-            // What SpecObject.write receives for a local source
             const result = deepSortKeys({
-                path: '/users/chris/repos/skeleton',
+                path: '/users/dev/repos/skeleton',
                 host: null
             });
             expect(Object.keys(result)).toEqual(['host', 'path']);
         });
 
         test('sorts source spec derived from github URL', () => {
-            // What SpecObject.write receives for a remote source
             const result = deepSortKeys({
-                path: '/jarvusinnovations/gatekeeper',
+                path: '/example-org/my-app',
                 host: 'github.com'
             });
             expect(Object.keys(result)).toEqual(['host', 'path']);
+        });
+    });
+
+    describe('lens spec data patterns', () => {
+        test('sorts container lens spec with nested input/output', () => {
+            const result = deepSortKeys({
+                container: 'ghcr.io/hologit/lenses/sencha-pages@sha256:abc123',
+                input: 'aabbccdd',
+                output: null,
+                before: null,
+                after: null,
+                root: 'sencha-workspace',
+                files: ['ext/**', 'pages/**'],
+                merge: 'overlay'
+            });
+            expect(Object.keys(result)).toEqual([
+                'after', 'before', 'container', 'files', 'input', 'merge', 'output', 'root'
+            ]);
+            expect(result.files).toEqual(['ext/**', 'pages/**']);
+        });
+
+        test('sorts habitat lens spec with nested helm config', () => {
+            const result = deepSortKeys({
+                package: 'holo/lens-helm3/1.22',
+                before: 'k8s-normalize',
+                input: 'aabbccdd',
+                output: null,
+                after: null,
+                root: 'my-api-staging',
+                files: '**',
+                merge: 'replace',
+                helm: {
+                    namespace: 'app-staging',
+                    release_name: 'my-api-staging',
+                    chart_path: 'helm-chart',
+                    value_files: ['release-values.yaml']
+                }
+            });
+            expect(Object.keys(result)).toEqual([
+                'after', 'before', 'files', 'helm', 'input', 'merge', 'output', 'package', 'root'
+            ]);
+            expect(Object.keys(result.helm)).toEqual([
+                'chart_path', 'namespace', 'release_name', 'value_files'
+            ]);
+            expect(result.helm.value_files).toEqual(['release-values.yaml']);
+        });
+
+        test('sorts yarn-run lens spec with nested config', () => {
+            const result = deepSortKeys({
+                package: 'holo/lens-yarn-run',
+                input: 'aabbccdd',
+                output: null,
+                before: null,
+                after: null,
+                files: ['package.json', 'yarn.lock', 'webpack.mix.js', 'resources/assets/**'],
+                'yarn-run': {
+                    command: 'production',
+                    output_dir: 'public'
+                },
+                root: 'public',
+                merge: 'overlay'
+            });
+            expect(Object.keys(result)).toEqual([
+                'after', 'before', 'files', 'input', 'merge', 'output', 'package', 'root', 'yarn-run'
+            ]);
+            expect(Object.keys(result['yarn-run'])).toEqual(['command', 'output_dir']);
+        });
+
+        test('sorts helm lens spec with namespace_fill boolean', () => {
+            const result = deepSortKeys({
+                container: 'ghcr.io/hologit/lenses/helm3@sha256:xyz',
+                input: 'aabbccdd',
+                output: null,
+                before: null,
+                after: null,
+                root: 'my-frontend',
+                files: '**',
+                merge: 'replace',
+                helm: {
+                    namespace: 'my-app',
+                    release_name: 'my-frontend',
+                    namespace_fill: true,
+                    chart_path: 'helm-chart',
+                    value_files: ['release-values.yaml']
+                }
+            });
+            expect(Object.keys(result.helm)).toEqual([
+                'chart_path', 'namespace', 'namespace_fill', 'release_name', 'value_files'
+            ]);
+            expect(result.helm.namespace_fill).toBe(true);
         });
     });
 
