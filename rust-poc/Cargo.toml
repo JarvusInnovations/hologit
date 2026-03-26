@@ -1,0 +1,26 @@
+[package]
+name = "holo-project"
+version = "0.1.0"
+edition = "2021"
+description = "Proof-of-concept Rust port of hologit's projection engine"
+
+[dependencies]
+# git object access — direct packfile/loose reads, no subprocess
+gix = { version = "0.72", features = ["blocking-network-client"] }
+
+# glob pattern matching — compiles to Aho-Corasick automaton
+globset = "0.4"
+
+# TOML config parsing
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+
+# topological sorting for mapping/lens ordering
+topological-sort = "0.2"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# error handling
+anyhow = "1"
+thiserror = "2"
