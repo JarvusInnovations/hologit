@@ -9,7 +9,7 @@
 //! - HashMap instead of prototype chain trick for base/overlay children
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{bail, Context, Result};
@@ -163,6 +163,15 @@ impl MergeOptions {
                         Glob::new(raw_pat)
                             .with_context(|| format!("invalid glob: {pat}"))?,
                     );
+                    // globset's ** doesn't match zero path segments (unlike minimatch).
+                    // "**/*.php" should match "Admin.php", "**/*" should match "file".
+                    // Add the suffix pattern without the **/ prefix.
+                    if let Some(suffix) = raw_pat.strip_prefix("**/") {
+                        builder.add(
+                            Glob::new(suffix)
+                                .with_context(|| format!("invalid glob: {suffix}"))?,
+                        );
+                    }
                     entries.push(PatternEntry {
                         glob: builder.build()?,
                         negate,
@@ -241,7 +250,7 @@ impl MergeOptions {
 pub struct MutableTree {
     pub hash: ObjectId,
     pub dirty: bool,
-    pub children: Option<HashMap<String, Child>>,
+    pub children: Option<BTreeMap<String, Child>>,
 }
 
 pub enum Child {
@@ -264,7 +273,7 @@ impl MutableTree {
         MutableTree {
             hash: empty_tree_id(),
             dirty: false,
-            children: Some(HashMap::new()),
+            children: Some(BTreeMap::new()),
         }
     }
 
@@ -276,7 +285,7 @@ impl MutableTree {
         }
 
         if self.hash == empty_tree_id() {
-            self.children = Some(HashMap::new());
+            self.children = Some(BTreeMap::new());
             return Ok(());
         }
 
@@ -316,7 +325,7 @@ impl MutableTree {
         };
 
         // Build children map
-        let mut children = HashMap::with_capacity(entries.len());
+        let mut children = BTreeMap::new();
         for entry in entries {
             let child = match entry.entry_type {
                 EntryType::Tree => Child::Tree(MutableTree::new(entry.hash)),
@@ -334,6 +343,7 @@ impl MutableTree {
     }
 
     /// Navigate to or create a subtree at the given path.
+    /// Marks all intermediate nodes dirty if any new nodes are created.
     pub fn get_or_create_subtree(
         &mut self,
         repo: &gix::Repository,
@@ -343,19 +353,51 @@ impl MutableTree {
             return Ok(self);
         }
 
+        // First pass: check if any nodes need to be created, and mark all ancestors dirty
         let parts: Vec<&str> = path.split('/').collect();
-        let mut current = self;
+        let mut needs_create = false;
+        {
+            let mut check = &mut *self;
+            for part in &parts {
+                check.ensure_children(repo)?;
+                let children = check.children.as_ref().unwrap();
+                if !children.contains_key(*part) {
+                    needs_create = true;
+                    break;
+                }
+                match check.children.as_mut().unwrap().get_mut(*part) {
+                    Some(Child::Tree(ref mut t)) => check = t,
+                    _ => break,
+                }
+            }
+        }
 
+        if needs_create {
+            // Mark the root dirty (and all intermediates will be marked as we create them)
+            self.dirty = true;
+        }
+
+        // Second pass: create missing nodes
+        let mut current = self;
         for part in parts {
             current.ensure_children(repo)?;
             let children = current.children.as_mut().unwrap();
 
             let child = children
                 .entry(part.to_string())
-                .or_insert_with(|| Child::Tree(MutableTree::empty()));
+                .or_insert_with(|| {
+                    let mut t = MutableTree::empty();
+                    t.dirty = true;
+                    Child::Tree(t)
+                });
 
             current = match child {
-                Child::Tree(ref mut t) => t,
+                Child::Tree(ref mut t) => {
+                    if needs_create {
+                        t.dirty = true;
+                    }
+                    t
+                },
                 _ => bail!("path component '{part}' exists but is not a tree"),
             };
         }
@@ -484,29 +526,25 @@ impl MutableTree {
                 format!("{base_path}{child_name}")
             };
 
-            // Check glob patterns
+            // Check glob patterns — mirrors Minimatch logic from JS TreeObject.merge()
             let mut pending_child_match = false;
             if options.has_patterns() {
                 let (matched, negation_excluded) = options.matches(&child_path);
-
                 if negation_excluded {
                     continue;
                 }
 
                 if !matched && !is_input_tree {
+                    // Blob doesn't match any pattern — skip
                     continue;
                 }
 
-                if !matched && is_input_tree {
-                    if options.might_match_children(&child_path) {
+                if is_input_tree {
+                    if !matched || options.has_negations() {
+                        // Tree not yet matched, or negation patterns exist that
+                        // might exclude some descendants — must recurse to check
                         pending_child_match = true;
-                    } else {
-                        continue;
                     }
-                }
-
-                if ((!matched || options.has_negations()) && is_input_tree) {
-                    pending_child_match = true;
                 }
             }
 
@@ -530,7 +568,7 @@ impl MutableTree {
                 continue;
             }
 
-            // Input is a tree — need to merge recursively
+            // Input is a tree — decide merge strategy
             let has_base_tree = matches!(
                 self.children.as_ref().unwrap().get(child_name),
                 Some(Child::Tree(_))
@@ -721,6 +759,68 @@ fn child_is_dirty(child: &Child) -> bool {
     match child {
         Child::Tree(t) => t.dirty,
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_glob_double_star_in_subdir() {
+        // This is the actual failing case: **/*.php should match Blame/Line.php
+        let opts = MergeOptions::new(Some(&["**/*.php".to_string()]), MergeMode::Overlay).unwrap();
+        // At base_path="Blame/", the child path for a blob is "Blame/Line.php"
+        let (m, _) = opts.matches("Blame/Line.php");
+        assert!(m, "**/*.php should match Blame/Line.php");
+        // At root, tree path
+        let (m, _) = opts.matches("Blame/");
+        // Dir might not match but should allow descent
+    }
+
+    #[test]
+    fn test_glob_double_star_slash() {
+        let opts = MergeOptions::new(Some(&["**/*.php".to_string()]), MergeMode::Overlay).unwrap();
+        // Blob at root: should match
+        let (m, _) = opts.matches("Admin.php");
+        assert!(m, "**/*.php should match Admin.php");
+        // Tree at root
+        let (m, _) = opts.matches("Blame/");
+        assert!(!m, "**/*.php should not match dir Blame/");
+        // Blob in subdir
+        let (m, _) = opts.matches("Blame/Line.php");
+        assert!(m, "**/*.php should match Blame/Line.php");
+        // Non-php
+        let (m, _) = opts.matches("README.md");
+        assert!(!m, "**/*.php should not match README.md");
+    }
+
+    #[test]
+    fn test_glob_star_slash_double_star() {
+        let opts = MergeOptions::new(Some(&["*/**".to_string()]), MergeMode::Overlay).unwrap();
+        // Direct blob: should NOT match (need at least one dir)
+        let (m, _) = opts.matches("file.txt");
+        assert!(!m, "*/** should not match root file");
+        // Tree at root (dir match for potential children)
+        let (m, _) = opts.matches("dir/");
+        // This is a dir — not matched by */** directly, but children might be
+        // Blob under one dir level
+        let (m, _) = opts.matches("dir/file.txt");
+        assert!(m, "*/** should match dir/file.txt");
+        let (m, _) = opts.matches("dir/sub/file.txt");
+        assert!(m, "*/** should match dir/sub/file.txt");
+    }
+
+    #[test]
+    fn test_glob_negation() {
+        let opts = MergeOptions::new(
+            Some(&["**".to_string(), "!.github/".to_string()]),
+            MergeMode::Overlay,
+        ).unwrap();
+        let (m, neg) = opts.matches("file.txt");
+        assert!(m && !neg, "** should match file.txt");
+        let (m, neg) = opts.matches(".github/");
+        assert!(!m || neg, "!.github/ should exclude .github/");
     }
 }
 

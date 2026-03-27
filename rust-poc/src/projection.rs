@@ -71,10 +71,8 @@ pub fn project_branch(
         holo.delete_child(repo, "sources")?;
     }
 
-    // Strip .holo/lenses from output
-    if let Some(holo) = output.get_subtree(repo, ".holo")? {
-        holo.delete_child(repo, "lenses")?;
-    }
+    // Note: .holo/lenses is only stripped when lensing runs (Projection.lens),
+    // which this PoC does not implement. Leave it in the output.
 
     // Strip .holo entirely if only config.toml remains
     strip_empty_holo(repo, &mut output)?;
@@ -165,67 +163,104 @@ fn composite_branch(
 
 /// Resolve a source to a tree hash.
 ///
-/// In the full implementation this would handle:
-/// - Remote fetching
-/// - Working tree hashing
-/// - Recursive projection (source.project.holobranch)
-///
-/// For this PoC, we resolve from gitlink entries in .holo/sources/
-/// or treat workspace-name sources as the workspace root tree.
+/// Handles: gitlinks, spec-ref resolution, source.project.holobranch,
+/// and mapping holobranch (source=>holobranch syntax).
 fn resolve_source_tree(
     repo: &gix::Repository,
     workspace_tree: &mut MutableTree,
     source_name: &str,
     workspace_name: &str,
 ) -> Result<ObjectId> {
-    let (base_name, _holobranch) = match source_name.split_once("=>") {
+    let (base_name, mapping_holobranch) = match source_name.split_once("=>") {
         Some((base, branch)) => (base, Some(branch)),
         None => (source_name, None),
     };
 
     // Self-source: workspace tree is the source
     if base_name == workspace_name {
-        // Write the workspace tree to get its hash
-        // For self-source we need to return the tree hash
-        return Ok(workspace_tree.hash);
+        let mut head = workspace_tree.hash;
+        // Apply mapping holobranch if present
+        if let Some(holobranch) = mapping_holobranch {
+            eprintln!(
+                "  (projecting {} via mapping holobranch {})",
+                source_name, holobranch
+            );
+            head = project_branch(repo, head, holobranch)?;
+        }
+        return Ok(head);
     }
 
     // Read source config
     let source_config = read_source_config(repo, workspace_tree, base_name)?;
 
-    // Try gitlink first
-    if let Some(commit_hash) = config::resolve_gitlink(repo, workspace_tree, source_name)? {
-        // Get tree hash from commit
-        let tree_hash = commit_to_tree(repo, commit_hash)?;
+    // Resolve the source commit hash via multiple strategies
+    let commit_hash = resolve_source_commit(repo, workspace_tree, source_name, base_name, &source_config)?;
 
-        // If source has project config, recursively project
-        if let Some(ref project) = source_config.project {
-            eprintln!(
-                "  (recursively projecting {} via holobranch {})",
-                source_name, project.holobranch
-            );
-            return project_branch(repo, tree_hash, &project.holobranch);
-        }
+    // Get tree from commit
+    let mut head = commit_to_tree(repo, commit_hash)?;
 
-        return Ok(tree_hash);
+    // Apply source.project.holobranch if configured
+    if let Some(ref project) = source_config.project {
+        eprintln!(
+            "  (recursively projecting {} via source holobranch {})",
+            source_name, project.holobranch
+        );
+        head = project_branch(repo, head, &project.holobranch)?;
     }
 
-    // Try resolving from local ref
+    // Apply mapping holobranch (=>holobranch) if present
+    if let Some(holobranch) = mapping_holobranch {
+        eprintln!(
+            "  (projecting {} via mapping holobranch {})",
+            source_name, holobranch
+        );
+        head = project_branch(repo, head, holobranch)?;
+    }
+
+    Ok(head)
+}
+
+/// Resolve a source's commit hash via gitlink, spec-ref, or local ref.
+fn resolve_source_commit(
+    repo: &gix::Repository,
+    workspace_tree: &mut MutableTree,
+    source_name: &str,
+    base_name: &str,
+    source_config: &SourceConfig,
+) -> Result<ObjectId> {
+    // Try gitlink first
+    if let Some(commit_hash) = config::resolve_gitlink(repo, workspace_tree, source_name)? {
+        return Ok(commit_hash);
+    }
+    // Also try base_name gitlink (without =>holobranch suffix)
+    if base_name != source_name {
+        if let Some(commit_hash) = config::resolve_gitlink(repo, workspace_tree, base_name)? {
+            return Ok(commit_hash);
+        }
+    }
+
+    // Try spec ref
+    if let Some(ref url) = source_config.url {
+        if let Some(ref git_ref) = source_config.r#ref {
+            let spec_hash = compute_source_spec_hash(repo, url)?;
+            let ref_suffix = git_ref.strip_prefix("refs/").unwrap_or(git_ref);
+            let spec_ref = format!(
+                "refs/holo/source/{}/{}/{}",
+                &spec_hash[..2],
+                &spec_hash[2..],
+                ref_suffix
+            );
+
+            if let Ok(resolved) = repo.rev_parse_single(spec_ref.as_str()) {
+                return peel_to_commit(repo, resolved.detach());
+            }
+        }
+    }
+
+    // Try local ref directly
     if let Some(ref git_ref) = source_config.r#ref {
         if let Ok(resolved) = repo.rev_parse_single(git_ref.as_str()) {
-            let obj = resolved.object()?;
-            let commit = obj.try_into_commit()?;
-            let tree_hash = commit.tree_id()?.detach();
-
-            if let Some(ref project) = source_config.project {
-                eprintln!(
-                    "  (recursively projecting {} via holobranch {})",
-                    source_name, project.holobranch
-                );
-                return project_branch(repo, tree_hash, &project.holobranch);
-            }
-
-            return Ok(tree_hash);
+            return peel_to_commit(repo, resolved.detach());
         }
     }
 
@@ -255,15 +290,106 @@ fn read_source_config(
     }
 }
 
-/// Get the tree OID from a commit OID.
-fn commit_to_tree(repo: &gix::Repository, commit_id: ObjectId) -> Result<ObjectId> {
-    let obj = repo
-        .find_object(commit_id)
-        .with_context(|| format!("failed to find commit {commit_id}"))?;
+/// Compute the spec hash for a source URL.
+/// Replicates the JS logic: parse URL → extract host+path → build canonical TOML → SHA-1 as git blob.
+fn compute_source_spec_hash(repo: &gix::Repository, url: &str) -> Result<String> {
+    // Parse URL to extract host and path (matching parse-url behavior)
+    let (host, path) = parse_source_url(url);
+
+    // Build canonical TOML (keys sorted alphabetically: host before path)
+    let toml = if let Some(ref h) = host {
+        format!(
+            "[holospec.source]\nhost = \"{}\"\npath = \"{}\"\n",
+            h, path
+        )
+    } else {
+        format!("[holospec.source]\npath = \"{}\"\n", path)
+    };
+
+    // Hash as git blob: "blob {len}\0{content}"
+    let mut hasher = gix::hash::hasher(gix::hash::Kind::Sha1);
+    let header = format!("blob {}\0", toml.len());
+    hasher.update(header.as_bytes());
+    hasher.update(toml.as_bytes());
+    let oid = hasher.try_finalize()?;
+    Ok(oid.to_string())
+}
+
+/// Parse a source URL to extract host and path, matching the JS parse-url behavior.
+fn parse_source_url(url: &str) -> (Option<String>, String) {
+    // Handle file:// or absolute paths
+    let effective_url = if url.starts_with('/') {
+        format!("file://{url}")
+    } else {
+        url.to_string()
+    };
+
+    // Try to parse as URL
+    if let Ok(parsed) = url::Url::parse(&effective_url) {
+        let host = parsed.host_str().map(|h| h.to_lowercase());
+        let path = parsed
+            .path()
+            .to_lowercase()
+            .trim_end_matches(".git")
+            .trim_end_matches('/')
+            .to_string();
+        (host, path)
+    } else if effective_url.contains(':') && !effective_url.contains("://") {
+        // SSH-style: git@github.com:org/repo.git
+        let parts: Vec<&str> = effective_url.splitn(2, ':').collect();
+        let host = parts[0]
+            .rsplit('@')
+            .next()
+            .unwrap_or("")
+            .to_lowercase();
+        let path = format!(
+            "/{}",
+            parts
+                .get(1)
+                .unwrap_or(&"")
+                .to_lowercase()
+                .trim_end_matches(".git")
+                .trim_end_matches('/')
+        );
+        (Some(host), path)
+    } else {
+        (None, ".".to_string())
+    }
+}
+
+/// Get the tree OID from a commit (or tag→commit) OID.
+/// Handles tag peeling: tag → commit → tree.
+fn commit_to_tree(repo: &gix::Repository, object_id: ObjectId) -> Result<ObjectId> {
+    let mut obj = repo
+        .find_object(object_id)
+        .with_context(|| format!("failed to find object {object_id}"))?;
+
+    // Peel tags to get to the commit
+    while obj.kind == gix::object::Kind::Tag {
+        let tag = obj.try_into_tag()?;
+        let target_id = tag.target_id()?.detach();
+        obj = repo.find_object(target_id)?;
+    }
+
     let commit = obj
         .try_into_commit()
-        .with_context(|| format!("{commit_id} is not a commit"))?;
+        .with_context(|| format!("{object_id} does not peel to a commit"))?;
     Ok(commit.tree_id()?.detach())
+}
+
+/// Peel an object to a commit OID (handles tags).
+fn peel_to_commit(repo: &gix::Repository, object_id: ObjectId) -> Result<ObjectId> {
+    let mut obj = repo
+        .find_object(object_id)
+        .with_context(|| format!("failed to find object {object_id}"))?;
+
+    while obj.kind == gix::object::Kind::Tag {
+        let tag = obj.try_into_tag()?;
+        let target_id = tag.target_id()?.detach();
+        obj = repo.find_object(target_id)?;
+    }
+
+    Ok(obj.id().detach())
 }
 
 /// Navigate into a tree to a subpath and return a MutableTree for that subtree.
@@ -305,11 +431,14 @@ fn resolve_tree_at_path(
 }
 
 /// Topologically sort mappings by their before/after constraints.
-/// Equivalent to the toposort logic in Branch.getMappings().
+/// Uses Kahn's algorithm with a stable queue (VecDeque) to preserve
+/// input order for unconstrained nodes — matching the JS toposort behavior.
 fn toposort_mappings(mappings: &[MappingConfig]) -> Result<Vec<MappingConfig>> {
     if mappings.is_empty() {
         return Ok(vec![]);
     }
+
+    let n = mappings.len();
 
     // Build layer→mapping index
     let mut by_layer: std::collections::HashMap<&str, Vec<usize>> =
@@ -318,22 +447,16 @@ fn toposort_mappings(mappings: &[MappingConfig]) -> Result<Vec<MappingConfig>> {
         by_layer.entry(&m.layer).or_default().push(i);
     }
 
-    // Build dependency graph
-    let mut ts = TopologicalSort::<usize>::new();
-
-    // Add all nodes
-    for i in 0..mappings.len() {
-        ts.insert(i);
-    }
+    // Build adjacency list and in-degree counts (Kahn's algorithm)
+    let mut in_degree = vec![0usize; n];
+    let mut dependents: Vec<Vec<usize>> = vec![vec![]; n]; // dependents[i] = nodes that depend on i
 
     for (i, mapping) in mappings.iter().enumerate() {
-        // Process "after" constraints
+        // "after" constraints: i must come after these layers
         let mut after_expanded = mapping.after.clone();
         let mut j = 0;
         while j < after_expanded.len() {
-            let after_layer = &after_expanded[j];
-            if after_layer == "*" {
-                // Expand wildcard: all other layers
+            if after_expanded[j] == "*" {
                 for layer in by_layer.keys() {
                     if *layer != mapping.layer && !after_expanded.contains(&layer.to_string()) {
                         after_expanded.push(layer.to_string());
@@ -343,20 +466,22 @@ fn toposort_mappings(mappings: &[MappingConfig]) -> Result<Vec<MappingConfig>> {
                 continue;
             }
 
-            if let Some(indices) = by_layer.get(after_layer.as_str()) {
+            if let Some(indices) = by_layer.get(after_expanded[j].as_str()) {
                 for &dep_idx in indices {
-                    ts.add_dependency(dep_idx, i); // dep must come before i
+                    if dep_idx != i {
+                        dependents[dep_idx].push(i);
+                        in_degree[i] += 1;
+                    }
                 }
             }
             j += 1;
         }
 
-        // Process "before" constraints
+        // "before" constraints: i must come before these layers
         let mut before_expanded = mapping.before.clone();
         let mut j = 0;
         while j < before_expanded.len() {
-            let before_layer = &before_expanded[j];
-            if before_layer == "*" {
+            if before_expanded[j] == "*" {
                 for layer in by_layer.keys() {
                     if *layer != mapping.layer && !before_expanded.contains(&layer.to_string()) {
                         before_expanded.push(layer.to_string());
@@ -366,28 +491,38 @@ fn toposort_mappings(mappings: &[MappingConfig]) -> Result<Vec<MappingConfig>> {
                 continue;
             }
 
-            if let Some(indices) = by_layer.get(before_layer.as_str()) {
+            if let Some(indices) = by_layer.get(before_expanded[j].as_str()) {
                 for &dep_idx in indices {
-                    ts.add_dependency(i, dep_idx); // i must come before dep
+                    if dep_idx != i {
+                        dependents[i].push(dep_idx);
+                        in_degree[dep_idx] += 1;
+                    }
                 }
             }
             j += 1;
         }
     }
 
-    // Extract sorted order
-    let mut sorted = Vec::with_capacity(mappings.len());
-    loop {
-        let batch = ts.pop_all();
-        if batch.is_empty() {
-            break;
-        }
-        for idx in batch {
-            sorted.push(mappings[idx].clone());
+    // Kahn's with VecDeque for stable ordering (preserves input order)
+    let mut queue = std::collections::VecDeque::new();
+    for i in 0..n {
+        if in_degree[i] == 0 {
+            queue.push_back(i);
         }
     }
 
-    if sorted.len() != mappings.len() {
+    let mut sorted = Vec::with_capacity(n);
+    while let Some(idx) = queue.pop_front() {
+        sorted.push(mappings[idx].clone());
+        for &dep in &dependents[idx] {
+            in_degree[dep] -= 1;
+            if in_degree[dep] == 0 {
+                queue.push_back(dep);
+            }
+        }
+    }
+
+    if sorted.len() != n {
         bail!("circular dependency detected in mapping before/after constraints");
     }
 

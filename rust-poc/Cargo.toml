@@ -21,6 +21,9 @@ topological-sort = "0.2"
 # CLI
 clap = { version = "4", features = ["derive"] }
 
+# URL parsing
+url = "2"
+
 # error handling
 anyhow = "1"
 thiserror = "2"
