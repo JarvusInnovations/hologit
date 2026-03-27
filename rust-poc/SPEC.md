@@ -536,17 +536,60 @@ pub enum Error {
 
 ## Public API
 
-The library exposes a minimal public API:
+The library exposes two entry points: one for TOML-driven projection (reading `.holo/` from a git tree) and one for programmatic composition (structured input, no TOML).
+
+### TOML-driven projection
 
 ```rust
-/// Project a holobranch and return the resulting tree hash.
+/// Project a holobranch by reading .holo/ config from a git tree.
 pub fn project_branch(
     repo: &gix::Repository,
     root_tree_id: ObjectId,
     branch_name: &str,
     options: &ProjectOptions,
 ) -> Result<ObjectId>;
+```
 
+This is the path used by the `git holo project` CLI command. It reads workspace config, discovers branches/sources/mappings from the tree, and runs the full projection pipeline.
+
+### Programmatic projection (plan builder)
+
+```rust
+/// Compose git trees from structured source/mapping definitions.
+/// No .holo/ directory needed — config is passed directly.
+pub fn project_plan(
+    repo: &gix::Repository,
+    sources: &[PlanSource],
+    mappings: &[PlanMapping],
+    options: &ProjectOptions,
+) -> Result<ObjectId>;
+
+pub struct PlanSource {
+    pub name: String,
+    pub url: Option<String>,
+    pub git_ref: Option<String>,
+    /// Project through a holobranch within this source before using it
+    pub project_holobranch: Option<String>,
+}
+
+pub struct PlanMapping {
+    pub source: String,
+    pub files: Vec<String>,       // default: ["**"]
+    pub root: String,             // default: "."
+    pub output: String,           // default: "."
+    pub layer: String,            // default: source name
+    pub after: Vec<String>,
+    pub before: Vec<String>,
+}
+```
+
+This is the path used by `ProjectionPlan` in the Node.js API (PR #425) and by tools like Emergence 4 that define layer stacks in their own config format rather than `.holo/` directories.
+
+Internally, `project_plan` constructs the same workspace/branch/mapping structures that `project_branch` discovers from TOML, then feeds them into the shared composition pipeline. The two entry points converge at the same `composite()` → `merge()` → `write()` code path.
+
+### Shared options and utilities
+
+```rust
 pub struct ProjectOptions {
     /// Called for each lens encountered. Returns the lensed tree hash.
     /// If None, lensing is skipped.
@@ -561,6 +604,56 @@ pub fn reset();
 
 /// Return current performance statistics.
 pub fn stats() -> Stats;
+```
+
+### napi-rs binding
+
+The `holo-engine-napi` crate exposes both entry points to Node.js:
+
+```rust
+#[napi]
+pub fn project_branch(
+    git_dir: String,
+    ref_: String,
+    branch_name: String,
+    no_lens: bool,
+) -> napi::Result<String>;
+
+#[napi]
+pub fn project_plan(
+    git_dir: String,
+    sources: Vec<NapiPlanSource>,
+    mappings: Vec<NapiPlanMapping>,
+) -> napi::Result<String>;
+```
+
+The JS `ProjectionPlan.project()` calls `project_plan` directly:
+
+```javascript
+const { projectPlan } = require('holo-engine-napi');
+
+class ProjectionPlan {
+    async project(options = {}) {
+        return projectPlan(
+            this.repo.gitDir,
+            [...this._sources.entries()].map(([name, c]) => ({
+                name,
+                url: c.url,
+                gitRef: c.ref,
+                projectHolobranch: c.project?.holobranch,
+            })),
+            this._mappings.map(({ sourceName, config }) => ({
+                source: sourceName,
+                files: config.files,
+                root: config.root,
+                output: config.output,
+                layer: config.layer,
+                after: config.after || [],
+                before: config.before || [],
+            })),
+        );
+    }
+}
 ```
 
 ---
@@ -748,9 +841,21 @@ These tests create complete `.holo/` configurations in a git sandbox and verify 
 - Partial override: `#refs/heads/other` changes only ref, preserves URL
 - Override with projection: `#refs/heads/main=>holobranch` sets project config
 
+**Plan builder (programmatic API):**
+
+- Single layer: one source, files = `["**"]`, produces expected tree
+- Two layers with ordering: `after` constraint respected
+- Layer with root path: maps from subdirectory of source
+- Layer with output path: maps into subdirectory of output
+- Layer with file filter: only matching files appear
+- Layer with recursive projection: `project_holobranch` triggers inner projection
+- Plan produces identical hash to equivalent TOML-driven projection
+- Empty plan (no mappings): returns empty tree
+
 **Hash verification:**
 
 - Run both JS and Rust engines on the same input, verify identical output hash
+- Run both `project_branch` and `project_plan` Rust paths on equivalent input, verify identical hash
 - This is the most critical test — it validates the entire pipeline
 
 ### Benchmarks
@@ -787,34 +892,25 @@ Based on PoC benchmarks, the production implementation should achieve:
 
 ## Node.js Integration (napi-rs)
 
-A separate crate `holo-engine-napi` provides the FFI boundary:
-
-```rust
-#[napi]
-pub fn project_branch(
-    git_dir: String,
-    ref_: String,
-    branch_name: String,
-    no_lens: bool,
-) -> napi::Result<String>;  // returns tree hash hex string
-```
+A separate crate `holo-engine-napi` provides the FFI boundary. It exposes both `project_branch` (for the TOML-driven CLI path) and `project_plan` (for the programmatic `ProjectionPlan` path) as described in the Public API section above.
 
 The napi crate:
 
-- Opens the repo via gix
-- Calls `holo_engine::project_branch()`
-- Returns the hash as a hex string
+- Opens the repo via gix on each call (gix's repo discovery is ~1ms)
+- Converts napi-rs JS objects to Rust structs
+- Calls `holo_engine::project_branch()` or `holo_engine::project_plan()`
+- Returns the tree hash as a hex string
 - Provides `reset()` and `stats()` accessors
 
-The Node.js CLI delegates to this for the composition phase, then handles lensing, commit, and watch in JS.
+The Node.js CLI delegates to the napi crate for the composition phase, then handles lensing, commit, and watch in JS. The `ProjectionPlan` builder delegates directly to `project_plan`, bypassing the JS Workspace/Branch/Mapping construction entirely.
 
 ---
 
 ## Migration Path
 
-1. **Phase 1: Library + benchmark parity** — Implement the spec above, verify hash-identical output for all existing test fixtures plus emergence-site.
+1. **Phase 1: Library + benchmark parity** — Implement the spec above with both `project_branch` and `project_plan` entry points. Verify hash-identical output for all existing test fixtures plus emergence-site.
 
-2. **Phase 2: napi-rs binding** — Create the Node.js native addon. The existing CLI calls `Projection.projectBranch()` in JS; replace the composition portion with a call to the Rust engine via the native addon.
+2. **Phase 2: napi-rs binding** — Create the Node.js native addon exposing both entry points. Wire `ProjectionPlan.project()` to call `project_plan` via napi (this is the simplest integration — no TOML discovery, just structured data in and hash out). Wire the CLI's `project` command to call `project_branch` via napi.
 
 3. **Phase 3: Lens integration** — Pass a callback from JS that the Rust engine invokes for each lens. The Rust side builds the input tree and spec hash; the JS side executes the container and returns the output hash.
 
