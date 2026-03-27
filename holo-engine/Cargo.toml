@@ -1,0 +1,18 @@
+[package]
+name = "holo-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Git tree composition engine — the performance-critical core of hologit"
+license = "MIT"
+
+[dependencies]
+gix = { version = "0.72", features = ["blocking-network-client"] }
+globset = "0.4"
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+url = "2"
+thiserror = "2"
+
+[dev-dependencies]
+anyhow = "1"
+tempfile = "3"
