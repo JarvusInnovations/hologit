@@ -120,6 +120,12 @@ pub enum Child {
 | `merge(repo, input, options, base_path)` | Merge another tree into this one (see below) |
 | `write(repo)` | Recursively write dirty trees to ODB, return root hash |
 
+#### Preload optimization
+
+The JS implementation has a `preloadChildren` flag on `_loadBaseChildren()` and `merge()`. When true (the default for merge), it uses a single recursive `git ls-tree -r -t` call to load an entire tree hierarchy at once, populating the cache for all subtrees. This avoids one ODB read per tree level during merge traversal.
+
+In the Rust implementation, gix's direct packfile access makes individual tree reads fast enough that the preload optimization is less critical. However, for very large source trees, a similar bulk-load approach could be implemented by walking the gix tree recursively and populating the cache. This is a **future optimization**, not required for correctness.
+
 #### Module-level tree cache
 
 A thread-local `HashMap<ObjectId, Vec<TreeEntry>>` caches parsed tree contents by hash. This is the single most impactful optimization — it eliminates redundant ODB reads when the same tree is referenced by multiple sources or across recursive projections.
@@ -158,9 +164,8 @@ for each child in input.children:
             set pending_child_match = true
 
     if blob:
-        overlay: always write
-        underlay: write only if target has no entry
-        replace: always write
+        if underlay: write only if target has no entry at this name
+        else (overlay or replace): always write
 
     if tree:
         if target has no tree at this name (or replace mode):
@@ -209,6 +214,8 @@ Atomic counters for: trees_read, trees_written, trees_skipped_clean, cache_hits,
 ### 2. `glob` — Minimatch-Compatible Glob Matching
 
 A dedicated module that wraps `globset` with corrections for minimatch compatibility. This exists because globset and minimatch differ in meaningful ways that affect projection correctness.
+
+**Important:** The JS uses `Minimatch` with `{ dot: true }`, which means patterns like `*` and `**` match dotfiles (`.gitignore`, `.github/`, etc.). Globset matches dotfiles by default, so no special handling is needed for this — but it must be verified in tests.
 
 #### Differences from globset that must be handled
 
@@ -303,7 +310,7 @@ pub fn read_toml<T: DeserializeOwned>(
 
 #### Mapping discovery
 
-Mappings are discovered by walking `.holo/branches/{name}/` recursively. The walk must be depth-first with alphabetical ordering within each level (matching BTreeMap iteration) to produce consistent mapping discovery order.
+Mappings are discovered by walking `.holo/branches/{name}/` recursively. **Important:** The JS uses BFS (a `searchQueue` with `shift()`), but with BTreeMap-ordered children and DFS, the results are equivalent because all children at each tree level are discovered before recursing. The critical requirement is that children within each directory are iterated in alphabetical (git tree) order, not that the walk be BFS vs DFS. Both produce the same ordering when children are sorted.
 
 Each `.toml` file found becomes a mapping. The mapping key is the file's path relative to the branch directory, minus the `.toml` extension. Subdirectories are namespace prefixes.
 
@@ -411,6 +418,10 @@ pub fn resolve(
 
 5. **Error:** If all strategies fail, return an error. (The Rust engine does not fetch; the caller must ensure sources are available locally.)
 
+**Environment variable overrides:** The JS allows overriding source configs via `HOLO_SOURCE_{NAME}` env vars (with `-` replaced by `_`, uppercased). The format is `url#ref=>holobranch`. This is primarily used in CI and should be supported in the production implementation. The PoC does not implement this.
+
+**Self-source ($workspace):** When a source's `holosourceName` matches the workspace name, the JS sets a `$workspace: true` flag and returns the workspace root tree's written hash as the source head. This means the workspace tree (which may have been modified by previous composition steps in an outer projection) serves as its own source. The Rust PoC handles this by returning `workspace_tree.hash` directly.
+
 **After resolving the base commit:**
 
 1. **Tag peeling:** If the resolved object is a tag, peel to the underlying commit.
@@ -465,6 +476,10 @@ pub fn project_branch(
 7. Return the tree hash
 
 **Lensing boundary:** The `project_branch` function accepts an optional `lens` callback that the caller can provide. For the Node.js integration, this callback invokes the existing JS lens infrastructure. The Rust engine does not implement container orchestration.
+
+The lens integration point is between steps 4 and 5: after composition and metadata stripping, but before the final `.holo` cleanup. The callback receives the current output tree (writable) and the workspace, and can read lens configs from `.holo/lenses/` and `.holo/branches/{name}.lenses/`, build input trees, execute specs, and merge output trees — all using the same tree merge primitives. After lensing, `.holo/lenses` is stripped from the output.
+
+**Recursive projection lens behavior:** When `project_branch` is called recursively (from source resolution), the lens flag comes from the inner branch's config (`holobranch.lens`), NOT from the outer projection's CLI flag. The spec's `ProjectOptions.lens_executor` should be passed through to recursive calls, but whether it's invoked depends on the branch config.
 
 ---
 
@@ -613,6 +628,10 @@ These tests use a git sandbox (bare repo created in a temp directory) to verify 
 - Very deep nesting (20+ levels)
 - Trees with commit/gitlink entries (preserved but not recursed)
 - Tree with mixed blob/tree children at same level
+- Source tree with executable blobs (mode 100755) preserved correctly
+- Source tree with symlinks (mode 120000) preserved correctly
+- Merge with `files = ["**"]` is equivalent to no-filter merge (fast path)
+- Sequential merges: merge A into target, then merge B into target — both reflected
 
 #### `tests/glob.rs` — Glob matching correctness
 
@@ -645,6 +664,8 @@ These tests use a git sandbox (bare repo created in a temp directory) to verify 
 - `**/*` matches `file.txt` (zero segments)
 - `!Tests/**` excludes `Tests/` and all children
 - `!Command/LintCommand.php` excludes specific file
+- Dotfiles: `**` matches `.gitignore`, `.hidden/` (minimatch `dot: true` behavior)
+- Path construction: blob at root = `name`, tree at root = `name/`, nested = `parent/name` or `parent/name/`
 
 #### `tests/config.rs` — TOML config parsing
 
@@ -719,6 +740,13 @@ These tests create complete `.holo/` configurations in a git sandbox and verify 
 - `.holo/branches` and `.holo/sources` removed from output
 - `.holo` removed entirely when only `config.toml` remains
 - `.holo/lenses` preserved (lensing not applied)
+
+**Environment variable overrides:**
+
+- `HOLO_SOURCE_MYSOURCE=https://other.url#refs/heads/main` overrides source URL and ref
+- Hyphenated names: `my-source` → `HOLO_SOURCE_MY_SOURCE`
+- Partial override: `#refs/heads/other` changes only ref, preserves URL
+- Override with projection: `#refs/heads/main=>holobranch` sets project config
 
 **Hash verification:**
 
