@@ -142,6 +142,22 @@ const treeHash = await Projection.projectBranch(branch, { lens: false });
 
 See the [Programmatic API docs](docs/programmatic-api/README.md) for full details and the [ProjectionPlan](docs/programmatic-api/projection-plan.md) fluent builder API.
 
+## Rust Engine
+
+The projection engine is being rewritten in Rust for performance, structured as two crates in a Cargo workspace:
+
+- **[holo-tree](holo-tree/)** — Shared git tree primitives: read, merge, and write git trees directly via [gitoxide](https://github.com/GitoxideLabs/gitoxide) packfile access. Also usable by other projects like [gitsheets](https://github.com/JarvusInnovations/gitsheets).
+- **[holo-projector](holo-projector/)** — Holobranch projection engine: reads `.holo/` config, resolves sources, composes trees. Depends on holo-tree.
+
+The Rust engine produces hash-identical output to the Node.js implementation and runs ~130x faster on complex projections. It is integrated into the Node.js CLI and can also be used standalone:
+
+```bash
+cargo build --release -p holo-projector --features cli
+./target/release/holo-project --repo . --ref HEAD my-branch
+```
+
+See each crate's README for details.
+
 ## Documentation
 
 - [Installation Guide](docs/grand-tour/installation.md)
