@@ -463,6 +463,12 @@ impl MutableTree {
 
     /// Write string content as a blob at a deep path, creating intermediate
     /// trees as needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any intermediate path component exists but is not
+    /// a tree (e.g. writing to `"a/b/c"` when `"a/b"` is a blob). This is
+    /// intentional — silently replacing a blob with a tree would be a footgun.
     pub fn write_child(
         &mut self,
         repo: &gix::Repository,

@@ -27,6 +27,7 @@ pub mod tree;
 
 // Re-export the most-used types at crate root
 pub use error::{Error, Result};
+pub use gix::ObjectId;
 pub use tree::{BlobInfo, Child, MergeMode, MergeOptions, MutableTree};
 
 /// Reset all module-level caches and stats counters.

@@ -233,41 +233,11 @@ fn parse_url(raw: &str) -> (Option<String>, String) {
 }
 
 /// Navigate into a tree at a given subpath.
+/// Delegates to `holo_tree::repo::create_tree_from_path`.
 pub fn resolve_tree_at_path(
     repo: &gix::Repository,
     tree_id: ObjectId,
     path: &str,
 ) -> Result<MutableTree> {
-    use gix::bstr::ByteSlice;
-
-    if path == "." || path.is_empty() {
-        return Ok(MutableTree::new(tree_id));
-    }
-
-    let mut current = tree_id;
-    for component in path.split('/') {
-        if component.is_empty() || component == "." {
-            continue;
-        }
-
-        let obj = repo.find_object(current)?;
-        let tree = obj
-            .try_into_tree()
-            .map_err(|_| holo_tree::Error::Git(format!("{current} is not a tree")))?;
-
-        let entry = tree
-            .iter()
-            .filter_map(|e| e.ok())
-            .find(|e| {
-                e.filename()
-                    .to_str()
-                    .map(|s| s == component)
-                    .unwrap_or(false)
-            })
-            .ok_or_else(|| holo_tree::Error::Git(format!("'{component}' not found in tree {current}")))?;
-
-        current = entry.oid().to_owned();
-    }
-
-    Ok(MutableTree::new(current))
+    Ok(holo_tree::repo::create_tree_from_path(repo, tree_id, path)?)
 }
