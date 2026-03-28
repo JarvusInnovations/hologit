@@ -3,7 +3,7 @@
 mod helpers;
 
 use helpers::*;
-use holo_engine::tree::MutableTree;
+use holo_projector::holo_tree::tree::MutableTree;
 
 fn list_tree(repo: &gix::Repository, hash: gix::ObjectId) -> Vec<String> {
     let mut tree = MutableTree::new(hash);
@@ -17,10 +17,10 @@ fn collect_paths(repo: &gix::Repository, tree: &mut MutableTree, prefix: &str) -
     for name in keys {
         let path = if prefix.is_empty() { name.clone() } else { format!("{prefix}/{name}") };
         match tree.children.as_mut().unwrap().get_mut(&name) {
-            Some(holo_engine::tree::Child::Tree(ref mut t)) => {
+            Some(holo_projector::holo_tree::tree::Child::Tree(ref mut t)) => {
                 paths.extend(collect_paths(repo, t, &path));
             }
-            Some(holo_engine::tree::Child::Blob { .. }) => paths.push(path),
+            Some(holo_projector::holo_tree::tree::Child::Blob { .. }) => paths.push(path),
             _ => {}
         }
     }
@@ -55,8 +55,8 @@ fn project_self_source_all_files() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(paths.contains(&"index.html".to_string()));
@@ -86,8 +86,8 @@ fn project_self_source_with_glob_filter() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(paths.contains(&"docs/guide.md".to_string()));
@@ -120,8 +120,8 @@ fn project_self_source_with_negation() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(paths.contains(&"src/app.js".to_string()));
@@ -166,8 +166,8 @@ fn project_two_sources_via_gitlinks() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(paths.contains(&"a.txt".to_string()));
@@ -205,8 +205,8 @@ fn project_with_root_path() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     // Files from src/lib/ should appear at /mylib/ (default output = mapping name)
@@ -249,8 +249,8 @@ fn project_branch_extends_chain() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "extended").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "extended").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(paths.contains(&"base.txt".to_string()));
@@ -298,8 +298,8 @@ fn project_source_with_inner_projection() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, outer_root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, outer_root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(paths.contains(&"lib/core.js".to_string()));
@@ -324,8 +324,8 @@ fn strips_holo_branches_and_sources() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(!paths.iter().any(|p| p.starts_with(".holo/branches")));
@@ -346,8 +346,8 @@ fn strips_holo_entirely_when_only_config_remains() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     let paths = list_tree(&sb.repo, result);
     assert!(!paths.iter().any(|p| p.starts_with(".holo")),
@@ -367,16 +367,16 @@ fn project_plan_single_source() {
     // Store commit at a ref that source resolution can find
     sb.set_ref("refs/heads/main", source_commit);
 
-    holo_engine::reset();
-    let result = holo_engine::project_plan(
+    holo_projector::reset();
+    let result = holo_projector::project_plan(
         &sb.repo,
-        &[holo_engine::PlanSource {
+        &[holo_projector::PlanSource {
             name: "frontend".into(),
             url: None,
             git_ref: Some("refs/heads/main".into()),
             project_holobranch: None,
         }],
-        &[holo_engine::PlanMapping::new("frontend")],
+        &[holo_projector::PlanMapping::new("frontend")],
     )
     .unwrap();
 
@@ -397,17 +397,17 @@ fn project_plan_two_layers_with_ordering() {
     let overlay_commit = sb.commit(overlay_tree, None, "overlay");
     sb.set_ref("refs/heads/overlay", overlay_commit);
 
-    holo_engine::reset();
-    let result = holo_engine::project_plan(
+    holo_projector::reset();
+    let result = holo_projector::project_plan(
         &sb.repo,
         &[
-            holo_engine::PlanSource {
+            holo_projector::PlanSource {
                 name: "base".into(),
                 url: None,
                 git_ref: Some("refs/heads/base".into()),
                 project_holobranch: None,
             },
-            holo_engine::PlanSource {
+            holo_projector::PlanSource {
                 name: "overlay".into(),
                 url: None,
                 git_ref: Some("refs/heads/overlay".into()),
@@ -415,10 +415,10 @@ fn project_plan_two_layers_with_ordering() {
             },
         ],
         &[
-            holo_engine::PlanMapping::new("base"),
-            holo_engine::PlanMapping {
+            holo_projector::PlanMapping::new("base"),
+            holo_projector::PlanMapping {
                 after: vec!["base".to_string()],
-                ..holo_engine::PlanMapping::new("overlay")
+                ..holo_projector::PlanMapping::new("overlay")
             },
         ],
     )
@@ -447,10 +447,10 @@ fn same_input_produces_same_hash() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let hash1 = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
-    holo_engine::reset();
-    let hash2 = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let hash1 = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let hash2 = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
     assert_eq!(hash1, hash2, "identical input must produce identical hash");
 }

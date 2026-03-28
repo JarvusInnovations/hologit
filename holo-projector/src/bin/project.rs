@@ -42,14 +42,14 @@ fn main() -> Result<()> {
     let root_tree_id = commit.tree_id().context("commit has no tree")?;
     let t_resolve = start.elapsed();
 
-    let output_hash = holo_engine::project_branch(&repo, root_tree_id.detach(), &cli.branch)
+    let output_hash = holo_projector::project_branch(&repo, root_tree_id.detach(), &cli.branch)
         .map_err(|e| anyhow::anyhow!("{e}"))?;
     let t_project = start.elapsed();
 
     println!("{output_hash}");
 
     if cli.stats {
-        let stats = holo_engine::stats();
+        let stats = holo_projector::stats();
         eprintln!();
         eprintln!("--- timing ---");
         eprintln!("  repo open:    {:?}", t_open);

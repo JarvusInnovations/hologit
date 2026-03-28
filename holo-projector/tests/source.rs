@@ -13,14 +13,14 @@ use helpers::*;
 fn spec_hash_https_url() {
     // JS: parse-url("https://github.com/CodeForPhilly/laddr")
     //   → host = "github.com", path = "/codeforphilly/laddr"
-    let hash = holo_engine::source::compute_spec_hash("https://github.com/CodeForPhilly/laddr")
+    let hash = holo_projector::source::compute_spec_hash("https://github.com/CodeForPhilly/laddr")
         .unwrap();
     assert_eq!(hash, "64cf84c3745210e48cfa429e13924103dcd998c4");
 }
 
 #[test]
 fn spec_hash_https_with_git_suffix() {
-    let hash = holo_engine::source::compute_spec_hash(
+    let hash = holo_projector::source::compute_spec_hash(
         "https://github.com/gitonomy/gitlib.git",
     )
     .unwrap();
@@ -29,7 +29,7 @@ fn spec_hash_https_with_git_suffix() {
 
 #[test]
 fn spec_hash_emergence_skeleton() {
-    let hash = holo_engine::source::compute_spec_hash(
+    let hash = holo_projector::source::compute_spec_hash(
         "https://github.com/JarvusInnovations/emergence-skeleton",
     )
     .unwrap();
@@ -56,10 +56,10 @@ fn resolves_gitlink_source() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let mut tree = holo_engine::tree::MutableTree::new(result);
+    let mut tree = holo_projector::holo_tree::tree::MutableTree::new(result);
     let data = tree.read_blob(&sb.repo, "hello.txt").unwrap().unwrap();
     assert_eq!(std::str::from_utf8(&data).unwrap(), "world");
 }
@@ -106,10 +106,10 @@ fn resolves_source_through_annotated_tag() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let mut tree = holo_engine::tree::MutableTree::new(result);
+    let mut tree = holo_projector::holo_tree::tree::MutableTree::new(result);
     let data = tree.read_blob(&sb.repo, "tagged.txt").unwrap().unwrap();
     assert_eq!(std::str::from_utf8(&data).unwrap(), "from tag");
 }
@@ -135,10 +135,10 @@ fn self_source_returns_workspace_tree() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let mut tree = holo_engine::tree::MutableTree::new(result);
+    let mut tree = holo_projector::holo_tree::tree::MutableTree::new(result);
     let data = tree.read_blob(&sb.repo, "content.txt").unwrap().unwrap();
     assert_eq!(std::str::from_utf8(&data).unwrap(), "self-source content");
 }
@@ -182,11 +182,11 @@ fn mapping_holobranch_triggers_inner_projection() {
         ..Default::default()
     });
 
-    holo_engine::reset();
-    let result = holo_engine::project_branch(&sb.repo, outer_root, "site").unwrap();
+    holo_projector::reset();
+    let result = holo_projector::project_branch(&sb.repo, outer_root, "site").unwrap();
 
     let paths = {
-        let mut tree = holo_engine::tree::MutableTree::new(result);
+        let mut tree = holo_projector::holo_tree::tree::MutableTree::new(result);
         collect_paths(&sb.repo, &mut tree, "")
     };
 
@@ -194,17 +194,17 @@ fn mapping_holobranch_triggers_inner_projection() {
     assert!(!paths.contains(&"test/spec.js".to_string()));
 }
 
-fn collect_paths(repo: &gix::Repository, tree: &mut holo_engine::tree::MutableTree, prefix: &str) -> Vec<String> {
+fn collect_paths(repo: &gix::Repository, tree: &mut holo_projector::holo_tree::tree::MutableTree, prefix: &str) -> Vec<String> {
     tree.ensure_children(repo).unwrap();
     let mut paths = Vec::new();
     let keys: Vec<String> = tree.children.as_ref().unwrap().keys().cloned().collect();
     for name in keys {
         let path = if prefix.is_empty() { name.clone() } else { format!("{prefix}/{name}") };
         match tree.children.as_mut().unwrap().get_mut(&name) {
-            Some(holo_engine::tree::Child::Tree(ref mut t)) => {
+            Some(holo_projector::holo_tree::tree::Child::Tree(ref mut t)) => {
                 paths.extend(collect_paths(repo, t, &path));
             }
-            Some(holo_engine::tree::Child::Blob { .. }) => paths.push(path),
+            Some(holo_projector::holo_tree::tree::Child::Blob { .. }) => paths.push(path),
             _ => {}
         }
     }

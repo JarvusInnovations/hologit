@@ -1,0 +1,16 @@
+[package]
+name = "holo-tree"
+version = "0.1.0"
+edition = "2021"
+description = "Mutable in-memory git trees — read, merge, write via gix"
+license = "MIT"
+
+[dependencies]
+gix = { version = "0.72", features = ["blocking-network-client"] }
+globset = "0.4"
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"

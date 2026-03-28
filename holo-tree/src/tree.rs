@@ -183,6 +183,12 @@ fn child_is_dirty(child: &Child) -> bool {
     matches!(child, Child::Tree(t) if t.dirty)
 }
 
+/// Info about a blob entry, returned by `get_blob_map`.
+pub struct BlobInfo {
+    pub hash: ObjectId,
+    pub mode: u16,
+}
+
 fn clone_child(child: &Child) -> Child {
     match child {
         Child::Tree(t) => Child::Tree(MutableTree::new(t.hash)),
@@ -372,7 +378,7 @@ impl MutableTree {
                     t
                 }
                 _ => {
-                    return Err(Error::Other(format!(
+                    return Err(Error::NotATree(format!(
                         "path component '{}' exists but is not a tree",
                         part
                     )))
@@ -426,6 +432,127 @@ impl MutableTree {
         } else {
             Ok(false)
         }
+    }
+
+    // ── Deep path operations ──────────────────────────────────────────────
+
+    /// Navigate a slash-separated path to any child type.
+    /// Returns `None` if any path component doesn't exist.
+    pub fn get_child(
+        &mut self,
+        repo: &gix::Repository,
+        path: &str,
+    ) -> Result<Option<&Child>> {
+        let (dir, name) = match path.rsplit_once('/') {
+            Some((d, f)) => (d, f),
+            None => (".", path),
+        };
+
+        let tree = if dir == "." {
+            self
+        } else {
+            match self.get_subtree(repo, dir)? {
+                Some(t) => t,
+                None => return Ok(None),
+            }
+        };
+
+        tree.ensure_children(repo)?;
+        Ok(tree.children.as_ref().unwrap().get(name))
+    }
+
+    /// Write string content as a blob at a deep path, creating intermediate
+    /// trees as needed.
+    pub fn write_child(
+        &mut self,
+        repo: &gix::Repository,
+        path: &str,
+        content: &str,
+    ) -> Result<ObjectId> {
+        self.write_child_bytes(repo, path, content.as_bytes())
+    }
+
+    /// Write raw bytes as a blob at a deep path.
+    pub fn write_child_bytes(
+        &mut self,
+        repo: &gix::Repository,
+        path: &str,
+        content: &[u8],
+    ) -> Result<ObjectId> {
+        let blob_id = repo
+            .write_blob(content)
+            .map_err(|e| Error::Git(e.to_string()))?
+            .detach();
+
+        let (dir, name) = match path.rsplit_once('/') {
+            Some((d, f)) => (d, f),
+            None => (".", path),
+        };
+
+        let tree = self.get_or_create_subtree(repo, dir)?;
+        tree.children.as_mut().unwrap().insert(
+            name.to_string(),
+            Child::Blob {
+                mode: 0o100644,
+                hash: blob_id,
+            },
+        );
+        tree.dirty = true;
+        Ok(blob_id)
+    }
+
+    /// Delete a child at a deep slash-separated path (not just a direct child).
+    pub fn delete_child_deep(
+        &mut self,
+        repo: &gix::Repository,
+        path: &str,
+    ) -> Result<bool> {
+        let (dir, name) = match path.rsplit_once('/') {
+            Some((d, f)) => (d, f),
+            None => return self.delete_child(repo, path),
+        };
+
+        match self.get_subtree(repo, dir)? {
+            Some(tree) => tree.delete_child(repo, name),
+            None => Ok(false),
+        }
+    }
+
+    /// Recursively collect all blobs into a flat map.
+    pub fn get_blob_map(
+        &mut self,
+        repo: &gix::Repository,
+    ) -> Result<BTreeMap<String, BlobInfo>> {
+        let mut out = BTreeMap::new();
+        self.collect_blobs(repo, "", &mut out)?;
+        Ok(out)
+    }
+
+    fn collect_blobs(
+        &mut self,
+        repo: &gix::Repository,
+        prefix: &str,
+        out: &mut BTreeMap<String, BlobInfo>,
+    ) -> Result<()> {
+        self.ensure_children(repo)?;
+
+        let keys: Vec<String> = self.children.as_ref().unwrap().keys().cloned().collect();
+        for name in keys {
+            let path = if prefix.is_empty() {
+                name.clone()
+            } else {
+                format!("{prefix}/{name}")
+            };
+
+            match self.children.as_mut().unwrap().get_mut(&name) {
+                Some(Child::Tree(ref mut t)) => t.collect_blobs(repo, &path, out)?,
+                Some(Child::Blob { hash, mode }) => {
+                    out.insert(path, BlobInfo { hash: *hash, mode: *mode });
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 
     // ── Merge ────────────────────────────────────────────────────────────

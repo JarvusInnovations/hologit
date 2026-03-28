@@ -5,7 +5,7 @@ use gix::ObjectId;
 use crate::branch;
 use crate::config::{self, BranchConfig, BranchConfigFile, MappingConfig, WorkspaceConfigFile};
 use crate::error::Result;
-use crate::tree::{Child, MutableTree};
+use holo_tree::{Child, MutableTree};
 
 /// Project a holobranch by reading `.holo/` config from a git tree.
 ///
@@ -37,7 +37,7 @@ pub fn project_branch(
 
     strip_metadata(repo, &mut output)?;
 
-    output.write(repo)
+    Ok(output.write(repo)?)
 }
 
 /// Compose git trees from structured source/mapping definitions.
@@ -56,7 +56,7 @@ pub fn project_plan(
     // Write .holo/config.toml so recursive projections can read it
     let config_blob = repo
         .write_blob(format!("[holospace]\nname = \"{ws_name}\"\n"))
-        .map_err(|e| crate::error::Error::Git(e.to_string()))?;
+        .map_err(|e| holo_tree::Error::Git(e.to_string()))?;
     {
         let holo = ws_tree.get_or_create_subtree(repo, ".holo")?;
         holo.ensure_children(repo)?;
@@ -88,7 +88,7 @@ pub fn project_plan(
 
         let blob_id = repo
             .write_blob(&toml_content)
-            .map_err(|e| crate::error::Error::Git(e.to_string()))?;
+            .map_err(|e| holo_tree::Error::Git(e.to_string()))?;
 
         let sources_tree = ws_tree.get_or_create_subtree(repo, ".holo/sources")?;
         sources_tree.children.as_mut().unwrap().insert(
@@ -131,7 +131,7 @@ pub fn project_plan(
 
     strip_metadata(repo, &mut output)?;
 
-    output.write(repo)
+    Ok(output.write(repo)?)
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────

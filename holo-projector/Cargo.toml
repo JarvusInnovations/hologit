@@ -1,15 +1,15 @@
 [package]
-name = "holo-engine"
+name = "holo-projector"
 version = "0.1.0"
 edition = "2021"
-description = "Git tree composition engine — the performance-critical core of hologit"
+description = "Holobranch projection engine — compose git trees from declarative configs"
 license = "MIT"
 
 [dependencies]
-gix = { version = "0.72", features = ["blocking-network-client"] }
-globset = "0.4"
-toml = "0.8"
+holo-tree = { path = "../holo-tree", version = "0.1" }
+gix = { version = "0.72" }
 serde = { version = "1", features = ["derive"] }
+toml = "0.8"
 url = "2"
 thiserror = "2"
 
@@ -31,5 +31,4 @@ version = "1"
 optional = true
 
 [dev-dependencies]
-anyhow = "1"
 tempfile = "3"

@@ -1,36 +1,29 @@
-//! holo-engine: Git tree composition engine.
+//! holo-projector: Holobranch projection engine.
 //!
-//! The performance-critical core of hologit. Composes git trees from
-//! multiple sources according to declarative configuration, using gix
-//! for direct packfile access (no git subprocess).
+//! Composes git trees from multiple sources according to declarative
+//! `.holo/` configuration or structured input. Built on [`holo_tree`]
+//! for git object access.
 //!
 //! # Entry points
 //!
 //! - [`project_branch`] — TOML-driven: reads `.holo/` config from a git tree
 //! - [`project_plan`] — Programmatic: accepts structured source/mapping definitions
-//!
-//! Both share the same composition internals (toposort, source resolution,
-//! tree merge, ODB write-back).
 
 pub mod branch;
 pub mod config;
 pub mod error;
-pub mod glob;
 pub mod projection;
 pub mod source;
-pub mod tree;
 
 use error::Result;
 use gix::ObjectId;
 
+// Re-export holo-tree for consumers that need the tree primitives
+pub use holo_tree;
+
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /// Project a holobranch by reading `.holo/` config from a git tree.
-///
-/// This is the path used by `git holo project`. It discovers workspace
-/// config, branches, sources, and mappings from the tree, resolves the
-/// branch's `extend` chain, composes all mappings, strips metadata,
-/// and returns the final tree hash.
 pub fn project_branch(
     repo: &gix::Repository,
     root_tree_id: ObjectId,
@@ -40,9 +33,6 @@ pub fn project_branch(
 }
 
 /// Compose git trees from structured source/mapping definitions.
-///
-/// This is the path used by `ProjectionPlan`. No `.holo/` directory
-/// is needed in the source repositories — config is passed directly.
 pub fn project_plan(
     repo: &gix::Repository,
     sources: &[PlanSource],
@@ -53,12 +43,12 @@ pub fn project_plan(
 
 /// Reset all module-level caches and stats counters.
 pub fn reset() {
-    tree::reset();
+    holo_tree::reset();
 }
 
 /// Return current performance statistics.
-pub fn stats() -> tree::Stats {
-    tree::stats()
+pub fn stats() -> holo_tree::tree::Stats {
+    holo_tree::stats()
 }
 
 // ── Plan builder types ─────────────────────────────────────────────────────

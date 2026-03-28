@@ -6,7 +6,7 @@
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
-use crate::tree::MutableTree;
+use holo_tree::MutableTree;
 
 // ── Workspace (.holo/config.toml) ──────────────────────────────────────────
 
@@ -163,26 +163,13 @@ impl StringOrVec {
 // ── Config reading ─────────────────────────────────────────────────────────
 
 /// Read and parse a TOML file from a blob inside a git tree.
+/// Delegates to `holo_tree::toml::read_toml` for the generic parsing.
 pub fn read_toml<T: serde::de::DeserializeOwned>(
     repo: &gix::Repository,
     tree: &mut MutableTree,
     path: &str,
 ) -> Result<Option<T>> {
-    let blob = tree.read_blob(repo, path)?;
-    match blob {
-        None => Ok(None),
-        Some(data) => {
-            let text = std::str::from_utf8(&data).map_err(|_| Error::Config {
-                path: path.into(),
-                message: "non-UTF8 content".into(),
-            })?;
-            let parsed: T = toml::from_str(text).map_err(|e| Error::Config {
-                path: path.into(),
-                message: e.to_string(),
-            })?;
-            Ok(Some(parsed))
-        }
-    }
+    Ok(holo_tree::toml::read_toml(repo, tree, path)?)
 }
 
 // ── Mapping discovery ──────────────────────────────────────────────────────
@@ -220,9 +207,9 @@ fn walk_mappings(
         .unwrap()
         .iter()
         .map(|(name, child)| {
-            let is_tree = matches!(child, crate::tree::Child::Tree(_));
+            let is_tree = matches!(child, holo_tree::Child::Tree(_));
             let blob_hash = match child {
-                crate::tree::Child::Blob { hash, .. } => Some(*hash),
+                holo_tree::Child::Blob { hash, .. } => Some(*hash),
                 _ => None,
             };
             (name.clone(), is_tree, blob_hash)
@@ -288,14 +275,14 @@ pub fn resolve_gitlink(
         None => return Ok(None),
     };
 
-    if let Some(crate::tree::Child::Commit { hash }) = children.get(source_name) {
+    if let Some(holo_tree::Child::Commit { hash }) = children.get(source_name) {
         return Ok(Some(*hash));
     }
 
     // Also try base name (without =>holobranch suffix)
     let base = source_name.split("=>").next().unwrap_or(source_name);
     if base != source_name {
-        if let Some(crate::tree::Child::Commit { hash }) = children.get(base) {
+        if let Some(holo_tree::Child::Commit { hash }) = children.get(base) {
             return Ok(Some(*hash));
         }
     }

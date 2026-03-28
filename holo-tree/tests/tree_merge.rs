@@ -3,7 +3,7 @@
 mod helpers;
 
 use helpers::Sandbox;
-use holo_engine::tree::{MergeMode, MergeOptions, MutableTree};
+use holo_tree::tree::{MergeMode, MergeOptions, MutableTree};
 
 fn list_tree(repo: &gix::Repository, hash: gix::ObjectId) -> Vec<String> {
     let mut tree = MutableTree::new(hash);
@@ -22,11 +22,11 @@ fn collect_paths(repo: &gix::Repository, tree: &mut MutableTree, prefix: &str) -
             format!("{prefix}/{name}")
         };
         match tree.children.as_mut().unwrap().get_mut(&name) {
-            Some(holo_engine::tree::Child::Tree(ref mut t)) => {
+            Some(holo_tree::tree::Child::Tree(ref mut t)) => {
                 paths.extend(collect_paths(repo, t, &path));
             }
-            Some(holo_engine::tree::Child::Blob { .. }) => paths.push(path),
-            Some(holo_engine::tree::Child::Commit { .. }) => paths.push(format!("{path} [gitlink]")),
+            Some(holo_tree::tree::Child::Blob { .. }) => paths.push(path),
+            Some(holo_tree::tree::Child::Commit { .. }) => paths.push(format!("{path} [gitlink]")),
             None => {}
         }
     }
@@ -299,7 +299,7 @@ fn get_or_create_subtree_marks_ancestors_dirty() {
     // Insert a blob into the deepest subtree
     sub.children.as_mut().unwrap().insert(
         "file.txt".to_string(),
-        holo_engine::tree::Child::Blob {
+        holo_tree::tree::Child::Blob {
             mode: 0o100644,
             hash: sb.write_blob("content"),
         },
@@ -355,7 +355,7 @@ fn empty_into_empty_is_noop() {
 #[test]
 fn preserves_executable_mode() {
     let sb = Sandbox::new();
-    use holo_engine::tree::Child;
+    use holo_tree::tree::Child;
 
     let script_hash = sb.write_blob("#!/bin/sh\necho hi");
     let source_hash = sb.write_tree_with_entries(&[helpers::TreeEntrySpec {
@@ -398,7 +398,7 @@ fn preserves_gitlink_entries() {
     let mut check = MutableTree::new(result);
     check.ensure_children(&sb.repo).unwrap();
     match check.children.as_ref().unwrap().get("submodule") {
-        Some(holo_engine::tree::Child::Commit { hash }) => assert_eq!(*hash, fake_commit),
+        Some(holo_tree::tree::Child::Commit { hash }) => assert_eq!(*hash, fake_commit),
         _ => panic!("expected gitlink"),
     }
 }

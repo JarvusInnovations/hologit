@@ -30,7 +30,7 @@ impl Sandbox {
     /// Paths can be nested (e.g. "dir/file.txt"). Intermediate trees
     /// are created automatically.
     pub fn write_tree(&self, files: &[(&str, &str)]) -> ObjectId {
-        let mut tree = holo_engine::tree::MutableTree::empty();
+        let mut tree = holo_tree::tree::MutableTree::empty();
 
         for (path, content) in files {
             let blob_hash = self.write_blob(content);
@@ -100,7 +100,7 @@ impl Sandbox {
     /// Build a complete holo workspace tree with config, sources, and branch mappings.
     /// Returns the root tree hash.
     pub fn write_holo_workspace(&self, spec: &WorkspaceSpec) -> ObjectId {
-        let mut tree = holo_engine::tree::MutableTree::empty();
+        let mut tree = holo_tree::tree::MutableTree::empty();
 
         // .holo/config.toml
         let config_toml = format!(
@@ -201,7 +201,7 @@ impl Sandbox {
                 .unwrap();
             sources_tree.children.as_mut().unwrap().insert(
                 name.clone(),
-                holo_engine::tree::Child::Commit { hash: *commit_hash },
+                holo_tree::tree::Child::Commit { hash: *commit_hash },
             );
             sources_tree.dirty = true;
         }
@@ -219,7 +219,7 @@ impl Sandbox {
 /// Insert a blob at a slash-separated path in a MutableTree.
 fn insert_blob_at_path(
     repo: &gix::Repository,
-    tree: &mut holo_engine::tree::MutableTree,
+    tree: &mut holo_tree::tree::MutableTree,
     path: &str,
     blob_hash: ObjectId,
 ) {
@@ -230,7 +230,7 @@ fn insert_blob_at_path(
     let parent = tree.get_or_create_subtree(repo, dir).unwrap();
     parent.children.as_mut().unwrap().insert(
         file.to_string(),
-        holo_engine::tree::Child::Blob {
+        holo_tree::tree::Child::Blob {
             mode: 0o100644,
             hash: blob_hash,
         },

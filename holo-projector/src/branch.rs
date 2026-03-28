@@ -7,7 +7,7 @@ use gix::ObjectId;
 use crate::config::{self, MappingConfig};
 use crate::error::{Error, Result};
 use crate::source;
-use crate::tree::{MergeMode, MergeOptions, MutableTree};
+use holo_tree::{MergeMode, MergeOptions, MutableTree};
 
 /// Composite a single branch's mappings into the output tree.
 ///

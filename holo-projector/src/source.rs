@@ -10,7 +10,7 @@ use gix::ObjectId;
 
 use crate::config::{self, SourceConfig, SourceConfigFile};
 use crate::error::{Error, Result};
-use crate::tree::MutableTree;
+use holo_tree::MutableTree;
 
 /// Resolve a source to a tree hash.
 ///
@@ -132,20 +132,20 @@ fn commit_to_tree(repo: &gix::Repository, id: ObjectId) -> Result<ObjectId> {
     while obj.kind == gix::object::Kind::Tag {
         let tag = obj
             .try_into_tag()
-            .map_err(|_| Error::Git(format!("{id} failed to parse as tag")))?;
+            .map_err(|_| holo_tree::Error::Git(format!("{id} failed to parse as tag")))?;
         let target = tag
             .target_id()
-            .map_err(|e| Error::Git(e.to_string()))?
+            .map_err(|e| holo_tree::Error::Git(e.to_string()))?
             .detach();
         obj = repo.find_object(target)?;
     }
 
     let commit = obj
         .try_into_commit()
-        .map_err(|_| Error::Git(format!("{id} does not peel to a commit")))?;
+        .map_err(|_| holo_tree::Error::Git(format!("{id} does not peel to a commit")))?;
     let tree_id = commit
         .tree_id()
-        .map_err(|e| Error::Git(e.to_string()))?
+        .map_err(|e| holo_tree::Error::Git(e.to_string()))?
         .detach();
     Ok(tree_id)
 }
@@ -156,10 +156,10 @@ fn peel_to_commit(repo: &gix::Repository, id: ObjectId) -> Result<ObjectId> {
     while obj.kind == gix::object::Kind::Tag {
         let tag = obj
             .try_into_tag()
-            .map_err(|_| Error::Git(format!("{id} failed to parse as tag")))?;
+            .map_err(|_| holo_tree::Error::Git(format!("{id} failed to parse as tag")))?;
         let target = tag
             .target_id()
-            .map_err(|e| Error::Git(e.to_string()))?
+            .map_err(|e| holo_tree::Error::Git(e.to_string()))?
             .detach();
         obj = repo.find_object(target)?;
     }
@@ -185,7 +185,7 @@ pub fn compute_spec_hash(url: &str) -> Result<String> {
     let mut hasher = gix::hash::hasher(gix::hash::Kind::Sha1);
     hasher.update(header.as_bytes());
     hasher.update(toml.as_bytes());
-    let oid = hasher.try_finalize().map_err(|e| Error::Git(e.to_string()))?;
+    let oid = hasher.try_finalize().map_err(|e| holo_tree::Error::Git(e.to_string()))?;
     Ok(oid.to_string())
 }
 
@@ -253,7 +253,7 @@ pub fn resolve_tree_at_path(
         let obj = repo.find_object(current)?;
         let tree = obj
             .try_into_tree()
-            .map_err(|_| Error::Git(format!("{current} is not a tree")))?;
+            .map_err(|_| holo_tree::Error::Git(format!("{current} is not a tree")))?;
 
         let entry = tree
             .iter()
@@ -264,7 +264,7 @@ pub fn resolve_tree_at_path(
                     .map(|s| s == component)
                     .unwrap_or(false)
             })
-            .ok_or_else(|| Error::Git(format!("'{component}' not found in tree {current}")))?;
+            .ok_or_else(|| holo_tree::Error::Git(format!("'{component}' not found in tree {current}")))?;
 
         current = entry.oid().to_owned();
     }
