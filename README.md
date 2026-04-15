@@ -99,14 +99,13 @@ See the [Installation Guide](docs/grand-tour/installation.md) and [Grand Tour](d
 
 ## Claude Code Plugin
 
-Hologit includes a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude deep knowledge of hologit's configuration system, CLI, stock lenses, and workflows.
+Hologit includes an [Agent Skill](https://skills.sh/) that gives your coding agent deep knowledge of hologit's configuration system, CLI, stock lenses, and workflows.
 
 ```bash
-/plugin marketplace add JarvusInnovations/hologit
-/plugin install hologit@hologit
+npx skills add --global JarvusInnovations/hologit
 ```
 
-Once installed, Claude can help you configure `.holo/` files, set up sources and mappings, choose and configure stock lenses, and debug projection issues.
+Once installed, your agent can help you configure `.holo/` files, set up sources and mappings, choose and configure stock lenses, and debug projection issues.
 
 ## Programmatic API
 
