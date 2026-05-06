@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 holo-tree = { path = "../holo-tree", version = "0.1" }
-gix = { version = "0.72" }
+gix = { version = "0.83" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 url = "2"
