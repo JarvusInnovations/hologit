@@ -101,7 +101,7 @@ For complete field schemas with types and defaults: [references/toml-configurati
 
 The mapping filename (key) controls default behavior:
 
-- **`_name.toml`** (leading underscore): Output merges to the branch root (`/`). The `holosource` defaults to `name` (underscore stripped). Use for sources whose files should be at the top level.
+- **`_name.toml`** (leading underscore): Output merges to the branch root (`/`). The `holosource` defaults to `name` (underscore stripped). Use for sources whose files should be at the top level. **Self-reference**: if `name` matches the holospace name from `.holo/config.toml`, the current workspace tree is used as the source — no `holosource` field or `.holo/sources/` file needed.
 - **`name.toml`** (no underscore): Output goes to a subdirectory matching the key (`/name/`). The `holosource` defaults to `name`. Use for sources that should be namespaced.
 - **Nested keys**: `subdir/name.toml` outputs to `subdir/name/` (or `subdir/` if `_name.toml`).
 
@@ -142,6 +142,30 @@ git holo branch create my-branch --template=passthrough
 
 Creates a mapping `_<workspace-name>.toml` with `files = "**"` that includes all workspace files.
 
+### Filter the current repo to specific paths
+
+The simplest holobranch: select specific paths from the current workspace. Name the mapping `_<workspace-name>.toml` so the key auto-resolves to the holospace as a self-referencing source — no `holosource` field or `.holo/sources/` file needed.
+
+Given a workspace named `my-project` (from `.holo/config.toml`):
+
+```toml
+# .holo/branches/my-branch/_my-project.toml
+[holomapping]
+files = [".claude-plugin/**", "skills/**"]
+```
+
+This projects only `.claude-plugin/` and `skills/` from the workspace, preserving their original directory structure. Verify with:
+
+```bash
+git ls-tree -r --name-only $(git holo project my-branch --working)
+```
+
+Since projection produces a git tree hash, it composes with any git command that accepts a tree-ish — for example, creating a distributable archive:
+
+```bash
+git archive --format=zip $(git holo project my-branch --working) > /tmp/my-project.zip
+```
+
 ### Add a mapping manually
 
 Create `.holo/branches/my-branch/_my-source.toml`:
@@ -159,10 +183,12 @@ This maps `packages/core/src/**` (excluding tests) from source `my-source` to th
 After editing `.holo/` config files, run `inspect` to verify the resolved state before projecting:
 
 ```bash
-git holo inspect my-branch
+git holo inspect my-branch --working
 ```
 
 This shows the fully resolved mappings (auto-resolved source names, output paths, layer ordering) and lenses without running a projection. Use it to catch config mistakes early.
+
+> **Note:** Pass `--working` so hologit reads uncommitted `.holo/` files from the working tree. Without it, hologit reads from the git index and won't see unstaged changes. Once `.holo/` files are committed, `--working` is no longer needed.
 
 ### Project and commit
 
