@@ -59,6 +59,10 @@ async function run() {
                 'origin',
                 `https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git`
             ]);
+            // Disable auto-gc to prevent races on .git/shallow during shallow
+            // source fetches. See https://github.com/JarvusInnovations/hologit/issues/450
+            await gitExec('config', ['gc.auto', '0']);
+            await gitExec('config', ['maintenance.auto', 'false']);
         } catch (err) {
             core.setFailed(`Failed to initialize git repository: ${err.message}`);
             return;
