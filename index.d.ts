@@ -136,6 +136,7 @@ declare module 'hologit' {
         getChildren(): Promise<{ [key: string]: TreeObject | BlobObject | CommitObject }>;
         getBlobMap(): Promise<{ [key: string]: BlobObject }>;
         deleteChild(childPath: string): Promise<void>;
+        clearChildren(): void;
         getSubtree(subtreePath: string, create?: boolean): Promise<TreeObject | null>;
         getSubtreeStack(subtreePath: string, create?: boolean): Promise<TreeObject[] | null>;
         write(): Promise<string>;
