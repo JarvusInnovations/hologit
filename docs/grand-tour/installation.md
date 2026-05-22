@@ -1,56 +1,134 @@
-# Grand Tour: Installation
+# Installation Guide
 
-Hologit can be installed via [habitat](https://www.habitat.sh/) (best option in Linux environments):
+Hologit is a Git extension that requires Git >= 2.8.0 and can be installed through multiple package managers.
 
-```console
-$ hab pkg install -b jarvus/hologit
-» Installing jarvus/hologit
-☁ Determining latest version of jarvus/hologit in the 'stable' channel
-→ Using jarvus/hologit/0.4.1/20181224022822
-★ Install of jarvus/hologit/0.4.1/20181224022822 complete with 0 new packages installed.
-» Binlinking git-holo from jarvus/hologit/0.4.1/20181224022822 into /bin
-★ Binlinked git-holo from jarvus/hologit/0.4.1/20181224022822 to /bin/git-holo
+## System Requirements
+
+- Git >= 2.8.0
+- Node.js >= 16 (if installing via npm)
+- Docker (optional, for container-based lenses)
+- Habitat (optional, for habitat-based lenses)
+
+## Installation Methods
+
+### Via Habitat (Recommended for Linux)
+
+[Habitat](https://www.habitat.sh/) provides the most integrated experience for Linux environments:
+
+```bash
+hab pkg install -b jarvus/hologit
 ```
 
-or with [npm](https://www.npmjs.com/) (best option in Mac environments):
+This will:
 
-```console
-$ git --version # ensure >= 2.8.0
-git version 2.17.2 (Apple Git-113)
-$ node --version # ensure >= 8.3.0
-v11.5.0
-$ npm install -g hologit
-/usr/local/bin/git-holo -> /usr/local/lib/node_modules/hologit/bin/cli.js
-+ hologit@0.4.1
-updated 1 package in 1.947s
+1. Install the latest stable version of hologit
+2. Create the necessary binlinks
+3. Set up the habitat studio environment
+
+### Via NPM (Recommended for macOS)
+
+For macOS and other environments, installing via [npm](https://www.npmjs.com/) is recommended:
+
+```bash
+# Verify requirements
+git --version  # should be >= 2.8.0
+node --version # should be >= 16
+
+# Install hologit globally
+npm install -g hologit
 ```
 
-## Optional: watchman for working trees
+This will:
 
-Install `watchman` to enable watching working trees via [habitat](https://www.habitat.sh/) (best option in Linux environments):
+1. Install the hologit package globally
+2. Create a git-holo command in your PATH
+3. Enable using hologit as a Git extension
 
-```console
-$ hab pkg install -b jarvus/watchman
-» Installing jarvus/watchman
-☁ Determining latest version of jarvus/watchman in the 'stable' channel
-→ Using jarvus/watchman/4.9.0/20180624025538
-★ Install of jarvus/watchman/4.9.0/20180624025538 complete with 0 new packages installed.
-» Binlinking watchman from jarvus/watchman/4.9.0/20180624025538 into /bin
-★ Binlinked watchman from jarvus/watchman/4.9.0/20180624025538 to /bin/watchman
-» Binlinking watchman-make from jarvus/watchman/4.9.0/20180624025538 into /bin
-★ Binlinked watchman-make from jarvus/watchman/4.9.0/20180624025538 to /bin/watchman-make
-» Binlinking watchman-wait from jarvus/watchman/4.9.0/20180624025538 into /bin
-★ Binlinked watchman-wait from jarvus/watchman/4.9.0/20180624025538 to /bin/watchman-wait
-$ mkdir -m 777 -p /hab/svc/watchman/var
+## Optional Components
+
+### Watchman for Live Updates
+
+[Watchman](https://facebook.github.io/watchman/) enables live updates when working with holobranches. While this feature is still in development, installing Watchman is recommended for future functionality.
+
+#### Via Habitat (Linux)
+
+```bash
+# Install watchman
+hab pkg install -b jarvus/watchman
+
+# Create required directory
+mkdir -m 777 -p /hab/svc/watchman/var
 ```
 
-or with [homebrew](https://brew.sh/) (best option in Mac environments):
+#### Via Homebrew (macOS)
 
-```console
-$ brew install watchman
-==> Downloading https://homebrew.bintray.com/bottles/watchman-4.9.0_2.mojave.bottle.tar.gz
-Already downloaded: /Users/chris/Library/Caches/Homebrew/downloads/01bca112fb1c6fe86d4068af4635ca8a47a53688bb3597c4ac5e45e49fe1de27--watchman-4.9.0_2.mojave.bottle.tar.gz
-==> Pouring watchman-4.9.0_2.mojave.bottle.tar.gz
-==> launchctl unload -F /Users/chris/Library/LaunchAgents/com.github.facebook.watchman.plist
-🍺  /usr/local/Cellar/watchman/4.9.0_2: 23 files, 2.1MB
+```bash
+brew install watchman
 ```
+
+### Docker for Container Lenses
+
+If you plan to use container-based lenses:
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop) (macOS/Windows) or Docker Engine (Linux)
+2. Ensure the Docker daemon is running
+3. Test with: `docker run hello-world`
+
+### Habitat for Package Lenses
+
+If you plan to use habitat-based lenses:
+
+1. Install [Habitat](https://www.habitat.sh/docs/install-habitat/)
+2. Configure hab studio:
+
+   ```bash
+   hab cli setup
+   ```
+
+## Verifying Installation
+
+After installation, verify hologit is working:
+
+```bash
+# Check version
+git holo version
+
+# View help
+git holo help
+```
+
+## Upgrading
+
+### Via Habitat
+
+```bash
+hab pkg install -b jarvus/hologit
+```
+
+### Via NPM
+
+```bash
+npm update -g hologit
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **git-holo command not found**
+   - Ensure the installation directory is in your PATH
+   - Try running `which git-holo` to locate the command
+
+2. **Permission errors with Habitat**
+   - Ensure proper permissions on /hab directory
+   - Try running with sudo if needed
+
+3. **Node version conflicts**
+   - Use nvm to manage Node versions
+   - Ensure global npm permissions are correct
+
+### Getting Help
+
+- File issues on [GitHub](https://github.com/JarvusInnovations/hologit/issues)
+- Check the [documentation](https://github.com/JarvusInnovations/hologit/tree/master/docs)
+- Join the community discussions
