@@ -1,0 +1,204 @@
+//! holo-tree-napi: Node.js native binding for [holo-tree](../holo-tree).
+//!
+//! Exposes the narrow slice of holo-tree's `MutableTree` + `repo` helpers that
+//! gitsheets needs for its upsert→commit path:
+//!
+//! ```text
+//!   const repo = Repo.open(gitDir)
+//!   const tree = repo.createTreeFromRef('HEAD')   // or repo.createTree()
+//!   tree.writeChild(path, content)                // hash blob + deep insert
+//!   const treeHash   = tree.write()               // flush dirty subtrees → ODB
+//!   const commitHash = repo.commitTree(treeHash, [parentHash], message)
+//!   repo.updateRef(refname, commitHash)
+//! ```
+//!
+//! Conventions across the FFI boundary:
+//! - **Object ids** cross as lowercase hex `String` (matches gitsheets' existing
+//!   hash handling — it stores/compares hashes as hex strings everywhere).
+//! - **Blob content** crosses as `Buffer` (binary-safe; records are TOML/text
+//!   but attachments are arbitrary bytes).
+//!
+//! This binding is a deliberately thin pass-through. Per the spike's governing
+//! principle (see `plans/holo-tree-napi-spike.md` in gitsheets), rough edges in
+//! holo-tree's API are recorded as `Phase-C finding` notes and fixed upstream —
+//! not papered over with cleverness here.
+
+use napi::bindgen_prelude::*;
+use napi_derive::napi;
+
+use holo_tree::repo as ht_repo;
+use holo_tree::tree::empty_tree_id;
+use holo_tree::{MutableTree, ObjectId};
+
+// ── helpers ─────────────────────────────────────────────────────────────────
+
+/// Map a holo-tree error into a JS exception.
+///
+/// Phase-C finding: `holo_tree::Error` collapses to a flat string here. gitsheets
+/// needs to translate substrate failures into its typed error classes, which a
+/// stringified `Display` makes lossy — candidate upstream improvement is a stable
+/// error code / structured variant that survives FFI.
+fn ht_err(e: holo_tree::Error) -> napi::Error {
+    napi::Error::from_reason(e.to_string())
+}
+
+fn parse_oid(hex: &str) -> napi::Result<ObjectId> {
+    ObjectId::from_hex(hex.as_bytes())
+        .map_err(|e| napi::Error::from_reason(format!("invalid object id '{hex}': {e}")))
+}
+
+fn oid_hex(oid: ObjectId) -> String {
+    oid.to_hex().to_string()
+}
+
+/// Git's well-known empty-tree hash (`4b825dc6…`).
+#[napi]
+pub fn empty_tree_hash() -> String {
+    oid_hex(empty_tree_id())
+}
+
+// ── Repo ────────────────────────────────────────────────────────────────────
+
+/// A handle to a git repository, backed by gix.
+///
+/// Stored as a `ThreadSafeRepository` so the handle is `Send + Sync` and can be
+/// cheaply cloned into each `Tree`; every call derives a thread-local
+/// `gix::Repository` via `to_thread_local()`.
+#[napi]
+pub struct Repo {
+    inner: gix::ThreadSafeRepository,
+}
+
+#[napi]
+impl Repo {
+    /// Open a repository at `gitDir` (a `.git` directory, or any path gix can
+    /// discover a repo from).
+    #[napi(factory)]
+    pub fn open(git_dir: String) -> napi::Result<Repo> {
+        let inner = gix::open(&git_dir)
+            .map_err(|e| {
+                napi::Error::from_reason(format!("failed to open repo at '{git_dir}': {e}"))
+            })?
+            .into_sync();
+        Ok(Repo { inner })
+    }
+
+    /// Resolve a ref (branch, tag, or commit hash) to its tree and return a
+    /// mutable, in-memory view of it.
+    #[napi]
+    pub fn create_tree_from_ref(&self, git_ref: String) -> napi::Result<Tree> {
+        let local = self.inner.to_thread_local();
+        let inner = ht_repo::create_tree_from_ref(&local, &git_ref).map_err(ht_err)?;
+        Ok(Tree {
+            repo: self.inner.clone(),
+            inner,
+        })
+    }
+
+    /// Create a fresh empty, mutable in-memory tree rooted at this repo.
+    #[napi]
+    pub fn create_tree(&self) -> Tree {
+        Tree {
+            repo: self.inner.clone(),
+            inner: MutableTree::empty(),
+        }
+    }
+
+    /// Write a commit object pointing at `treeHash` with `parents`, using the
+    /// repo's configured author/committer identity. Returns the new commit hash.
+    #[napi]
+    pub fn commit_tree(
+        &self,
+        tree_hash: String,
+        parents: Vec<String>,
+        message: String,
+    ) -> napi::Result<String> {
+        let local = self.inner.to_thread_local();
+        let tree = parse_oid(&tree_hash)?;
+        let parent_oids = parents
+            .iter()
+            .map(|p| parse_oid(p))
+            .collect::<napi::Result<Vec<_>>>()?;
+        let commit = ht_repo::commit_tree(&local, tree, &parent_oids, &message).map_err(ht_err)?;
+        Ok(oid_hex(commit))
+    }
+
+    /// Point a ref at an object hash.
+    #[napi]
+    pub fn update_ref(&self, refname: String, hash: String) -> napi::Result<()> {
+        let local = self.inner.to_thread_local();
+        let oid = parse_oid(&hash)?;
+        ht_repo::update_ref(&local, &refname, oid).map_err(ht_err)
+    }
+}
+
+// ── Tree ────────────────────────────────────────────────────────────────────
+
+/// A mutable, in-memory git tree.
+///
+/// Holds its own clone of the repo handle so JS callers don't thread a repo
+/// argument through every call.
+///
+/// Phase-C finding #1: holo-tree's `MutableTree` takes `&gix::Repository` on
+/// nearly every method and keeps a *thread-local* tree cache. We smooth the
+/// first half here (the handle lives on the `Tree`) but NOT the second: each
+/// call does `to_thread_local()`, and whether holo-tree's thread-local cache
+/// stays warm across libuv-dispatched calls is the open ergonomics question to
+/// resolve upstream (e.g. a repo-bound tree handle, or an explicit session/
+/// cache object the consumer owns).
+#[napi]
+pub struct Tree {
+    repo: gix::ThreadSafeRepository,
+    inner: MutableTree,
+}
+
+#[napi]
+impl Tree {
+    /// Hash `content` (UTF-8 text) as a blob and insert it at `path`, creating
+    /// intermediate trees as needed. Returns the blob hash.
+    #[napi]
+    pub fn write_child(&mut self, path: String, content: String) -> napi::Result<String> {
+        let local = self.repo.to_thread_local();
+        let oid = self
+            .inner
+            .write_child(&local, &path, &content)
+            .map_err(ht_err)?;
+        Ok(oid_hex(oid))
+    }
+
+    /// Hash raw bytes as a blob and insert at `path`. Binary-safe.
+    #[napi]
+    pub fn write_child_bytes(&mut self, path: String, content: Buffer) -> napi::Result<String> {
+        let local = self.repo.to_thread_local();
+        let oid = self
+            .inner
+            .write_child_bytes(&local, &path, content.as_ref())
+            .map_err(ht_err)?;
+        Ok(oid_hex(oid))
+    }
+
+    /// Read a blob's bytes at `path`, or `null` if no blob exists there.
+    #[napi]
+    pub fn read_blob(&mut self, path: String) -> napi::Result<Option<Buffer>> {
+        let local = self.repo.to_thread_local();
+        let bytes = self.inner.read_blob(&local, &path).map_err(ht_err)?;
+        Ok(bytes.map(Buffer::from))
+    }
+
+    /// Delete a child at a deep `path`. Returns whether it existed.
+    #[napi]
+    pub fn delete_child_deep(&mut self, path: String) -> napi::Result<bool> {
+        let local = self.repo.to_thread_local();
+        self.inner
+            .delete_child_deep(&local, &path)
+            .map_err(ht_err)
+    }
+
+    /// Flush dirty subtrees to the ODB and return the resulting tree hash.
+    #[napi]
+    pub fn write(&mut self) -> napi::Result<String> {
+        let local = self.repo.to_thread_local();
+        let oid = self.inner.write(&local).map_err(ht_err)?;
+        Ok(oid_hex(oid))
+    }
+}

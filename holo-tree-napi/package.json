@@ -1,0 +1,23 @@
+{
+  "name": "holo-tree-napi",
+  "version": "0.1.0",
+  "description": "Node.js native binding for holo-tree — mutable in-memory git trees via gix",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "napi": {
+    "name": "holo-tree-napi"
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4"
+  }
+}
