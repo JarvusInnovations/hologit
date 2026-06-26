@@ -57,6 +57,44 @@ pub fn empty_tree_hash() -> String {
     oid_hex(empty_tree_id())
 }
 
+/// A commit identity (author or committer). `timeSeconds`/`offsetMinutes` are
+/// optional; when omitted the current wall-clock time at UTC is used. Pass them
+/// explicitly to reproduce a specific commit (e.g. match `git commit-tree`
+/// under pinned `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE`).
+#[napi(object)]
+pub struct Signature {
+    pub name: String,
+    pub email: String,
+    pub time_seconds: Option<i64>,
+    pub offset_minutes: Option<i32>,
+}
+
+fn now_secs() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Render git's `"<seconds> ±HHMM"` signature-time format.
+fn format_git_time(seconds: i64, offset_minutes: i32) -> String {
+    let sign = if offset_minutes < 0 { '-' } else { '+' };
+    let abs = offset_minutes.unsigned_abs();
+    format!("{seconds} {sign}{:02}{:02}", abs / 60, abs % 60)
+}
+
+fn to_gix_signature(sig: Signature) -> napi::Result<gix::actor::Signature> {
+    let seconds = sig.time_seconds.unwrap_or_else(now_secs);
+    let time = format_git_time(seconds, sig.offset_minutes.unwrap_or(0));
+    gix::actor::SignatureRef {
+        name: sig.name.as_str().into(),
+        email: sig.email.as_str().into(),
+        time: &time,
+    }
+    .to_owned()
+    .map_err(|e| napi::Error::from_reason(format!("invalid signature time: {e}")))
+}
+
 // ── Repo ────────────────────────────────────────────────────────────────────
 
 /// A handle to a git repository, backed by gix.
@@ -104,14 +142,17 @@ impl Repo {
         }
     }
 
-    /// Write a commit object pointing at `treeHash` with `parents`, using the
-    /// repo's configured author/committer identity. Returns the new commit hash.
+    /// Write a commit object pointing at `treeHash` with `parents`. `author`
+    /// and `committer` are optional; each falls back to the repo's configured
+    /// identity, then a "holo-tree" default. Returns the new commit hash.
     #[napi]
     pub fn commit_tree(
         &self,
         tree_hash: String,
         parents: Vec<String>,
         message: String,
+        author: Option<Signature>,
+        committer: Option<Signature>,
     ) -> napi::Result<String> {
         let local = self.inner.to_thread_local();
         let tree = parse_oid(&tree_hash)?;
@@ -119,7 +160,10 @@ impl Repo {
             .iter()
             .map(|p| parse_oid(p))
             .collect::<napi::Result<Vec<_>>>()?;
-        let commit = ht_repo::commit_tree(&local, tree, &parent_oids, &message).map_err(ht_err)?;
+        let author = author.map(to_gix_signature).transpose()?;
+        let committer = committer.map(to_gix_signature).transpose()?;
+        let commit = ht_repo::commit_tree(&local, tree, &parent_oids, &message, author, committer)
+            .map_err(ht_err)?;
         Ok(oid_hex(commit))
     }
 

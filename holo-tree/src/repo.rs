@@ -81,33 +81,41 @@ pub fn create_tree_from_path(
 
 /// Create a git commit pointing to a tree.
 ///
-/// Uses the repository's configured author/committer identity (from
-/// git config or `GIT_AUTHOR_NAME`/`GIT_COMMITTER_NAME` env vars).
-/// Falls back to "holo-tree" if no identity is configured.
+/// Identity resolution, per field, is: explicit `author`/`committer` argument →
+/// the repository's configured identity (git config or `GIT_AUTHOR_*`/
+/// `GIT_COMMITTER_*` env) → a "holo-tree" fallback. Passing explicit signatures
+/// (with timestamps) is what lets an embedding consumer reproduce a specific
+/// commit bit-for-bit — e.g. match `git commit-tree` under pinned dates.
 pub fn commit_tree(
     repo: &gix::Repository,
     tree_hash: ObjectId,
     parents: &[ObjectId],
     message: &str,
+    author: Option<gix::actor::Signature>,
+    committer: Option<gix::actor::Signature>,
 ) -> Result<ObjectId> {
     use gix::objs::Commit;
 
-    let author = repo
-        .author()
-        .and_then(|r| r.ok())
-        .map(|s| s.to_owned())
-        .transpose()
-        .ok()
-        .flatten()
+    let author = author
+        .or_else(|| {
+            repo.author()
+                .and_then(|r| r.ok())
+                .map(|s| s.to_owned())
+                .transpose()
+                .ok()
+                .flatten()
+        })
         .unwrap_or_else(default_signature);
 
-    let committer = repo
-        .committer()
-        .and_then(|r| r.ok())
-        .map(|s| s.to_owned())
-        .transpose()
-        .ok()
-        .flatten()
+    let committer = committer
+        .or_else(|| {
+            repo.committer()
+                .and_then(|r| r.ok())
+                .map(|s| s.to_owned())
+                .transpose()
+                .ok()
+                .flatten()
+        })
         .unwrap_or_else(default_signature);
 
     let commit = Commit {

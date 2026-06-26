@@ -83,3 +83,42 @@ test('upsert→commit round-trips and advances the ref', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('commitTree honors explicit identity + time (bit-parity with git commit-tree)', () => {
+  const dir = scratchRepo();
+  try {
+    const parent = git(dir, 'rev-parse', 'HEAD');
+    const repo = Repo.open(join(dir, '.git'));
+    const tree = repo.createTreeFromRef('HEAD');
+    tree.writeChild('data/x.toml', 'id = 1\n');
+    const treeHash = tree.write();
+
+    const sig = {
+      name: 'Pin Author',
+      email: 'pin@example.com',
+      timeSeconds: 1700000000,
+      offsetMinutes: 0,
+    };
+    // git commit-tree ensures the stored message ends in a single newline.
+    const holoCommit = repo.commitTree(treeHash, [parent], 'pinned message\n', sig, sig);
+
+    const env = {
+      ...process.env,
+      GIT_AUTHOR_NAME: sig.name,
+      GIT_AUTHOR_EMAIL: sig.email,
+      GIT_AUTHOR_DATE: '1700000000 +0000',
+      GIT_COMMITTER_NAME: sig.name,
+      GIT_COMMITTER_EMAIL: sig.email,
+      GIT_COMMITTER_DATE: '1700000000 +0000',
+    };
+    const gitCommit = execFileSync(
+      'git',
+      ['commit-tree', treeHash, '-p', parent, '-m', 'pinned message'],
+      { cwd: dir, encoding: 'utf8', env },
+    ).trim();
+
+    assert.equal(holoCommit, gitCommit, 'binding commit must hash-match git commit-tree');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
