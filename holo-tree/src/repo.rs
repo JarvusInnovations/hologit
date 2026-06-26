@@ -127,19 +127,41 @@ pub fn commit_tree(
 }
 
 /// Update a git ref to point at a new object.
+///
+/// Accepts the same leniency as `git update-ref`: a bare branch name (e.g.
+/// `main`) is qualified to `refs/heads/main`. Already-qualified names (anything
+/// containing `/`, like `refs/heads/x` or `refs/tags/x`) and all-caps pseudo-refs
+/// (e.g. `HEAD`) pass through unchanged. Without this, gix's `reference()`
+/// rejects a standalone lowercase name ("Standalone references must be all
+/// uppercased").
 pub fn update_ref(
     repo: &gix::Repository,
     refname: &str,
     target: ObjectId,
 ) -> Result<()> {
+    let qualified = qualify_ref(refname);
     repo.reference(
-        refname,
+        qualified.as_ref(),
         target,
         gix::refs::transaction::PreviousValue::Any,
         "holo-tree",
     )
     .map_err(|e| Error::Git(e.to_string()))?;
     Ok(())
+}
+
+/// Map a bare branch name to a fully-qualified ref, matching `git update-ref`'s
+/// leniency. See [`update_ref`].
+fn qualify_ref(refname: &str) -> std::borrow::Cow<'_, str> {
+    let is_pseudo_ref = !refname.is_empty()
+        && refname
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b == b'_');
+    if refname.contains('/') || is_pseudo_ref {
+        std::borrow::Cow::Borrowed(refname)
+    } else {
+        std::borrow::Cow::Owned(format!("refs/heads/{refname}"))
+    }
 }
 
 /// Fallback signature when git config has no author/committer.
@@ -157,4 +179,23 @@ fn default_signature() -> gix::actor::Signature {
     }
     .to_owned()
     .expect("valid fallback signature")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::qualify_ref;
+
+    #[test]
+    fn qualifies_bare_branch_names() {
+        assert_eq!(qualify_ref("main"), "refs/heads/main");
+        assert_eq!(qualify_ref("feature-x"), "refs/heads/feature-x");
+    }
+
+    #[test]
+    fn passes_through_qualified_and_pseudo_refs() {
+        assert_eq!(qualify_ref("refs/heads/main"), "refs/heads/main");
+        assert_eq!(qualify_ref("refs/tags/v1"), "refs/tags/v1");
+        assert_eq!(qualify_ref("HEAD"), "HEAD");
+        assert_eq!(qualify_ref("FETCH_HEAD"), "FETCH_HEAD");
+    }
 }
