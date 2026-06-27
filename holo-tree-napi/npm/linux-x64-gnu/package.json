@@ -1,0 +1,27 @@
+{
+  "name": "@hologit/holo-tree-linux-x64-gnu",
+  "version": "0.1.0",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "holo-tree.linux-x64-gnu.node",
+  "files": [
+    "holo-tree.linux-x64-gnu.node"
+  ],
+  "description": "Node.js native binding for holo-tree — mutable in-memory git trees via gix",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JarvusInnovations/hologit.git",
+    "directory": "holo-tree-napi"
+  },
+  "libc": [
+    "glibc"
+  ]
+}
