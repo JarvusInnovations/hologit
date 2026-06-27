@@ -1,0 +1,119 @@
+# Build + publish the @hologit/holo-tree napi binding with per-platform prebuilds.
+#
+# Each target builds NATIVELY on its matching runner (no cross-compilation):
+#   x86_64-unknown-linux-gnu → ubuntu-latest
+#   aarch64-apple-darwin     → macos-latest   (Apple Silicon runner)
+#   x86_64-pc-windows-msvc   → windows-latest
+#
+# Triggers:
+#   - pull_request touching the binding/crate  → build + smoke-test all 3 (no publish)
+#   - push of a `holo-tree-v*` tag             → build, then publish to npm
+#   - workflow_dispatch                        → manual build
+#
+# Publish prerequisites (one-time, npm-account side — see holo-tree-napi/README):
+#   - secrets.NPM_TOKEN: an npm automation token with publish rights to the
+#     @hologit scope (the 4 packages: @hologit/holo-tree + the 3 platform pkgs).
+#   - The `napi prepublish` step also creates a GitHub release (uses GITHUB_TOKEN).
+name: holo-tree-napi
+
+on:
+  pull_request:
+    paths:
+      - 'holo-tree-napi/**'
+      - 'holo-tree/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  push:
+    tags:
+      - 'holo-tree-v*'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: holo-tree-napi
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            host: ubuntu-latest
+          - target: aarch64-apple-darwin
+            host: macos-latest
+          - target: x86_64-pc-windows-msvc
+            host: windows-latest
+    runs-on: ${{ matrix.host }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Configure git identity (the smoke test commits to scratch repos)
+        run: |
+          git config --global user.name "holo-tree CI"
+          git config --global user.email "ci@hologit.local"
+
+      - run: npm install
+
+      - name: Build (native, release)
+        run: npm run build -- --target ${{ matrix.target }}
+
+      - name: Smoke test
+        run: npm test
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bindings-${{ matrix.target }}
+          path: holo-tree-napi/*.node
+          if-no-files-found: error
+
+  publish:
+    name: publish @hologit/holo-tree
+    if: ${{ startsWith(github.ref, 'refs/tags/holo-tree-v') }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # napi prepublish cuts a GitHub release
+      id-token: write   # npm provenance attestation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install
+
+      - name: Set version from tag (e.g. holo-tree-v0.2.0 → 0.2.0)
+        run: |
+          VERSION="${GITHUB_REF_NAME#holo-tree-v}"
+          npm version --no-git-tag-version "$VERSION"
+          npx napi version
+
+      - name: Collect prebuilt .node artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: holo-tree-napi/artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Distribute artifacts into npm/<triple>/
+        run: npx napi artifacts --dir artifacts
+
+      - name: Publish (platform packages via prepublishOnly hook, then main)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -14,7 +14,7 @@ source and fixed upstream rather than worked around here.
 ## API
 
 ```js
-const { Repo, emptyTreeHash } = require('holo-tree-napi');
+const { Repo, emptyTreeHash } = require('@hologit/holo-tree');
 
 const repo = Repo.open('/path/to/repo/.git');
 
@@ -57,11 +57,42 @@ npm run build:debug   # or: npm run build   (release)
 npm test              # node --test against a scratch git repo
 ```
 
-`napi build` emits `holo-tree-napi.<triple>.node` plus generated `index.js` /
-`index.d.ts` (all git-ignored — they are build artifacts).
+`napi build` emits `holo-tree.<triple>.node`. The generated `index.js` loader
+and `index.d.ts` types **are committed**; only the `.node` binaries are
+git-ignored (built per-platform in CI).
 
-## Status
+## Publishing
 
-Phase A of the gitsheets holo-tree spike (see
-`plans/holo-tree-napi-spike.md` in the gitsheets repo). Not published to npm;
-gitsheets consumes it via a local path/git dependency during the spike.
+Published as the scoped package **`@hologit/holo-tree`** with per-platform
+prebuilt binaries shipped as `optionalDependencies`:
+
+| Platform package | Triple | Built on |
+| --- | --- | --- |
+| `@hologit/holo-tree-linux-x64-gnu` | `x86_64-unknown-linux-gnu` | ubuntu-latest |
+| `@hologit/holo-tree-darwin-arm64` | `aarch64-apple-darwin` | macos-latest |
+| `@hologit/holo-tree-win32-x64-msvc` | `x86_64-pc-windows-msvc` | windows-latest |
+
+Each target builds **natively** on its runner — no cross-compilation. The
+`.github/workflows/holo-tree-napi.yml` workflow builds + smoke-tests all three on
+every PR touching the binding, and on a `holo-tree-v*` tag it builds then
+publishes.
+
+### Release
+
+```sh
+# bump the version, then tag (tag drives the published version):
+git tag holo-tree-v0.1.0 && git push origin holo-tree-v0.1.0
+```
+
+### One-time npm-account setup (required before the first publish)
+
+- Create an npm **automation token** with publish rights to the `@hologit`
+  scope and add it to the repo as the **`NPM_TOKEN`** secret.
+- The four packages publish under the `@hologit` scope — ensure the scope exists
+  and the token can create packages in it. (First publish uses `--access public`.)
+- The workflow also adds npm **provenance** (`id-token: write`) and cuts a
+  GitHub release via `napi prepublish` (`GITHUB_TOKEN`).
+
+To add or drop a platform later, edit `napi.triples.additional` +
+`optionalDependencies` in `package.json`, run `napi create-npm-dir -t .`, and add
+the matching matrix entry in the workflow.
