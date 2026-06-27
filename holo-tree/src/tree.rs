@@ -324,8 +324,14 @@ impl MutableTree {
 
     /// Navigate to a subtree, creating intermediate empty trees as needed.
     ///
-    /// **Marks all ancestors dirty** when any new node is created, matching
-    /// the JS `getSubtreeStack(path, create=true)` behavior.
+    /// This is the **mutating** navigator: callers reach for it to change the
+    /// destination (write a child, insert a gitlink, …). So every node along
+    /// the path — root included — is marked dirty, because each one's
+    /// serialized form will change once `write()` propagates the mutation back
+    /// up. (The earlier behavior only marked the path dirty when a *new* node
+    /// was created, which silently dropped writes into an already-existing
+    /// directory: the leaf was dirtied but its clean ancestors short-circuited
+    /// in `write()`.)
     pub fn get_or_create_subtree(
         &mut self,
         repo: &gix::Repository,
@@ -335,46 +341,24 @@ impl MutableTree {
             return Ok(self);
         }
 
-        let parts: Vec<&str> = path.split('/').collect();
-
-        // First pass: detect whether any node needs to be created.
-        let mut needs_create = false;
-        {
-            let mut check = &mut *self;
-            for part in &parts {
-                check.ensure_children(repo)?;
-                if !check.children.as_ref().unwrap().contains_key(*part) {
-                    needs_create = true;
-                    break;
-                }
-                match check.children.as_mut().unwrap().get_mut(*part) {
-                    Some(Child::Tree(ref mut t)) => check = t,
-                    _ => break,
-                }
-            }
-        }
-
-        if needs_create {
-            self.dirty = true;
-        }
-
-        // Second pass: create missing nodes.
+        self.dirty = true;
         let mut cur = self;
-        for part in parts {
+        for part in path.split('/') {
             cur.ensure_children(repo)?;
-            let children = cur.children.as_mut().unwrap();
-
-            let child = children.entry(part.to_string()).or_insert_with(|| {
-                let mut t = MutableTree::empty();
-                t.dirty = true;
-                Child::Tree(t)
-            });
+            let child = cur
+                .children
+                .as_mut()
+                .unwrap()
+                .entry(part.to_string())
+                .or_insert_with(|| {
+                    let mut t = MutableTree::empty();
+                    t.dirty = true;
+                    Child::Tree(t)
+                });
 
             cur = match child {
                 Child::Tree(ref mut t) => {
-                    if needs_create {
-                        t.dirty = true;
-                    }
+                    t.dirty = true;
                     t
                 }
                 _ => {
@@ -385,6 +369,14 @@ impl MutableTree {
                 }
             };
         }
+        // Postcondition: the returned node has its children loaded. Navigation
+        // above only ensures children on nodes it descends *through*; a final
+        // node that already exists in the parent tree is lazily loaded
+        // (`children: None`). Callers that mutate the returned node (e.g.
+        // `write_child_bytes`) rely on `children` being `Some` — and loading
+        // here is also what preserves existing siblings when writing into an
+        // existing directory.
+        cur.ensure_children(repo)?;
         Ok(cur)
     }
 
