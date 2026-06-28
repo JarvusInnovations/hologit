@@ -1,6 +1,6 @@
 {
   "name": "@hologit/holo-tree",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Node.js native binding for holo-tree — mutable in-memory git trees via gix",
   "main": "index.js",
   "types": "index.d.ts",
@@ -29,9 +29,9 @@
     "index.d.ts"
   ],
   "optionalDependencies": {
-    "@hologit/holo-tree-linux-x64-gnu": "0.1.0",
-    "@hologit/holo-tree-darwin-arm64": "0.1.0",
-    "@hologit/holo-tree-win32-x64-msvc": "0.1.0"
+    "@hologit/holo-tree-linux-x64-gnu": "0.0.1",
+    "@hologit/holo-tree-darwin-arm64": "0.0.1",
+    "@hologit/holo-tree-win32-x64-msvc": "0.0.1"
   },
   "scripts": {
     "artifacts": "napi artifacts",

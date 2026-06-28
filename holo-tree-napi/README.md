@@ -77,22 +77,49 @@ Each target builds **natively** on its runner — no cross-compilation. The
 every PR touching the binding, and on a `holo-tree-v*` tag it builds then
 publishes.
 
-### Release
+Auth is **npm trusted publishing (OIDC)** — no tokens, matching hologit's
+`publish-npm.yml`. Trusted publishing is configured *per package*, and a package
+can't get a trusted publisher until it exists — so the four packages need a
+**one-time manual bootstrap** before automated releases work.
+
+### One-time bootstrap (manual first publish, then configure trusted publishing)
+
+The four packages all start at an early version (currently `0.0.1`). They must
+exist on npm before trusted publishing can be turned on.
+
+1. **Get the prebuilt binaries.** Run the `holo-tree-napi` workflow (push the
+   branch / open a PR, or trigger `workflow_dispatch`) and download its three
+   `bindings-*` artifacts — they hold the `.node` for each platform. A single
+   machine can't build all three natively, so use the CI artifacts.
+
+2. **Publish all four manually**, logged in as an `@hologit` org member
+   (`npm login`):
+
+   ```sh
+   cd holo-tree-napi
+   npm install
+   npx napi artifacts --dir <downloaded-artifacts-dir>   # → npm/<triple>/*.node
+   # platform packages first, then the main package:
+   for d in npm/*/ ; do ( cd "$d" && npm publish --access public ); done
+   npm publish --access public --ignore-scripts          # main; skip the napi
+                                                         # prepublish GH-release hook
+   ```
+
+3. **Turn on trusted publishing** on npmjs.com for **each** of the four packages
+   → Settings → Trusted Publisher → GitHub Actions, repo
+   `JarvusInnovations/hologit`, workflow `holo-tree-napi.yml`.
+
+### Releases (after bootstrap — fully automated, tokenless)
 
 ```sh
-# bump the version, then tag (tag drives the published version):
 git tag holo-tree-v0.1.0 && git push origin holo-tree-v0.1.0
 ```
 
-### One-time npm-account setup (required before the first publish)
-
-- Create an npm **automation token** with publish rights to the `@hologit`
-  scope and add it to the repo as the **`NPM_TOKEN`** secret.
-- The four packages publish under the `@hologit` scope — ensure the scope exists
-  and the token can create packages in it. (First publish uses `--access public`.)
-- The workflow also adds npm **provenance** (`id-token: write`) and cuts a
-  GitHub release via `napi prepublish` (`GITHUB_TOKEN`).
+The tag drives the published version; CI builds all three platforms, then
+publishes via OIDC (provenance + a GitHub release). No secret needed.
 
 To add or drop a platform later, edit `napi.triples.additional` +
-`optionalDependencies` in `package.json`, run `napi create-npm-dir -t .`, and add
-the matching matrix entry in the workflow.
+`optionalDependencies` in `package.json`, run `napi create-npm-dir -t .`, add the
+matching matrix entry in the workflow, and (since it's a new package) bootstrap
+
++ trust that one package too.

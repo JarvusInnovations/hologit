@@ -10,10 +10,13 @@
 #   - push of a `holo-tree-v*` tag             → build, then publish to npm
 #   - workflow_dispatch                        → manual build
 #
-# Publish prerequisites (one-time, npm-account side — see holo-tree-napi/README):
-#   - secrets.NPM_TOKEN: an npm automation token with publish rights to the
-#     @hologit scope (the 4 packages: @hologit/holo-tree + the 3 platform pkgs).
-#   - The `napi prepublish` step also creates a GitHub release (uses GITHUB_TOKEN).
+# Publish auth: npm TRUSTED PUBLISHING (OIDC) — no token, matching hologit's
+# publish-npm.yml. Each of the 4 packages (@hologit/holo-tree + the 3 platform
+# packages) must already exist on npm AND have a trusted publisher configured
+# for this repo + this workflow. One-time bootstrap (the package can't get a
+# trusted publisher until it exists): publish an early version of all 4 manually,
+# then add the trusted publishers. See holo-tree-napi/README "Publishing".
+# (`napi prepublish` also cuts a GitHub release via GITHUB_TOKEN.)
 name: holo-tree-napi
 
 on:
@@ -91,7 +94,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' # recent npm for OIDC trusted publishing
           registry-url: 'https://registry.npmjs.org'
 
       - run: npm install
@@ -99,8 +102,13 @@ jobs:
       - name: Set version from tag (e.g. holo-tree-v0.2.0 → 0.2.0)
         run: |
           VERSION="${GITHUB_REF_NAME#holo-tree-v}"
+          export VERSION
           npm version --no-git-tag-version "$VERSION"
           npx napi version
+          # `napi version` updates the npm/<triple> package versions but NOT the
+          # root optionalDependencies — pin those to the release version too, or
+          # the main package would resolve stale platform packages.
+          node -e "const fs=require('fs'),p=require('./package.json');for(const k in p.optionalDependencies)p.optionalDependencies[k]=process.env.VERSION;fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
 
       - name: Collect prebuilt .node artifacts
         uses: actions/download-artifact@v8
@@ -113,7 +121,8 @@ jobs:
         run: npx napi artifacts --dir artifacts
 
       - name: Publish (platform packages via prepublishOnly hook, then main)
+        # Tokenless: OIDC trusted publishing. Requires all 4 packages to exist
+        # with a trusted publisher configured (see the bootstrap note up top).
         run: npm publish --provenance --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
