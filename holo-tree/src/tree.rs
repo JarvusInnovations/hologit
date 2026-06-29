@@ -338,6 +338,14 @@ impl MutableTree {
         path: &str,
     ) -> Result<&mut MutableTree> {
         if path == "." || path.is_empty() {
+            // Destination is the root itself. Mark dirty and load its children
+            // so a mutating caller (e.g. write_child_bytes for a repo-root file
+            // like "a.toml", whose dir is ".") can insert alongside existing
+            // entries — rather than panic on `children.as_mut().unwrap()` when
+            // the root was lazily loaded from a ref. Same postcondition as the
+            // deep-path return below.
+            self.dirty = true;
+            self.ensure_children(repo)?;
             return Ok(self);
         }
 

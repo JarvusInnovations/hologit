@@ -55,3 +55,46 @@ fn write_child_into_fresh_subtree_still_works() {
         Some(&b"id = 1\n"[..]),
     );
 }
+
+/// Regression: writing a file at the REPO ROOT (dir = ".") into a lazily-loaded
+/// tree must load the root's children rather than panic on
+/// `children.as_mut().unwrap()`. The earlier fix only covered deep paths; the
+/// `path == "."` early-return in get_or_create_subtree bypassed it. Surfaced by
+/// install-testing the published binding with a root-level `writeChild`.
+#[test]
+fn write_child_at_repo_root_preserves_siblings() {
+    let sb = Sandbox::new();
+
+    // Committed tree with a root-level file; reload it lazily (children: None).
+    let base = sb.write_tree(&[("existing.toml", "id = 0\n")]);
+    let mut tree = MutableTree::new(base);
+
+    tree.write_child(&sb.repo, "new.toml", "id = 1\n").unwrap();
+    let hash = tree.write(&sb.repo).unwrap();
+    assert_ne!(hash, base, "a root-level write must change the tree hash");
+
+    let mut reloaded = MutableTree::new(hash);
+    assert_eq!(
+        reloaded.read_blob(&sb.repo, "existing.toml").unwrap().as_deref(),
+        Some(&b"id = 0\n"[..]),
+        "existing root sibling must be preserved",
+    );
+    assert_eq!(
+        reloaded.read_blob(&sb.repo, "new.toml").unwrap().as_deref(),
+        Some(&b"id = 1\n"[..]),
+    );
+}
+
+#[test]
+fn write_child_at_repo_root_into_empty() {
+    let sb = Sandbox::new();
+    let mut tree = MutableTree::empty();
+    tree.write_child(&sb.repo, "only.toml", "id = 1\n").unwrap();
+    let hash = tree.write(&sb.repo).unwrap();
+
+    let mut reloaded = MutableTree::new(hash);
+    assert_eq!(
+        reloaded.read_blob(&sb.repo, "only.toml").unwrap().as_deref(),
+        Some(&b"id = 1\n"[..]),
+    );
+}
