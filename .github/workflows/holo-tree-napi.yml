@@ -16,7 +16,10 @@
 # for this repo + this workflow. One-time bootstrap (the package can't get a
 # trusted publisher until it exists): publish an early version of all 4 manually,
 # then add the trusted publishers. See holo-tree-napi/README "Publishing".
-# (`napi prepublish` also cuts a GitHub release via GITHUB_TOKEN.)
+#
+# The release marker is the `holo-tree-v*` git tag itself; napi prepublish runs
+# with --skip-gh-release so it does NOT create a bare `v<version>` GitHub release
+# + tag (those collide with hologit's own `v*` JS-package release namespace).
 name: holo-tree-napi
 
 on:
@@ -87,7 +90,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # napi prepublish cuts a GitHub release
+      contents: read    # no GitHub release is created (see --skip-gh-release)
       id-token: write   # npm provenance attestation
     steps:
       - uses: actions/checkout@v4
@@ -123,6 +126,6 @@ jobs:
       - name: Publish (platform packages via prepublishOnly hook, then main)
         # Tokenless: OIDC trusted publishing. Requires all 4 packages to exist
         # with a trusted publisher configured (see the bootstrap note up top).
+        # prepublishOnly runs `napi prepublish ... --skip-gh-release`, so no
+        # GitHub release/tag is created and no GITHUB_TOKEN is needed.
         run: npm publish --provenance --access public
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

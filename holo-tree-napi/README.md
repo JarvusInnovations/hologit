@@ -102,7 +102,7 @@ exist on npm before trusted publishing can be turned on.
    # platform packages first, then the main package:
    for d in npm/*/ ; do ( cd "$d" && npm publish --access public ); done
    npm publish --access public --ignore-scripts          # main; skip the napi
-                                                         # prepublish GH-release hook
+                                                         # prepublish hook
    ```
 
 3. **Turn on trusted publishing** on npmjs.com for **each** of the four packages
@@ -112,11 +112,14 @@ exist on npm before trusted publishing can be turned on.
 ### Releases (after bootstrap — fully automated, tokenless)
 
 ```sh
-git tag holo-tree-v0.1.0 && git push origin holo-tree-v0.1.0
+git tag holo-tree-v0.1.1 && git push origin holo-tree-v0.1.1
 ```
 
 The tag drives the published version; CI builds all three platforms, then
-publishes via OIDC (provenance + a GitHub release). No secret needed.
+publishes via OIDC (provenance). No secret needed. The `holo-tree-v*` tag is the
+release marker — napi runs with `--skip-gh-release` so it does **not** create a
+bare `v<version>` GitHub release/tag (which would collide with hologit's own
+`v*` JS-package release namespace).
 
 To add or drop a platform later, edit `napi.triples.additional` +
 `optionalDependencies` in `package.json`, run `napi create-npm-dir -t .`, add the
