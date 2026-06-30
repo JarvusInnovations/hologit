@@ -45,12 +45,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Native — build + smoke-test on a matching runner.
           - target: x86_64-unknown-linux-gnu
             host: ubuntu-latest
+            test: true
+          - target: aarch64-unknown-linux-gnu
+            host: ubuntu-24.04-arm
+            test: true
           - target: aarch64-apple-darwin
             host: macos-latest
+            test: true
           - target: x86_64-pc-windows-msvc
             host: windows-latest
+            test: true
+          # Cross — build only; the .node can't run on the host arch/libc, so
+          # the smoke test is skipped (the logic is covered by the native runs).
+          - target: x86_64-unknown-linux-musl
+            host: ubuntu-latest
+            setup: sudo apt-get update && sudo apt-get install -y musl-tools
+            test: false
+          - target: x86_64-apple-darwin
+            host: macos-latest
+            test: false
     runs-on: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v4
@@ -65,17 +81,27 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Target setup
+        if: ${{ matrix.setup }}
+        run: ${{ matrix.setup }}
+
       - name: Configure git identity (the smoke test commits to scratch repos)
+        if: ${{ matrix.test }}
         run: |
           git config --global user.name "holo-tree CI"
           git config --global user.email "ci@hologit.local"
 
       - run: npm install
 
-      - name: Build (native, release)
+      - name: Build (release)
         run: npm run build -- --target ${{ matrix.target }}
+        env:
+          # Only consulted when building the musl target; harmless otherwise.
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+          CC_x86_64_unknown_linux_musl: musl-gcc
 
       - name: Smoke test
+        if: ${{ matrix.test }}
         run: npm test
 
       - uses: actions/upload-artifact@v7

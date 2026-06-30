@@ -1,0 +1,24 @@
+{
+  "name": "@hologit/holo-tree-darwin-x64",
+  "version": "0.0.1",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "holo-tree.darwin-x64.node",
+  "files": [
+    "holo-tree.darwin-x64.node"
+  ],
+  "description": "Node.js native binding for holo-tree — mutable in-memory git trees via gix",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JarvusInnovations/hologit.git",
+    "directory": "holo-tree-napi"
+  }
+}

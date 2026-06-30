@@ -78,16 +78,20 @@ git-ignored (built per-platform in CI).
 Published as the scoped package **`@hologit/holo-tree`** with per-platform
 prebuilt binaries shipped as `optionalDependencies`:
 
-| Platform package | Triple | Built on |
-| --- | --- | --- |
-| `@hologit/holo-tree-linux-x64-gnu` | `x86_64-unknown-linux-gnu` | ubuntu-latest |
-| `@hologit/holo-tree-darwin-arm64` | `aarch64-apple-darwin` | macos-latest |
-| `@hologit/holo-tree-win32-x64-msvc` | `x86_64-pc-windows-msvc` | windows-latest |
+| Platform package | Triple | Built on | Smoke-tested |
+| --- | --- | --- | --- |
+| `@hologit/holo-tree-linux-x64-gnu` | `x86_64-unknown-linux-gnu` | ubuntu-latest | ✓ native |
+| `@hologit/holo-tree-linux-arm64-gnu` | `aarch64-unknown-linux-gnu` | ubuntu-24.04-arm | ✓ native |
+| `@hologit/holo-tree-linux-x64-musl` | `x86_64-unknown-linux-musl` | ubuntu-latest (musl cross) | build-only |
+| `@hologit/holo-tree-darwin-arm64` | `aarch64-apple-darwin` | macos-latest | ✓ native |
+| `@hologit/holo-tree-darwin-x64` | `x86_64-apple-darwin` | macos-latest (cross) | build-only |
+| `@hologit/holo-tree-win32-x64-msvc` | `x86_64-pc-windows-msvc` | windows-latest | ✓ native |
 
-Each target builds **natively** on its runner — no cross-compilation. The
-`.github/workflows/holo-tree-napi.yml` workflow builds + smoke-tests all three on
-every PR touching the binding, and on a `holo-tree-v*` tag it builds then
-publishes.
+Native targets build + smoke-test on a matching runner; cross targets (musl,
+darwin-x64) build only, since their `.node` can't run on the host arch/libc (the
+logic is covered by the native runs). The `.github/workflows/holo-tree-napi.yml`
+workflow builds all six on every PR touching the binding, and on a
+`holo-tree-v*` tag it builds then publishes.
 
 Auth is **npm trusted publishing (OIDC)** — no tokens, matching hologit's
 `publish-npm.yml`. Trusted publishing is configured *per package*, and a package
