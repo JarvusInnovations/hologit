@@ -524,6 +524,44 @@ impl MutableTree {
         }
     }
 
+    /// Clear all children under a deep `path`, replacing the subtree there
+    /// with the empty tree and marking the ancestor chain dirty.
+    ///
+    /// This is an **O(1)** clear: it does not load the cleared subtree's own
+    /// contents from the ODB — only the ancestor trees needed to navigate to
+    /// its parent. Intermediate trees along `path` are created if absent; since
+    /// an empty subtree is pruned on `write()`, clearing a path that doesn't
+    /// exist is a no-op in the written result.
+    ///
+    /// `path == "."` (or empty) clears the root tree itself.
+    pub fn clear_children(&mut self, repo: &gix::Repository, path: &str) -> Result<()> {
+        if path == "." || path.is_empty() {
+            self.children = Some(BTreeMap::new());
+            self.hash = empty_tree_id();
+            self.dirty = true;
+            return Ok(());
+        }
+
+        let (dir, name) = match path.rsplit_once('/') {
+            Some((d, f)) => (d, f),
+            None => (".", path),
+        };
+
+        // get_or_create_subtree marks the whole navigated path (root included)
+        // dirty, which is exactly what we need: every ancestor's serialized
+        // form changes once the cleared subtree is pruned on write().
+        let parent = self.get_or_create_subtree(repo, dir)?;
+        let mut empty = MutableTree::empty();
+        empty.dirty = true;
+        parent
+            .children
+            .as_mut()
+            .unwrap()
+            .insert(name.to_string(), Child::Tree(empty));
+        parent.dirty = true;
+        Ok(())
+    }
+
     /// Recursively collect all blobs into a flat map.
     pub fn get_blob_map(
         &mut self,
