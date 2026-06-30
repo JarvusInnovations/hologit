@@ -134,6 +134,37 @@ pub fn commit_tree(
     Ok(id.detach())
 }
 
+/// Resolve a ref / rev-spec (branch, tag, `HEAD`, hash, …) to its object hash,
+/// peeling annotated tags down to the object they point at (typically a commit).
+///
+/// Returns `Ok(None)` when the ref does not resolve — an unknown name, an
+/// unborn branch, or any spec gix can't parse to a single object. That is the
+/// natural "does this ref exist?" contract a caller wants from a resolver
+/// (gitsheets uses it to discover the current commit before a compare-and-swap
+/// `update_ref`). Genuine ODB failures *after* a spec resolves still surface as
+/// `Err`.
+pub fn resolve_ref(repo: &gix::Repository, git_ref: &str) -> Result<Option<ObjectId>> {
+    let spec = match repo.rev_parse_single(git_ref) {
+        Ok(s) => s,
+        Err(_) => return Ok(None),
+    };
+    let mut obj = spec.object().map_err(|e| Error::Git(e.to_string()))?;
+
+    // Peel annotated tags to their target object.
+    while obj.kind == gix::object::Kind::Tag {
+        let tag = obj
+            .try_into_tag()
+            .map_err(|_| Error::Git("failed to parse tag".into()))?;
+        let target = tag
+            .target_id()
+            .map_err(|e| Error::Git(e.to_string()))?
+            .detach();
+        obj = repo.find_object(target)?;
+    }
+
+    Ok(Some(obj.id))
+}
+
 /// Update a git ref to point at a new object.
 ///
 /// Accepts the same leniency as `git update-ref`: a bare branch name (e.g.
@@ -142,19 +173,28 @@ pub fn commit_tree(
 /// (e.g. `HEAD`) pass through unchanged. Without this, gix's `reference()`
 /// rejects a standalone lowercase name ("Standalone references must be all
 /// uppercased").
+///
+/// When `expected_old` is `Some`, this is a **compare-and-swap**: the update
+/// only succeeds if the ref currently resolves to exactly that object
+/// (`PreviousValue::MustExistAndMatch`), so a concurrent writer that moved the
+/// ref out from under the caller makes the swap fail loudly rather than clobber
+/// their commit. When `None`, the ref is set unconditionally
+/// (`PreviousValue::Any`), matching the original force behavior.
 pub fn update_ref(
     repo: &gix::Repository,
     refname: &str,
     target: ObjectId,
+    expected_old: Option<ObjectId>,
 ) -> Result<()> {
     let qualified = qualify_ref(refname);
-    repo.reference(
-        qualified.as_ref(),
-        target,
-        gix::refs::transaction::PreviousValue::Any,
-        "holo-tree",
-    )
-    .map_err(|e| Error::Git(e.to_string()))?;
+    let previous = match expected_old {
+        Some(old) => gix::refs::transaction::PreviousValue::MustExistAndMatch(
+            gix::refs::Target::Object(old),
+        ),
+        None => gix::refs::transaction::PreviousValue::Any,
+    };
+    repo.reference(qualified.as_ref(), target, previous, "holo-tree")
+        .map_err(|e| Error::Git(e.to_string()))?;
     Ok(())
 }
 

@@ -39,13 +39,25 @@ blob content crosses as `Buffer` (binary-safe).
 | `repo.createTreeFromRef(ref)` → `Tree` | `repo::create_tree_from_ref` | resolves ref→commit→tree |
 | `repo.createTree()` → `Tree` | `MutableTree::empty` | |
 | `repo.commitTree(treeHash, parents[], msg)` → hash | `repo::commit_tree` | uses git-config identity |
-| `repo.updateRef(ref, hash)` | `repo::update_ref` | |
+| `repo.updateRef(ref, hash, expectedOldHash?)` | `repo::update_ref` | compare-and-swap when `expectedOldHash` given; force otherwise |
+| `repo.resolveRef(ref)` → `hash\|null` | `repo::resolve_ref` | peels tags; `null` if unresolved |
+| `repo.writeBlob(buf)` → hash | `gix write_blob` | hash bytes into the ODB, no tree |
 | `tree.writeChild(path, text)` → hash | `MutableTree::write_child` | UTF-8 text |
 | `tree.writeChildBytes(path, buf)` → hash | `MutableTree::write_child_bytes` | binary |
 | `tree.readBlob(path)` → `Buffer\|null` | `MutableTree::read_blob` | |
+| `tree.getChild(path)` → `{type,hash,mode}\|null` | `MutableTree::get_child` | read-only; deep path |
+| `tree.getChildren(path)` → `[{name,type,hash,mode}]` | `get_subtree`+`ensure_children` | read-only; direct children |
+| `tree.getBlobMap(path?)` → `[{path,hash,mode}]` | `get_subtree`+`get_blob_map` | read-only; paths relative to subtree |
 | `tree.deleteChildDeep(path)` → bool | `MutableTree::delete_child_deep` | |
+| `tree.clearChildren(path)` | `MutableTree::clear_children` | O(1) subtree wipe |
+| `tree.merge(other, {files?, mode})` | `MutableTree::merge` | `mode`: `overlay`/`replace`/`underlay` |
 | `tree.write()` → treeHash | `MutableTree::write` | |
 | `emptyTreeHash()` → hash | `tree::empty_tree_id` | module fn |
+
+`mode` values are the git filemode as a number (e.g. `33188` = `0o100644`). Tree
+hashes reported by the read-only navigators reflect the last `write()`/load and
+are stale for a subtree mutated since — flush with `write()` for canonical
+hashes.
 
 ## Building
 

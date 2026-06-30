@@ -18,6 +18,24 @@ pub enum Error {
     Toml { path: String, message: String },
 }
 
+impl Error {
+    /// A stable, machine-matchable code for this error variant.
+    ///
+    /// Unlike the human-readable `Display` string (which embeds variable
+    /// context), these codes are part of the API contract: downstream
+    /// consumers — notably the napi binding and gitsheets — match on them to
+    /// map substrate failures onto their own typed errors. Keep them stable.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Error::Git(_) => "GIT",
+            Error::NotATree(_) => "NOT_A_TREE",
+            Error::PathNotFound { .. } => "PATH_NOT_FOUND",
+            Error::Glob(_) => "GLOB",
+            Error::Toml { .. } => "TOML",
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 // ── gix error conversions ──────────────────────────────────────────────────
@@ -43,5 +61,31 @@ impl From<gix::revision::spec::parse::single::Error> for Error {
 impl From<gix::reference::find::existing::Error> for Error {
     fn from(e: gix::reference::find::existing::Error) -> Self {
         Error::Git(e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+
+    #[test]
+    fn codes_are_stable_per_variant() {
+        assert_eq!(Error::Git("x".into()).code(), "GIT");
+        assert_eq!(Error::NotATree("x".into()).code(), "NOT_A_TREE");
+        assert_eq!(
+            Error::PathNotFound {
+                component: "x".into()
+            }
+            .code(),
+            "PATH_NOT_FOUND"
+        );
+        assert_eq!(
+            Error::Toml {
+                path: "p".into(),
+                message: "m".into()
+            }
+            .code(),
+            "TOML"
+        );
     }
 }
