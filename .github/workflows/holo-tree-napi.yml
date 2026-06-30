@@ -62,7 +62,7 @@ jobs:
           # the smoke test is skipped (the logic is covered by the native runs).
           - target: x86_64-unknown-linux-musl
             host: ubuntu-latest
-            setup: sudo apt-get update && sudo apt-get install -y musl-tools
+            zig: true
             test: false
           - target: x86_64-apple-darwin
             host: macos-latest
@@ -81,9 +81,15 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Target setup
-        if: ${{ matrix.setup }}
-        run: ${{ matrix.setup }}
+      # zig cc bundles libc/libgcc and links musl cleanly — napi-rs's
+      # recommended cross path. (musl-gcc fails on `libgcc_s.so.1`.)
+      - name: Setup zig (musl cross-link)
+        if: ${{ matrix.zig }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          ZIG=zig-linux-x86_64-0.13.0
+          curl -fsSL "https://ziglang.org/download/0.13.0/${ZIG}.tar.xz" | tar -xJ
+          echo "${{ runner.temp }}/${ZIG}" >> "$GITHUB_PATH"
 
       - name: Configure git identity (the smoke test commits to scratch repos)
         if: ${{ matrix.test }}
@@ -94,11 +100,7 @@ jobs:
       - run: npm install
 
       - name: Build (release)
-        run: npm run build -- --target ${{ matrix.target }}
-        env:
-          # Only consulted when building the musl target; harmless otherwise.
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
-          CC_x86_64_unknown_linux_musl: musl-gcc
+        run: npm run build -- --target ${{ matrix.target }}${{ matrix.zig && ' --zig' || '' }}
 
       - name: Smoke test
         if: ${{ matrix.test }}
