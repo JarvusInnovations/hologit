@@ -98,3 +98,46 @@ fn write_child_at_repo_root_into_empty() {
         Some(&b"id = 1\n"[..]),
     );
 }
+
+/// Regression: deleting a child deep inside a lazily-loaded tree must dirty the
+/// ancestor chain, or `write()` short-circuits on a clean root and silently
+/// drops the deletion (returns the original tree hash). Surfaced by the
+/// gitsheets migration (#127): every Sheet delete/rename-cleanup hit this once
+/// the working tree was binding-backed.
+#[test]
+fn delete_child_deep_into_existing_tree_persists() {
+    let sb = Sandbox::new();
+
+    // Committed tree with two records in a directory; reload it lazily.
+    let base = sb.write_tree(&[("data/a.toml", "id = 1\n"), ("data/b.toml", "id = 2\n")]);
+    let mut tree = MutableTree::new(base);
+
+    let deleted = tree.delete_child_deep(&sb.repo, "data/a.toml").unwrap();
+    assert!(deleted, "the record existed and should report deleted");
+
+    let new_hash = tree.write(&sb.repo).unwrap();
+    assert_ne!(new_hash, base, "deletion must change the tree hash (the bug: it didn't)");
+
+    let mut reloaded = MutableTree::new(new_hash);
+    assert!(
+        reloaded.read_blob(&sb.repo, "data/a.toml").unwrap().is_none(),
+        "deleted record must be gone after write()",
+    );
+    assert_eq!(
+        reloaded.read_blob(&sb.repo, "data/b.toml").unwrap().as_deref(),
+        Some(&b"id = 2\n"[..]),
+        "sibling must be preserved",
+    );
+}
+
+/// Deleting a non-existent deep path is a clean no-op: returns false and leaves
+/// the tree hash unchanged.
+#[test]
+fn delete_child_deep_missing_is_noop() {
+    let sb = Sandbox::new();
+    let base = sb.write_tree(&[("data/a.toml", "id = 1\n")]);
+    let mut tree = MutableTree::new(base);
+
+    assert!(!tree.delete_child_deep(&sb.repo, "data/missing.toml").unwrap());
+    assert_eq!(tree.write(&sb.repo).unwrap(), base, "no-op delete must not change the hash");
+}

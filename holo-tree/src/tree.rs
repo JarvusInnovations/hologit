@@ -518,10 +518,29 @@ impl MutableTree {
             None => return self.delete_child(repo, path),
         };
 
-        match self.get_subtree(repo, dir)? {
-            Some(tree) => tree.delete_child(repo, name),
-            None => Ok(false),
+        // Mark the path to `dir` dirty as we descend: removing a descendant
+        // changes every ancestor's serialized form, so all must be rewritten by
+        // write(). The previous read-only `get_subtree` navigation dirtied only
+        // the leaf dir, so a clean root short-circuited in write() and the
+        // deletion was silently dropped. (If the path doesn't fully exist there
+        // is nothing to delete; the few nodes dirtied along the way re-serialize
+        // to identical hashes, so over-dirtying on a miss is harmless.)
+        self.dirty = true;
+        let mut cur = self;
+        for part in dir.split('/') {
+            if part.is_empty() || part == "." {
+                continue;
+            }
+            cur.ensure_children(repo)?;
+            match cur.children.as_mut().unwrap().get_mut(part) {
+                Some(Child::Tree(t)) => {
+                    t.dirty = true;
+                    cur = t;
+                }
+                _ => return Ok(false),
+            }
         }
+        cur.delete_child(repo, name)
     }
 
     /// Clear all children under a deep `path`, replacing the subtree there
