@@ -18,6 +18,41 @@ export interface Signature {
   offsetMinutes?: number
 }
 /**
+ * A child entry returned by read-only navigation. `type` is `"tree"`,
+ * `"blob"`, or `"commit"`; `mode` is the git filemode as a number
+ * (e.g. `33188` = `0o100644`, `16384` = `0o040000` for a tree).
+ */
+export interface ChildInfo {
+  type: string
+  hash: string
+  mode: number
+}
+/** A named child entry, returned by `getChildren`. */
+export interface NamedChildInfo {
+  name: string
+  type: string
+  hash: string
+  mode: number
+}
+/**
+ * A blob entry in a flattened blob map, returned by `getBlobMap`. `path` is
+ * relative to the navigated subtree.
+ */
+export interface BlobEntry {
+  path: string
+  hash: string
+  mode: number
+}
+/**
+ * Options for `Tree.merge`. `mode` is `"overlay"`, `"replace"`, or
+ * `"underlay"`; `files` is an optional list of glob patterns restricting which
+ * paths merge (omit to merge everything).
+ */
+export interface MergeOpts {
+  files?: Array<string>
+  mode: string
+}
+/**
  * A handle to a git repository, backed by gix.
  *
  * Stored as a `ThreadSafeRepository` so the handle is `Send + Sync` and can be
@@ -43,8 +78,28 @@ export declare class Repo {
    * identity, then a "holo-tree" default. Returns the new commit hash.
    */
   commitTree(treeHash: string, parents: Array<string>, message: string, author?: Signature | undefined | null, committer?: Signature | undefined | null): string
-  /** Point a ref at an object hash. */
-  updateRef(refname: string, hash: string): void
+  /**
+   * Point a ref at an object hash.
+   *
+   * When `expectedOldHash` is provided this is a **compare-and-swap**: the
+   * update only succeeds if the ref currently resolves to exactly that hash,
+   * so a concurrent writer who moved the ref makes the swap fail rather than
+   * silently clobbering their commit. Omit it to force the ref (the prior
+   * unconditional behavior).
+   */
+  updateRef(refname: string, hash: string, expectedOldHash?: string | undefined | null): void
+  /**
+   * Resolve a ref / rev-spec (branch, tag, `HEAD`, hash, …) to its commit
+   * hash, peeling annotated tags. Returns `null` when the ref does not
+   * resolve — the natural "does this ref exist?" probe before a CAS
+   * `updateRef`.
+   */
+  resolveRef(gitRef: string): string | null
+  /**
+   * Hash raw bytes as a loose blob in the ODB and return its hash, without
+   * inserting it into any tree. Binary-safe.
+   */
+  writeBlob(content: Buffer): string
 }
 /**
  * A mutable, in-memory git tree.
@@ -70,8 +125,37 @@ export declare class Tree {
   writeChildBytes(path: string, content: Buffer): string
   /** Read a blob's bytes at `path`, or `null` if no blob exists there. */
   readBlob(path: string): Buffer | null
+  /**
+   * Read-only: look up the child at a deep `path` and report its type,
+   * hash, and mode, or `null` if nothing exists there.
+   */
+  getChild(path: string): ChildInfo | null
+  /**
+   * Read-only: list the direct children of the subtree at `path` (use `"."`
+   * for the root). Returns an empty array if `path` is missing or not a tree.
+   */
+  getChildren(path: string): Array<NamedChildInfo>
+  /**
+   * Read-only: recursively collect every blob under the subtree at `path`
+   * (defaults to the whole tree) into a flat list. Each `path` is relative
+   * to the navigated subtree. Returns an empty array if `path` is missing.
+   */
+  getBlobMap(path?: string | undefined | null): Array<BlobEntry>
   /** Delete a child at a deep `path`. Returns whether it existed. */
   deleteChildDeep(path: string): boolean
+  /**
+   * Clear all children under a deep `path` in O(1) — replace the subtree
+   * there with the empty tree (and dirty its ancestors) without loading the
+   * cleared subtree's contents. `path == "."` clears the whole tree. Used to
+   * wipe a directory before a full rewrite.
+   */
+  clearChildren(path: string): void
+  /**
+   * Merge another tree into this one in place, per `options.mode`
+   * (`overlay`/`replace`/`underlay`) and optional `options.files` globs.
+   * `other` must be a *different* `Tree` instance.
+   */
+  merge(other: Tree, options: MergeOpts): void
   /** Flush dirty subtrees to the ODB and return the resulting tree hash. */
   write(): string
 }

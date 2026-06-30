@@ -168,11 +168,99 @@ impl Repo {
     }
 
     /// Point a ref at an object hash.
+    ///
+    /// When `expectedOldHash` is provided this is a **compare-and-swap**: the
+    /// update only succeeds if the ref currently resolves to exactly that hash,
+    /// so a concurrent writer who moved the ref makes the swap fail rather than
+    /// silently clobbering their commit. Omit it to force the ref (the prior
+    /// unconditional behavior).
     #[napi]
-    pub fn update_ref(&self, refname: String, hash: String) -> napi::Result<()> {
+    pub fn update_ref(
+        &self,
+        refname: String,
+        hash: String,
+        expected_old_hash: Option<String>,
+    ) -> napi::Result<()> {
         let local = self.inner.to_thread_local();
         let oid = parse_oid(&hash)?;
-        ht_repo::update_ref(&local, &refname, oid).map_err(ht_err)
+        let expected = expected_old_hash.as_deref().map(parse_oid).transpose()?;
+        ht_repo::update_ref(&local, &refname, oid, expected).map_err(ht_err)
+    }
+
+    /// Resolve a ref / rev-spec (branch, tag, `HEAD`, hash, …) to its commit
+    /// hash, peeling annotated tags. Returns `null` when the ref does not
+    /// resolve — the natural "does this ref exist?" probe before a CAS
+    /// `updateRef`.
+    #[napi]
+    pub fn resolve_ref(&self, git_ref: String) -> napi::Result<Option<String>> {
+        let local = self.inner.to_thread_local();
+        let oid = ht_repo::resolve_ref(&local, &git_ref).map_err(ht_err)?;
+        Ok(oid.map(oid_hex))
+    }
+
+    /// Hash raw bytes as a loose blob in the ODB and return its hash, without
+    /// inserting it into any tree. Binary-safe.
+    #[napi]
+    pub fn write_blob(&self, content: Buffer) -> napi::Result<String> {
+        let local = self.inner.to_thread_local();
+        let oid = local
+            .write_blob(content.as_ref())
+            .map_err(|e| napi::Error::from_reason(e.to_string()))?
+            .detach();
+        Ok(oid_hex(oid))
+    }
+}
+
+// ── Tree read-models ─────────────────────────────────────────────────────────
+
+/// A child entry returned by read-only navigation. `type` is `"tree"`,
+/// `"blob"`, or `"commit"`; `mode` is the git filemode as a number
+/// (e.g. `33188` = `0o100644`, `16384` = `0o040000` for a tree).
+#[napi(object)]
+pub struct ChildInfo {
+    pub r#type: String,
+    pub hash: String,
+    pub mode: u32,
+}
+
+/// A named child entry, returned by `getChildren`.
+#[napi(object)]
+pub struct NamedChildInfo {
+    pub name: String,
+    pub r#type: String,
+    pub hash: String,
+    pub mode: u32,
+}
+
+/// A blob entry in a flattened blob map, returned by `getBlobMap`. `path` is
+/// relative to the navigated subtree.
+#[napi(object)]
+pub struct BlobEntry {
+    pub path: String,
+    pub hash: String,
+    pub mode: u32,
+}
+
+/// Options for `Tree.merge`. `mode` is `"overlay"`, `"replace"`, or
+/// `"underlay"`; `files` is an optional list of glob patterns restricting which
+/// paths merge (omit to merge everything).
+#[napi(object)]
+pub struct MergeOpts {
+    pub files: Option<Vec<String>>,
+    pub mode: String,
+}
+
+/// Classify a holo-tree `Child` into `(type, hash, mode)` for the read-models.
+///
+/// Note: for a `Tree` child the reported `hash` is the child's *stored* tree
+/// hash, which is stale if that subtree has been mutated but not yet
+/// `write()`-flushed. Read-only navigation on a freshly loaded/written tree
+/// reports accurate hashes.
+fn classify(child: &holo_tree::Child) -> (&'static str, String, u32) {
+    match child {
+        holo_tree::Child::Tree(t) => ("tree", oid_hex(t.hash), 0o040000),
+        holo_tree::Child::Blob { mode, hash } => ("blob", oid_hex(*hash), u32::from(*mode)),
+        holo_tree::Child::Commit { hash } => ("commit", oid_hex(*hash), 0o160000),
     }
 }
 
@@ -229,12 +317,109 @@ impl Tree {
         Ok(bytes.map(Buffer::from))
     }
 
+    /// Read-only: look up the child at a deep `path` and report its type,
+    /// hash, and mode, or `null` if nothing exists there.
+    #[napi]
+    pub fn get_child(&mut self, path: String) -> napi::Result<Option<ChildInfo>> {
+        let local = self.repo.to_thread_local();
+        let info = self
+            .inner
+            .get_child(&local, &path)
+            .map_err(ht_err)?
+            .map(|child| {
+                let (ty, hash, mode) = classify(child);
+                ChildInfo {
+                    r#type: ty.to_string(),
+                    hash,
+                    mode,
+                }
+            });
+        Ok(info)
+    }
+
+    /// Read-only: list the direct children of the subtree at `path` (use `"."`
+    /// for the root). Returns an empty array if `path` is missing or not a tree.
+    #[napi]
+    pub fn get_children(&mut self, path: String) -> napi::Result<Vec<NamedChildInfo>> {
+        let local = self.repo.to_thread_local();
+        let subtree = match self.inner.get_subtree(&local, &path).map_err(ht_err)? {
+            Some(t) => t,
+            None => return Ok(vec![]),
+        };
+        subtree.ensure_children(&local).map_err(ht_err)?;
+        let mut out = Vec::new();
+        for (name, child) in subtree.children.as_ref().unwrap().iter() {
+            let (ty, hash, mode) = classify(child);
+            out.push(NamedChildInfo {
+                name: name.clone(),
+                r#type: ty.to_string(),
+                hash,
+                mode,
+            });
+        }
+        Ok(out)
+    }
+
+    /// Read-only: recursively collect every blob under the subtree at `path`
+    /// (defaults to the whole tree) into a flat list. Each `path` is relative
+    /// to the navigated subtree. Returns an empty array if `path` is missing.
+    #[napi]
+    pub fn get_blob_map(&mut self, path: Option<String>) -> napi::Result<Vec<BlobEntry>> {
+        let local = self.repo.to_thread_local();
+        let path = path.unwrap_or_else(|| ".".to_string());
+        let map = match self.inner.get_subtree(&local, &path).map_err(ht_err)? {
+            Some(subtree) => subtree.get_blob_map(&local).map_err(ht_err)?,
+            None => return Ok(vec![]),
+        };
+        let out = map
+            .into_iter()
+            .map(|(p, info)| BlobEntry {
+                path: p,
+                hash: oid_hex(info.hash),
+                mode: u32::from(info.mode),
+            })
+            .collect();
+        Ok(out)
+    }
+
     /// Delete a child at a deep `path`. Returns whether it existed.
     #[napi]
     pub fn delete_child_deep(&mut self, path: String) -> napi::Result<bool> {
         let local = self.repo.to_thread_local();
         self.inner
             .delete_child_deep(&local, &path)
+            .map_err(ht_err)
+    }
+
+    /// Clear all children under a deep `path` in O(1) — replace the subtree
+    /// there with the empty tree (and dirty its ancestors) without loading the
+    /// cleared subtree's contents. `path == "."` clears the whole tree. Used to
+    /// wipe a directory before a full rewrite.
+    #[napi]
+    pub fn clear_children(&mut self, path: String) -> napi::Result<()> {
+        let local = self.repo.to_thread_local();
+        self.inner.clear_children(&local, &path).map_err(ht_err)
+    }
+
+    /// Merge another tree into this one in place, per `options.mode`
+    /// (`overlay`/`replace`/`underlay`) and optional `options.files` globs.
+    /// `other` must be a *different* `Tree` instance.
+    #[napi]
+    pub fn merge(&mut self, other: &mut Tree, options: MergeOpts) -> napi::Result<()> {
+        let local = self.repo.to_thread_local();
+        let mode = match options.mode.as_str() {
+            "overlay" => holo_tree::MergeMode::Overlay,
+            "replace" => holo_tree::MergeMode::Replace,
+            "underlay" => holo_tree::MergeMode::Underlay,
+            other => {
+                return Err(napi::Error::from_reason(format!(
+                    "invalid merge mode '{other}', expected 'overlay', 'replace', or 'underlay'"
+                )))
+            }
+        };
+        let opts = holo_tree::MergeOptions::new(options.files.as_deref(), mode).map_err(ht_err)?;
+        self.inner
+            .merge(&local, &mut other.inner, &opts, ".")
             .map_err(ht_err)
     }
 
