@@ -63,3 +63,29 @@ impl From<gix::reference::find::existing::Error> for Error {
         Error::Git(e.to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+
+    #[test]
+    fn codes_are_stable_per_variant() {
+        assert_eq!(Error::Git("x".into()).code(), "GIT");
+        assert_eq!(Error::NotATree("x".into()).code(), "NOT_A_TREE");
+        assert_eq!(
+            Error::PathNotFound {
+                component: "x".into()
+            }
+            .code(),
+            "PATH_NOT_FOUND"
+        );
+        assert_eq!(
+            Error::Toml {
+                path: "p".into(),
+                message: "m".into()
+            }
+            .code(),
+            "TOML"
+        );
+    }
+}
