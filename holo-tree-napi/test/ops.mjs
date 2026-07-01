@@ -1,6 +1,6 @@
 // Smoke tests for the tree/ref ops added for the gitsheets migration:
-//   writeBlob, resolveRef, updateRef (CAS), getChild, getChildren,
-//   getBlobMap, clearChildren, merge.
+//   writeBlob, writeChildHash, resolveRef, updateRef (CAS), getChild,
+//   getChildren, getBlobMap, clearChildren, merge.
 //
 // Requires the addon to be built first: `npm run build:debug` (or `build`).
 // Run with: `npm test` (node --test).
@@ -216,6 +216,40 @@ test('merge overlays another tree in place', () => {
 
     // An invalid mode is rejected.
     assert.throws(() => base.merge(incoming, { mode: 'bogus' }), /invalid merge mode/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('writeChildHash places an existing blob by hash, matching writeChildBytes', () => {
+  const dir = scratchRepo();
+  try {
+    const repo = Repo.open(join(dir, '.git'));
+    const content = Buffer.from('attachment payload\n');
+    const blob = repo.writeBlob(content);
+
+    // Placing by hash yields the same tree as hashing the same content.
+    const byBytes = repo.createTree();
+    byBytes.writeChildBytes('data/att.bin', content);
+    const byBytesHash = byBytes.write();
+
+    const byHash = repo.createTree();
+    const placed = byHash.writeChildHash('data/att.bin', blob, 0o100644);
+    assert.equal(placed, blob, 'writeChildHash echoes the placed hash');
+    assert.equal(byHash.write(), byBytesHash, 'place-by-hash must match write-by-content');
+
+    // Mode is honored: executable produces a different tree.
+    const exec = repo.createTree();
+    exec.writeChildHash('data/att.bin', blob, 0o100755);
+    assert.notEqual(exec.write(), byBytesHash, 'mode must be reflected in the tree');
+
+    // A non-blob object (a tree hash) is rejected.
+    assert.throws(() => repo.createTree().writeChildHash('x', byBytesHash, 0o100644), /not a blob/);
+    // An absent hash is rejected.
+    assert.throws(
+      () => repo.createTree().writeChildHash('x', '0123456789abcdef0123456789abcdef01234567', 0o100644),
+      /./,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

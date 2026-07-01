@@ -141,3 +141,141 @@ fn delete_child_deep_missing_is_noop() {
     assert!(!tree.delete_child_deep(&sb.repo, "data/missing.toml").unwrap());
     assert_eq!(tree.write(&sb.repo).unwrap(), base, "no-op delete must not change the hash");
 }
+
+// ── write_child_hash (#477): place an existing blob by hash ─────────────────
+
+/// Placing a blob by hash yields a byte-identical tree to writing the same
+/// content via `write_child_bytes` — the whole point is to skip re-hashing while
+/// producing exactly the same result.
+#[test]
+fn write_child_hash_matches_write_child_bytes() {
+    let sb = Sandbox::new();
+    let content = b"attachment payload\n";
+    let blob = sb.repo.write_blob(content).unwrap().detach();
+
+    let mut by_bytes = MutableTree::empty();
+    by_bytes
+        .write_child_bytes(&sb.repo, "data/att.bin", content)
+        .unwrap();
+    let bytes_hash = by_bytes.write(&sb.repo).unwrap();
+
+    let mut by_hash = MutableTree::empty();
+    by_hash
+        .write_child_hash(&sb.repo, "data/att.bin", blob, 0o100644)
+        .unwrap();
+    let hash_hash = by_hash.write(&sb.repo).unwrap();
+
+    assert_eq!(
+        hash_hash, bytes_hash,
+        "place-by-hash must produce the same tree as write-by-content",
+    );
+}
+
+/// Placing a blob by hash into an already-populated, lazily-loaded subtree
+/// preserves the existing siblings (same subtree-loading path as
+/// `write_child_bytes`).
+#[test]
+fn write_child_hash_preserves_siblings() {
+    let sb = Sandbox::new();
+    let base = sb.write_tree(&[("data/a.toml", "id = 1\n")]);
+    let blob = sb.repo.write_blob(b"id = 2\n").unwrap().detach();
+
+    let mut tree = MutableTree::new(base);
+    tree.write_child_hash(&sb.repo, "data/b.toml", blob, 0o100644)
+        .unwrap();
+    let new_hash = tree.write(&sb.repo).unwrap();
+    assert_ne!(new_hash, base);
+
+    let mut reloaded = MutableTree::new(new_hash);
+    assert_eq!(
+        reloaded.read_blob(&sb.repo, "data/a.toml").unwrap().as_deref(),
+        Some(&b"id = 1\n"[..]),
+        "existing sibling must be preserved",
+    );
+    assert_eq!(
+        reloaded.read_blob(&sb.repo, "data/b.toml").unwrap().as_deref(),
+        Some(&b"id = 2\n"[..]),
+        "placed-by-hash blob must be present",
+    );
+}
+
+/// The `mode` argument is honored — placing the same blob as executable records
+/// mode 100755, producing a different tree than the regular-mode placement.
+#[test]
+fn write_child_hash_honors_executable_mode() {
+    let sb = Sandbox::new();
+    let blob = sb.repo.write_blob(b"#!/bin/sh\n").unwrap().detach();
+
+    let mut regular = MutableTree::empty();
+    regular
+        .write_child_hash(&sb.repo, "run", blob, 0o100644)
+        .unwrap();
+    let regular_hash = regular.write(&sb.repo).unwrap();
+
+    let mut exec = MutableTree::empty();
+    exec.write_child_hash(&sb.repo, "run", blob, 0o100755)
+        .unwrap();
+    let exec_hash = exec.write(&sb.repo).unwrap();
+
+    assert_ne!(
+        regular_hash, exec_hash,
+        "executable mode must be reflected in the tree entry",
+    );
+}
+
+/// A hash that isn't in the ODB is rejected — no invalid entry is grafted.
+#[test]
+fn write_child_hash_rejects_missing_object() {
+    let sb = Sandbox::new();
+    // A valid-shaped sha1 that was never written to this repo's ODB.
+    let absent: gix::ObjectId = "0123456789abcdef0123456789abcdef01234567"
+        .parse()
+        .unwrap();
+
+    let mut tree = MutableTree::empty();
+    let err = tree
+        .write_child_hash(&sb.repo, "x", absent, 0o100644)
+        .unwrap_err();
+    assert!(matches!(err, holo_tree::Error::Git(_)), "got {err:?}");
+}
+
+/// A hash pointing at a non-blob object (here a tree) is rejected rather than
+/// silently producing a tree entry that claims a blob mode over a tree object.
+#[test]
+fn write_child_hash_rejects_non_blob() {
+    let sb = Sandbox::new();
+    let tree_oid = sb.write_tree(&[("inner.toml", "id = 1\n")]);
+
+    let mut tree = MutableTree::empty();
+    let err = tree
+        .write_child_hash(&sb.repo, "x", tree_oid, 0o100644)
+        .unwrap_err();
+    match err {
+        holo_tree::Error::Git(msg) => assert!(
+            msg.contains("not a blob"),
+            "expected a not-a-blob error, got: {msg}",
+        ),
+        other => panic!("expected Git error, got {other:?}"),
+    }
+}
+
+/// An invalid (non-blob) mode is rejected up front, before any tree mutation —
+/// it would otherwise panic later in `write()` when mapped to an `EntryMode`.
+#[test]
+fn write_child_hash_rejects_invalid_mode() {
+    let sb = Sandbox::new();
+    let blob = sb.repo.write_blob(b"x\n").unwrap().detach();
+
+    let mut tree = MutableTree::empty();
+    // 040000 is a tree mode, not valid for a blob entry.
+    let err = tree
+        .write_child_hash(&sb.repo, "x", blob, 0o040000)
+        .unwrap_err();
+    assert!(matches!(err, holo_tree::Error::Git(_)), "got {err:?}");
+    // The tree must be untouched by a rejected call.
+    assert_eq!(
+        tree.write(&sb.repo).unwrap(),
+        MutableTree::empty().write(&sb.repo).unwrap(),
+        "a rejected write_child_hash must not mutate the tree",
+    );
+}

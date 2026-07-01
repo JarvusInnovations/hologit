@@ -309,6 +309,29 @@ impl Tree {
         Ok(oid_hex(oid))
     }
 
+    /// Place an already-written blob at `path` by its `hash`, without reading its
+    /// bytes. Unlike `writeChildBytes` (which re-hashes content), this grafts a
+    /// blob already in the ODB — validated to exist and be a blob via a header
+    /// lookup, so a large attachment isn't read back and re-hashed. `mode` is the
+    /// git filemode: `0o100644` regular, `0o100755` executable, `0o120000`
+    /// symlink. Returns the placed hash.
+    #[napi]
+    pub fn write_child_hash(
+        &mut self,
+        path: String,
+        hash: String,
+        mode: u32,
+    ) -> napi::Result<String> {
+        let local = self.repo.to_thread_local();
+        let oid = parse_oid(&hash)?;
+        let mode = u16::try_from(mode)
+            .map_err(|_| napi::Error::from_reason(format!("invalid blob mode {mode:o}")))?;
+        self.inner
+            .write_child_hash(&local, &path, oid, mode)
+            .map_err(ht_err)?;
+        Ok(oid_hex(oid))
+    }
+
     /// Read a blob's bytes at `path`, or `null` if no blob exists there.
     #[napi]
     pub fn read_blob(&mut self, path: String) -> napi::Result<Option<Buffer>> {

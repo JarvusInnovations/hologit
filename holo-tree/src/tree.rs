@@ -507,6 +507,68 @@ impl MutableTree {
         Ok(blob_id)
     }
 
+    /// Place an already-written blob at a deep path by its hash, without reading
+    /// its bytes.
+    ///
+    /// Unlike [`write_child_bytes`](Self::write_child_bytes), which takes blob
+    /// *content* and writes (re-hashes) it, this grafts a blob that already
+    /// exists in the ODB. A consumer that holds a content-addressed blob hash —
+    /// because it wrote the blob earlier, or received the hash from elsewhere —
+    /// can place it without handing over the bytes again. `mode` is the git entry
+    /// mode for the blob: `0o100644` (regular), `0o100755` (executable), or
+    /// `0o120000` (symlink).
+    ///
+    /// The object is validated to exist and be a blob via an object *header*
+    /// lookup, which does not decode the blob payload — so placing a large
+    /// attachment stays independent of its byte size rather than paying a full
+    /// ODB read + re-hash.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `hash` does not exist in the ODB or is not a blob, if
+    /// `mode` is not a valid blob mode, or if an intermediate path component
+    /// exists but is not a tree (same footgun guard as
+    /// [`write_child_bytes`](Self::write_child_bytes)).
+    pub fn write_child_hash(
+        &mut self,
+        repo: &gix::Repository,
+        path: &str,
+        hash: ObjectId,
+        mode: u16,
+    ) -> Result<()> {
+        if !matches!(mode, 0o100644 | 0o100755 | 0o120000) {
+            return Err(Error::Git(format!(
+                "invalid blob mode {mode:o} for {path}: expected 100644, 100755, or 120000"
+            )));
+        }
+
+        // Validate existence + kind from the object header, without decoding the
+        // blob — that byte-read is exactly what a place-by-hash caller wants to
+        // skip.
+        let header = repo
+            .find_header(hash)
+            .map_err(|e| Error::Git(e.to_string()))?;
+        if header.kind() != gix::object::Kind::Blob {
+            return Err(Error::Git(format!(
+                "object {hash} is not a blob (found {:?})",
+                header.kind()
+            )));
+        }
+
+        let (dir, name) = match path.rsplit_once('/') {
+            Some((d, f)) => (d, f),
+            None => (".", path),
+        };
+
+        let tree = self.get_or_create_subtree(repo, dir)?;
+        tree.children
+            .as_mut()
+            .unwrap()
+            .insert(name.to_string(), Child::Blob { mode, hash });
+        tree.dirty = true;
+        Ok(())
+    }
+
     /// Delete a child at a deep slash-separated path (not just a direct child).
     pub fn delete_child_deep(
         &mut self,
