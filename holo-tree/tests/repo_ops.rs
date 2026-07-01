@@ -72,3 +72,59 @@ fn update_ref_without_expected_forces() {
     update_ref(&sb.repo, "refs/heads/work", b, None).unwrap();
     assert_eq!(resolve_ref(&sb.repo, "refs/heads/work").unwrap(), Some(b));
 }
+
+/// The reflog identity must come from the committer of the commit the ref now
+/// points at — not from ambient git config. The sandbox commits are stamped
+/// "Test <test@test>", so that is what the reflog entry must record, regardless
+/// of whatever `user.name` / `user.email` the machine running the test has.
+#[test]
+fn update_ref_reflog_identity_comes_from_commit_committer() {
+    let sb = Sandbox::new();
+    let (a, _) = two_commits(&sb);
+    sb.enable_reflogs();
+    let repo = sb.open_isolated();
+
+    update_ref(&repo, "refs/heads/work", a, None).unwrap();
+
+    let reference = repo.find_reference("refs/heads/work").unwrap();
+    let mut platform = reference.log_iter();
+    let iter = platform
+        .all()
+        .unwrap()
+        .expect("update_ref should have written a reflog");
+
+    let mut last = None;
+    for line in iter {
+        let line = line.unwrap();
+        last = Some((
+            line.signature.name.to_string(),
+            line.signature.email.to_string(),
+        ));
+    }
+    let (name, email) = last.expect("reflog should have at least one entry");
+    assert_eq!(name, "Test", "reflog name should be the commit's committer");
+    assert_eq!(
+        email, "test@test",
+        "reflog email should be the commit's committer"
+    );
+}
+
+/// Regression for #476: a ref update on a fully-specified commit must not depend
+/// on ambient git config. We reopen the sandbox repo with `isolated()` options —
+/// which ignore environment and global/system git config, so no `user.name` /
+/// `user.email` is visible — and confirm `update_ref` still succeeds. gix's
+/// convenience `reference()` fails here with "The reflog could not be created or
+/// updated"; deriving the reflog identity from the commit's committer fixes it.
+#[test]
+fn update_ref_succeeds_without_ambient_git_identity() {
+    let sb = Sandbox::new();
+    let (a, b) = two_commits(&sb);
+    sb.set_ref("refs/heads/work", a);
+    // Reproduce a CI checkout: reflogs on (so the reflog identity is actually
+    // needed) but no ambient git identity available.
+    sb.enable_reflogs();
+    let isolated = sb.open_isolated();
+
+    update_ref(&isolated, "refs/heads/work", b, Some(a)).unwrap();
+    assert_eq!(resolve_ref(&isolated, "refs/heads/work").unwrap(), Some(b));
+}
