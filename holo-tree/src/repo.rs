@@ -180,12 +180,25 @@ pub fn resolve_ref(repo: &gix::Repository, git_ref: &str) -> Result<Option<Objec
 /// ref out from under the caller makes the swap fail loudly rather than clobber
 /// their commit. When `None`, the ref is set unconditionally
 /// (`PreviousValue::Any`), matching the original force behavior.
+///
+/// The reflog identity is derived from the **committer of the commit the ref now
+/// points at**, falling back to a stable `holo-tree` default for non-commit
+/// targets or unreadable commits. It never reads ambient git config
+/// (`user.name` / `user.email`). gix's convenience `reference()` does reach for
+/// ambient config to stamp the reflog, and fails with "The reflog could not be
+/// created or updated" when none is set — so an embedding consumer that supplies
+/// a fully-specified commit (matching [`commit_tree`]'s explicit-identity
+/// contract) could still see the *ref update* fail on an unconfigured runner.
+/// Sourcing the identity from the commit itself keeps the whole operation
+/// independent of machine config.
 pub fn update_ref(
     repo: &gix::Repository,
     refname: &str,
     target: ObjectId,
     expected_old: Option<ObjectId>,
 ) -> Result<()> {
+    use gix::refs::transaction::{Change, LogChange, RefEdit, RefLog};
+
     let qualified = qualify_ref(refname);
     let previous = match expected_old {
         Some(old) => gix::refs::transaction::PreviousValue::MustExistAndMatch(
@@ -193,7 +206,41 @@ pub fn update_ref(
         ),
         None => gix::refs::transaction::PreviousValue::Any,
     };
-    repo.reference(qualified.as_ref(), target, previous, "holo-tree")
+
+    let name: gix::refs::FullName = qualified
+        .as_ref()
+        .try_into()
+        .map_err(|e: gix::refs::name::Error| Error::Git(e.to_string()))?;
+
+    // Reflog identity: the target commit's committer, else a stable default.
+    // Read the commit up front so its data outlives the borrowed `SignatureRef`
+    // we hand to the transaction below.
+    let commit = repo
+        .find_object(target)
+        .ok()
+        .and_then(|obj| obj.try_into_commit().ok());
+    let fallback = default_signature();
+    let mut time_buf = gix::date::parse::TimeBuf::default();
+    let committer = commit
+        .as_ref()
+        .and_then(|c| c.committer().ok())
+        .unwrap_or_else(|| fallback.to_ref(&mut time_buf));
+
+    let edit = RefEdit {
+        change: Change::Update {
+            log: LogChange {
+                mode: RefLog::AndReference,
+                force_create_reflog: false,
+                message: "holo-tree".into(),
+            },
+            expected: previous,
+            new: gix::refs::Target::Object(target),
+        },
+        name,
+        deref: false,
+    };
+
+    repo.edit_references_as(Some(edit), Some(committer))
         .map_err(|e| Error::Git(e.to_string()))?;
     Ok(())
 }
