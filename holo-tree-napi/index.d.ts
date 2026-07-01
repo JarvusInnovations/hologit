@@ -123,6 +123,15 @@ export declare class Tree {
   writeChild(path: string, content: string): string
   /** Hash raw bytes as a blob and insert at `path`. Binary-safe. */
   writeChildBytes(path: string, content: Buffer): string
+  /**
+   * Place an already-written blob at `path` by its `hash`, without reading its
+   * bytes. Unlike `writeChildBytes` (which re-hashes content), this grafts a
+   * blob already in the ODB — validated to exist and be a blob via a header
+   * lookup, so a large attachment isn't read back and re-hashed. `mode` is the
+   * git filemode: `0o100644` regular, `0o100755` executable, `0o120000`
+   * symlink. Returns the placed hash.
+   */
+  writeChildHash(path: string, hash: string, mode: number): string
   /** Read a blob's bytes at `path`, or `null` if no blob exists there. */
   readBlob(path: string): Buffer | null
   /**
