@@ -324,57 +324,49 @@ impl MutableTree {
 
     /// Navigate to a subtree, creating intermediate empty trees as needed.
     ///
-    /// **Marks all ancestors dirty** when any new node is created, matching
-    /// the JS `getSubtreeStack(path, create=true)` behavior.
+    /// This is the **mutating** navigator: callers reach for it to change the
+    /// destination (write a child, insert a gitlink, …). So every node along
+    /// the path — root included — is marked dirty, because each one's
+    /// serialized form will change once `write()` propagates the mutation back
+    /// up. (The earlier behavior only marked the path dirty when a *new* node
+    /// was created, which silently dropped writes into an already-existing
+    /// directory: the leaf was dirtied but its clean ancestors short-circuited
+    /// in `write()`.)
     pub fn get_or_create_subtree(
         &mut self,
         repo: &gix::Repository,
         path: &str,
     ) -> Result<&mut MutableTree> {
         if path == "." || path.is_empty() {
+            // Destination is the root itself. Mark dirty and load its children
+            // so a mutating caller (e.g. write_child_bytes for a repo-root file
+            // like "a.toml", whose dir is ".") can insert alongside existing
+            // entries — rather than panic on `children.as_mut().unwrap()` when
+            // the root was lazily loaded from a ref. Same postcondition as the
+            // deep-path return below.
+            self.dirty = true;
+            self.ensure_children(repo)?;
             return Ok(self);
         }
 
-        let parts: Vec<&str> = path.split('/').collect();
-
-        // First pass: detect whether any node needs to be created.
-        let mut needs_create = false;
-        {
-            let mut check = &mut *self;
-            for part in &parts {
-                check.ensure_children(repo)?;
-                if !check.children.as_ref().unwrap().contains_key(*part) {
-                    needs_create = true;
-                    break;
-                }
-                match check.children.as_mut().unwrap().get_mut(*part) {
-                    Some(Child::Tree(ref mut t)) => check = t,
-                    _ => break,
-                }
-            }
-        }
-
-        if needs_create {
-            self.dirty = true;
-        }
-
-        // Second pass: create missing nodes.
+        self.dirty = true;
         let mut cur = self;
-        for part in parts {
+        for part in path.split('/') {
             cur.ensure_children(repo)?;
-            let children = cur.children.as_mut().unwrap();
-
-            let child = children.entry(part.to_string()).or_insert_with(|| {
-                let mut t = MutableTree::empty();
-                t.dirty = true;
-                Child::Tree(t)
-            });
+            let child = cur
+                .children
+                .as_mut()
+                .unwrap()
+                .entry(part.to_string())
+                .or_insert_with(|| {
+                    let mut t = MutableTree::empty();
+                    t.dirty = true;
+                    Child::Tree(t)
+                });
 
             cur = match child {
                 Child::Tree(ref mut t) => {
-                    if needs_create {
-                        t.dirty = true;
-                    }
+                    t.dirty = true;
                     t
                 }
                 _ => {
@@ -385,6 +377,14 @@ impl MutableTree {
                 }
             };
         }
+        // Postcondition: the returned node has its children loaded. Navigation
+        // above only ensures children on nodes it descends *through*; a final
+        // node that already exists in the parent tree is lazily loaded
+        // (`children: None`). Callers that mutate the returned node (e.g.
+        // `write_child_bytes`) rely on `children` being `Some` — and loading
+        // here is also what preserves existing siblings when writing into an
+        // existing directory.
+        cur.ensure_children(repo)?;
         Ok(cur)
     }
 
@@ -507,6 +507,68 @@ impl MutableTree {
         Ok(blob_id)
     }
 
+    /// Place an already-written blob at a deep path by its hash, without reading
+    /// its bytes.
+    ///
+    /// Unlike [`write_child_bytes`](Self::write_child_bytes), which takes blob
+    /// *content* and writes (re-hashes) it, this grafts a blob that already
+    /// exists in the ODB. A consumer that holds a content-addressed blob hash —
+    /// because it wrote the blob earlier, or received the hash from elsewhere —
+    /// can place it without handing over the bytes again. `mode` is the git entry
+    /// mode for the blob: `0o100644` (regular), `0o100755` (executable), or
+    /// `0o120000` (symlink).
+    ///
+    /// The object is validated to exist and be a blob via an object *header*
+    /// lookup, which does not decode the blob payload — so placing a large
+    /// attachment stays independent of its byte size rather than paying a full
+    /// ODB read + re-hash.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `hash` does not exist in the ODB or is not a blob, if
+    /// `mode` is not a valid blob mode, or if an intermediate path component
+    /// exists but is not a tree (same footgun guard as
+    /// [`write_child_bytes`](Self::write_child_bytes)).
+    pub fn write_child_hash(
+        &mut self,
+        repo: &gix::Repository,
+        path: &str,
+        hash: ObjectId,
+        mode: u16,
+    ) -> Result<()> {
+        if !matches!(mode, 0o100644 | 0o100755 | 0o120000) {
+            return Err(Error::Git(format!(
+                "invalid blob mode {mode:o} for {path}: expected 100644, 100755, or 120000"
+            )));
+        }
+
+        // Validate existence + kind from the object header, without decoding the
+        // blob — that byte-read is exactly what a place-by-hash caller wants to
+        // skip.
+        let header = repo
+            .find_header(hash)
+            .map_err(|e| Error::Git(e.to_string()))?;
+        if header.kind() != gix::object::Kind::Blob {
+            return Err(Error::Git(format!(
+                "object {hash} is not a blob (found {:?})",
+                header.kind()
+            )));
+        }
+
+        let (dir, name) = match path.rsplit_once('/') {
+            Some((d, f)) => (d, f),
+            None => (".", path),
+        };
+
+        let tree = self.get_or_create_subtree(repo, dir)?;
+        tree.children
+            .as_mut()
+            .unwrap()
+            .insert(name.to_string(), Child::Blob { mode, hash });
+        tree.dirty = true;
+        Ok(())
+    }
+
     /// Delete a child at a deep slash-separated path (not just a direct child).
     pub fn delete_child_deep(
         &mut self,
@@ -518,10 +580,67 @@ impl MutableTree {
             None => return self.delete_child(repo, path),
         };
 
-        match self.get_subtree(repo, dir)? {
-            Some(tree) => tree.delete_child(repo, name),
-            None => Ok(false),
+        // Mark the path to `dir` dirty as we descend: removing a descendant
+        // changes every ancestor's serialized form, so all must be rewritten by
+        // write(). The previous read-only `get_subtree` navigation dirtied only
+        // the leaf dir, so a clean root short-circuited in write() and the
+        // deletion was silently dropped. (If the path doesn't fully exist there
+        // is nothing to delete; the few nodes dirtied along the way re-serialize
+        // to identical hashes, so over-dirtying on a miss is harmless.)
+        self.dirty = true;
+        let mut cur = self;
+        for part in dir.split('/') {
+            if part.is_empty() || part == "." {
+                continue;
+            }
+            cur.ensure_children(repo)?;
+            match cur.children.as_mut().unwrap().get_mut(part) {
+                Some(Child::Tree(t)) => {
+                    t.dirty = true;
+                    cur = t;
+                }
+                _ => return Ok(false),
+            }
         }
+        cur.delete_child(repo, name)
+    }
+
+    /// Clear all children under a deep `path`, replacing the subtree there
+    /// with the empty tree and marking the ancestor chain dirty.
+    ///
+    /// This is an **O(1)** clear: it does not load the cleared subtree's own
+    /// contents from the ODB — only the ancestor trees needed to navigate to
+    /// its parent. Intermediate trees along `path` are created if absent; since
+    /// an empty subtree is pruned on `write()`, clearing a path that doesn't
+    /// exist is a no-op in the written result.
+    ///
+    /// `path == "."` (or empty) clears the root tree itself.
+    pub fn clear_children(&mut self, repo: &gix::Repository, path: &str) -> Result<()> {
+        if path == "." || path.is_empty() {
+            self.children = Some(BTreeMap::new());
+            self.hash = empty_tree_id();
+            self.dirty = true;
+            return Ok(());
+        }
+
+        let (dir, name) = match path.rsplit_once('/') {
+            Some((d, f)) => (d, f),
+            None => (".", path),
+        };
+
+        // get_or_create_subtree marks the whole navigated path (root included)
+        // dirty, which is exactly what we need: every ancestor's serialized
+        // form changes once the cleared subtree is pruned on write().
+        let parent = self.get_or_create_subtree(repo, dir)?;
+        let mut empty = MutableTree::empty();
+        empty.dirty = true;
+        parent
+            .children
+            .as_mut()
+            .unwrap()
+            .insert(name.to_string(), Child::Tree(empty));
+        parent.dirty = true;
+        Ok(())
     }
 
     /// Recursively collect all blobs into a flat map.

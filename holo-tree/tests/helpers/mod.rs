@@ -85,6 +85,31 @@ impl Sandbox {
         self.repo.write_object(&commit).unwrap().detach()
     }
 
+    /// Enable reflog writes on this repo's local config (`core.logAllRefUpdates`).
+    ///
+    /// A bare repo defaults this off, so ref updates write no reflog — but a
+    /// normal checkout / CI runner has it on. Tests that need to exercise the
+    /// reflog path (see #476) turn it on to match that environment. Writes the
+    /// repo's own config file, so it's honored even by an `isolated()` handle
+    /// (which drops ambient global/system/env config but keeps local config).
+    pub fn enable_reflogs(&self) {
+        use std::io::Write;
+        let config_path = self.dir.path().join("config");
+        let mut f = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&config_path)
+            .expect("open repo config");
+        writeln!(f, "[core]\n\tlogAllRefUpdates = true").expect("write config");
+    }
+
+    /// Reopen this repo with `isolated()` options — no environment, global, or
+    /// system git config (so no ambient `user.name` / `user.email`), while the
+    /// repo's own local config still applies.
+    pub fn open_isolated(&self) -> gix::Repository {
+        gix::open_opts(self.dir.path(), gix::open::Options::isolated())
+            .expect("reopen sandbox repo with isolated config")
+    }
+
     /// Create a ref pointing to an object.
     pub fn set_ref(&self, name: &str, target: ObjectId) {
         self.repo

@@ -1,0 +1,159 @@
+# Build + publish the @hologit/holo-tree napi binding with per-platform prebuilds.
+#
+# Each target builds NATIVELY on its matching runner (no cross-compilation):
+#   x86_64-unknown-linux-gnu → ubuntu-latest
+#   aarch64-apple-darwin     → macos-latest   (Apple Silicon runner)
+#   x86_64-pc-windows-msvc   → windows-latest
+#
+# Triggers:
+#   - pull_request touching the binding/crate  → build + smoke-test all 3 (no publish)
+#   - push of a `holo-tree-v*` tag             → build, then publish to npm
+#   - workflow_dispatch                        → manual build
+#
+# Publish auth: npm TRUSTED PUBLISHING (OIDC) — no token, matching hologit's
+# publish-npm.yml. Each of the 4 packages (@hologit/holo-tree + the 3 platform
+# packages) must already exist on npm AND have a trusted publisher configured
+# for this repo + this workflow. One-time bootstrap (the package can't get a
+# trusted publisher until it exists): publish an early version of all 4 manually,
+# then add the trusted publishers. See holo-tree-napi/README "Publishing".
+#
+# The release marker is the `holo-tree-v*` git tag itself; napi prepublish runs
+# with --skip-gh-release so it does NOT create a bare `v<version>` GitHub release
+# + tag (those collide with hologit's own `v*` JS-package release namespace).
+name: holo-tree-napi
+
+on:
+  pull_request:
+    paths:
+      - 'holo-tree-napi/**'
+      - 'holo-tree/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  push:
+    tags:
+      - 'holo-tree-v*'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: holo-tree-napi
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Native — build + smoke-test on a matching runner.
+          - target: x86_64-unknown-linux-gnu
+            host: ubuntu-latest
+            test: true
+          - target: aarch64-unknown-linux-gnu
+            host: ubuntu-24.04-arm
+            test: true
+          - target: aarch64-apple-darwin
+            host: macos-latest
+            test: true
+          - target: x86_64-pc-windows-msvc
+            host: windows-latest
+            test: true
+          # Cross — build only; the .node can't run on the host arch/libc, so
+          # the smoke test is skipped (the logic is covered by the native runs).
+          - target: x86_64-unknown-linux-musl
+            host: ubuntu-latest
+            zig: true
+            test: false
+          - target: x86_64-apple-darwin
+            host: macos-latest
+            test: false
+    runs-on: ${{ matrix.host }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      # zig cc bundles libc/libgcc and links musl cleanly — napi-rs's
+      # recommended cross path. (musl-gcc fails on `libgcc_s.so.1`.)
+      - name: Setup zig (musl cross-link)
+        if: ${{ matrix.zig }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          ZIG=zig-linux-x86_64-0.13.0
+          curl -fsSL "https://ziglang.org/download/0.13.0/${ZIG}.tar.xz" | tar -xJ
+          echo "${{ runner.temp }}/${ZIG}" >> "$GITHUB_PATH"
+
+      - name: Configure git identity (the smoke test commits to scratch repos)
+        if: ${{ matrix.test }}
+        run: |
+          git config --global user.name "holo-tree CI"
+          git config --global user.email "ci@hologit.local"
+
+      - run: npm install
+
+      - name: Build (release)
+        run: npm run build -- --target ${{ matrix.target }}${{ matrix.zig && ' --zig' || '' }}
+
+      - name: Smoke test
+        if: ${{ matrix.test }}
+        run: npm test
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bindings-${{ matrix.target }}
+          path: holo-tree-napi/*.node
+          if-no-files-found: error
+
+  publish:
+    name: publish @hologit/holo-tree
+    if: ${{ startsWith(github.ref, 'refs/tags/holo-tree-v') }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read    # no GitHub release is created (see --skip-gh-release)
+      id-token: write   # npm provenance attestation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24' # recent npm for OIDC trusted publishing
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install
+
+      - name: Set version from tag (e.g. holo-tree-v0.2.0 → 0.2.0)
+        run: |
+          VERSION="${GITHUB_REF_NAME#holo-tree-v}"
+          export VERSION
+          npm version --no-git-tag-version "$VERSION"
+          npx napi version
+          # `napi version` updates the npm/<triple> package versions but NOT the
+          # root optionalDependencies — pin those to the release version too, or
+          # the main package would resolve stale platform packages.
+          node -e "const fs=require('fs'),p=require('./package.json');for(const k in p.optionalDependencies)p.optionalDependencies[k]=process.env.VERSION;fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+
+      - name: Collect prebuilt .node artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: holo-tree-napi/artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Distribute artifacts into npm/<triple>/
+        run: npx napi artifacts --dir artifacts
+
+      - name: Publish (platform packages via prepublishOnly hook, then main)
+        # Tokenless: OIDC trusted publishing. Requires all 4 packages to exist
+        # with a trusted publisher configured (see the bootstrap note up top).
+        # prepublishOnly runs `napi prepublish ... --skip-gh-release`, so no
+        # GitHub release/tag is created and no GITHUB_TOKEN is needed.
+        run: npm publish --provenance --access public

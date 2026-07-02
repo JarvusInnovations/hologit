@@ -8,9 +8,30 @@ The project is migrating its performance-critical core from Node.js to Rust:
 
 - **`holo-tree/`** — Shared crate: mutable git tree primitives (merge, write, glob, cache) via gix. Also used by gitsheets.
 - **`holo-projector/`** — Projection crate: holobranch config, source resolution, composition. Depends on holo-tree.
+- **`holo-tree-napi/`** — napi-rs binding exposing holo-tree to Node.js; published to npm as `@hologit/holo-tree` (the package gitsheets consumes). See its [`README.md`](../holo-tree-napi/README.md).
 - **`lib/`** — Existing Node.js implementation (still the CLI entry point).
 
-The two Rust crates form a Cargo workspace defined in the root `Cargo.toml`.
+The three Rust crates form a Cargo workspace defined in the root `Cargo.toml`.
+
+## Releases
+
+Two independent npm packages ship from this repo on **separate, prefix-namespaced
+git-tag tracks** — keep them distinct:
+
+- **`hologit`** (the Node.js CLI/library) — released on **`v*`** tags via the
+  develop→master Release-PR flow (`release-prepare`/`-validate`/`-publish`
+  workflows; the `release-flow` skill). Pushing `develop` opens a `Release: v*`
+  PR into `master`; merging it publishes.
+- **`@hologit/holo-tree`** (the napi binding) — released on **`holo-tree-v*`**
+  tags. Pushing e.g. `holo-tree-v0.1.2` triggers
+  `.github/workflows/holo-tree-napi.yml`, which builds the three platform
+  prebuilds natively (linux-x64-gnu, darwin-arm64, win32-x64-msvc) and publishes
+  via npm **trusted publishing** (OIDC, tokenless). The git tag is the release
+  marker; `napi prepublish` runs with `--skip-gh-release`.
+
+**Never tag the binding with a bare `v*`** — it collides with the `hologit` JS
+release namespace and matches `publish-npm.yml`'s `v*` trigger. Full binding
+release + one-time-bootstrap details: [`holo-tree-napi/README.md`](../holo-tree-napi/README.md).
 
 ## Development workflow
 
@@ -80,7 +101,7 @@ When modifying the Rust engine, always verify:
 
 These are correctness issues that caused hash mismatches during development. Each has a dedicated regression test:
 
-- **Dirty propagation in `get_or_create_subtree`** — all ancestor trees must be marked dirty when creating intermediate nodes, or subtrees are silently lost during `write()`
+- **`get_or_create_subtree` postconditions** — two separate bugs, both with regression tests in `holo-tree/tests/write_child.rs`: (a) mark the *whole* navigated path dirty (root included), not just newly-created nodes, or a write into an already-existing dir is silently lost during `write()`; (b) the returned node must have its children loaded — **including the `path == "."` root case** — or a mutating caller (`write_child_bytes`, e.g. a repo-root file like `a.toml`) hits `children.as_mut().unwrap()` on `None`, which **aborts the host process across the napi FFI boundary**. Cover both deep and root-level paths when testing.
 - **Glob `**` zero-segment matching** — globset's `**` doesn't match zero path segments unlike minimatch. Fix: add suffix pattern without `**/` prefix
 - **BTreeMap for children** — HashMap's random iteration order causes different merge results for unconstrained mappings
 - **Tag peeling** — source refs may point to annotated tags, not commits directly

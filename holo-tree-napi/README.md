@@ -1,0 +1,144 @@
+# holo-tree-napi
+
+Node.js native binding for [`holo-tree`](../holo-tree) — mutable in-memory git
+trees via [gitoxide](https://github.com/GitoxideLabs/gitoxide), with no `git`
+subprocess.
+
+This crate exposes the narrow slice of holo-tree that record-oriented consumers
+(notably [gitsheets](https://github.com/JarvusInnovations/gitsheets)) need for an
+upsert→commit path. It is intentionally a thin pass-through; it is also the first
+integrated consumer of the new Rust libs, so it doubles as a hardening vehicle —
+rough edges in holo-tree's API are recorded as `Phase-C finding` notes in the
+source and fixed upstream rather than worked around here.
+
+## API
+
+```js
+const { Repo, emptyTreeHash } = require('@hologit/holo-tree');
+
+const repo = Repo.open('/path/to/repo/.git');
+
+const tree = repo.createTreeFromRef('HEAD'); // or repo.createTree() for empty
+tree.writeChild('data/widgets/1.toml', 'id = 1\n'); // hash blob + deep insert
+const treeHash = tree.write(); // flush dirty subtrees → ODB, returns tree hash
+
+const commit = repo.commitTree(treeHash, [parentHash], 'add widget 1');
+repo.updateRef('refs/heads/main', commit);
+
+const bytes = repo.createTreeFromRef(commit).readBlob('data/widgets/1.toml');
+```
+
+Conventions: object ids cross the boundary as lowercase 40-char hex strings;
+blob content crosses as `Buffer` (binary-safe).
+
+### Surface
+
+| Method | holo-tree call | Notes |
+|---|---|---|
+| `Repo.open(gitDir)` | `gix::open().into_sync()` | factory |
+| `repo.createTreeFromRef(ref)` → `Tree` | `repo::create_tree_from_ref` | resolves ref→commit→tree |
+| `repo.createTree()` → `Tree` | `MutableTree::empty` | |
+| `repo.commitTree(treeHash, parents[], msg)` → hash | `repo::commit_tree` | uses git-config identity |
+| `repo.updateRef(ref, hash, expectedOldHash?)` | `repo::update_ref` | compare-and-swap when `expectedOldHash` given; force otherwise |
+| `repo.resolveRef(ref)` → `hash\|null` | `repo::resolve_ref` | peels tags; `null` if unresolved |
+| `repo.writeBlob(buf)` → hash | `gix write_blob` | hash bytes into the ODB, no tree |
+| `tree.writeChild(path, text)` → hash | `MutableTree::write_child` | UTF-8 text |
+| `tree.writeChildBytes(path, buf)` → hash | `MutableTree::write_child_bytes` | binary |
+| `tree.readBlob(path)` → `Buffer\|null` | `MutableTree::read_blob` | |
+| `tree.getChild(path)` → `{type,hash,mode}\|null` | `MutableTree::get_child` | read-only; deep path |
+| `tree.getChildren(path)` → `[{name,type,hash,mode}]` | `get_subtree`+`ensure_children` | read-only; direct children |
+| `tree.getBlobMap(path?)` → `[{path,hash,mode}]` | `get_subtree`+`get_blob_map` | read-only; paths relative to subtree |
+| `tree.deleteChildDeep(path)` → bool | `MutableTree::delete_child_deep` | |
+| `tree.clearChildren(path)` | `MutableTree::clear_children` | O(1) subtree wipe |
+| `tree.merge(other, {files?, mode})` | `MutableTree::merge` | `mode`: `overlay`/`replace`/`underlay` |
+| `tree.write()` → treeHash | `MutableTree::write` | |
+| `emptyTreeHash()` → hash | `tree::empty_tree_id` | module fn |
+
+`mode` values are the git filemode as a number (e.g. `33188` = `0o100644`). Tree
+hashes reported by the read-only navigators reflect the last `write()`/load and
+are stale for a subtree mutated since — flush with `write()` for canonical
+hashes.
+
+## Building
+
+Requires a Rust toolchain and `@napi-rs/cli` (a devDependency):
+
+```sh
+npm install
+npm run build:debug   # or: npm run build   (release)
+npm test              # node --test against a scratch git repo
+```
+
+`napi build` emits `holo-tree.<triple>.node`. The generated `index.js` loader
+and `index.d.ts` types **are committed**; only the `.node` binaries are
+git-ignored (built per-platform in CI).
+
+## Publishing
+
+Published as the scoped package **`@hologit/holo-tree`** with per-platform
+prebuilt binaries shipped as `optionalDependencies`:
+
+| Platform package | Triple | Built on | Smoke-tested |
+| --- | --- | --- | --- |
+| `@hologit/holo-tree-linux-x64-gnu` | `x86_64-unknown-linux-gnu` | ubuntu-latest | ✓ native |
+| `@hologit/holo-tree-linux-arm64-gnu` | `aarch64-unknown-linux-gnu` | ubuntu-24.04-arm | ✓ native |
+| `@hologit/holo-tree-linux-x64-musl` | `x86_64-unknown-linux-musl` | ubuntu-latest (musl cross) | build-only |
+| `@hologit/holo-tree-darwin-arm64` | `aarch64-apple-darwin` | macos-latest | ✓ native |
+| `@hologit/holo-tree-darwin-x64` | `x86_64-apple-darwin` | macos-latest (cross) | build-only |
+| `@hologit/holo-tree-win32-x64-msvc` | `x86_64-pc-windows-msvc` | windows-latest | ✓ native |
+
+Native targets build + smoke-test on a matching runner; cross targets (musl,
+darwin-x64) build only, since their `.node` can't run on the host arch/libc (the
+logic is covered by the native runs). The `.github/workflows/holo-tree-napi.yml`
+workflow builds all six on every PR touching the binding, and on a
+`holo-tree-v*` tag it builds then publishes.
+
+Auth is **npm trusted publishing (OIDC)** — no tokens, matching hologit's
+`publish-npm.yml`. Trusted publishing is configured *per package*, and a package
+can't get a trusted publisher until it exists — so the four packages need a
+**one-time manual bootstrap** before automated releases work.
+
+### One-time bootstrap (manual first publish, then configure trusted publishing)
+
+The four packages all start at an early version (currently `0.0.1`). They must
+exist on npm before trusted publishing can be turned on.
+
+1. **Get the prebuilt binaries.** Run the `holo-tree-napi` workflow (push the
+   branch / open a PR, or trigger `workflow_dispatch`) and download its three
+   `bindings-*` artifacts — they hold the `.node` for each platform. A single
+   machine can't build all three natively, so use the CI artifacts.
+
+2. **Publish all four manually**, logged in as an `@hologit` org member
+   (`npm login`):
+
+   ```sh
+   cd holo-tree-napi
+   npm install
+   npx napi artifacts --dir <downloaded-artifacts-dir>   # → npm/<triple>/*.node
+   # platform packages first, then the main package:
+   for d in npm/*/ ; do ( cd "$d" && npm publish --access public ); done
+   npm publish --access public --ignore-scripts          # main; skip the napi
+                                                         # prepublish hook
+   ```
+
+3. **Turn on trusted publishing** on npmjs.com for **each** of the four packages
+   → Settings → Trusted Publisher → GitHub Actions, repo
+   `JarvusInnovations/hologit`, workflow `holo-tree-napi.yml`.
+
+### Releases (after bootstrap — fully automated, tokenless)
+
+```sh
+git tag holo-tree-v0.1.1 && git push origin holo-tree-v0.1.1
+```
+
+The tag drives the published version; CI builds all three platforms, then
+publishes via OIDC (provenance). No secret needed. The `holo-tree-v*` tag is the
+release marker — napi runs with `--skip-gh-release` so it does **not** create a
+bare `v<version>` GitHub release/tag (which would collide with hologit's own
+`v*` JS-package release namespace).
+
+To add or drop a platform later, edit `napi.triples.additional` +
+`optionalDependencies` in `package.json`, run `napi create-npm-dir -t .`, add the
+matching matrix entry in the workflow, and (since it's a new package) bootstrap
+
++ trust that one package too.

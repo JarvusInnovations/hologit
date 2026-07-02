@@ -1,0 +1,53 @@
+{
+  "name": "@hologit/holo-tree",
+  "version": "0.0.1",
+  "description": "Node.js native binding for holo-tree — mutable in-memory git trees via gix",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JarvusInnovations/hologit.git",
+    "directory": "holo-tree-napi"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "napi": {
+    "name": "holo-tree",
+    "triples": {
+      "defaults": false,
+      "additional": [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ]
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "optionalDependencies": {
+    "@hologit/holo-tree-linux-x64-gnu": "0.0.1",
+    "@hologit/holo-tree-linux-arm64-gnu": "0.0.1",
+    "@hologit/holo-tree-linux-x64-musl": "0.0.1",
+    "@hologit/holo-tree-darwin-arm64": "0.0.1",
+    "@hologit/holo-tree-darwin-x64": "0.0.1",
+    "@hologit/holo-tree-win32-x64-msvc": "0.0.1"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm --skip-gh-release",
+    "test": "node --test test/",
+    "version": "napi version"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4"
+  }
+}

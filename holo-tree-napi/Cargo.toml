@@ -1,0 +1,22 @@
+[package]
+name = "holo-tree-napi"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Node.js native binding for holo-tree — mutable in-memory git trees via gix"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Node-API floor of 6 covers Node.js >= 20 comfortably.
+napi = { version = "2", default-features = false, features = ["napi6"] }
+napi-derive = "2"
+holo-tree = { path = "../holo-tree" }
+# gix defaults only — the binding does no networking, so we avoid the TLS/
+# OpenSSL pull-in of `blocking-network-client` to keep cross-compilation clean.
+gix = { version = "0.83" }
+
+[build-dependencies]
+napi-build = "2"

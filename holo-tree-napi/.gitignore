@@ -1,0 +1,11 @@
+# Rust build output (also covered by the workspace-root /target/ rule)
+target/
+
+# npm
+node_modules/
+
+# Compiled native addons — built per-platform in CI, never committed.
+# (The generated index.js / index.d.ts loader+types ARE committed, and the
+# npm/<triple>/ platform package manifests ARE committed; only the .node
+# binaries that land in them are ignored.)
+*.node
