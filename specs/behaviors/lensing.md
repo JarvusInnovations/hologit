@@ -63,6 +63,16 @@ One contract for all lens images; no port publishing, no readiness polling.
 - **Warm pool** (default for watch mode and multi-lens projections): at most one container per image digest, kept for the duration of the run/session; jobs multiplex over per-job refs. Warm containers retain repo objects, so successive pushes transfer only deltas — successive watch-mode projections ship only what changed. The engine owns pool lifecycle (start on first use, reap on session end or idle timeout); an engine crash must not orphan containers silently (label them for discovery and cleanup).
 - The trade-off is explicit: one-shot = stateless + full transfer; warm = incremental + engine-managed state. Both sit behind the identical job protocol; lens images cannot tell which mode they run in.
 
+## Object transfer
+
+Three sanctioned tiers, all behind the same job protocol; transfer strategy is an engine concern and never part of the spec hash:
+
+1. **Full** (one-shot cold case): the input reaches the container as a complete push/bundle.
+2. **Incremental** (warm pool): the container retains objects across jobs; pushes transfer only new objects.
+3. **Lazy** (either mode): the container repo is configured with the engine as a **promisor remote over the same exec'd-stdio connection**; objects are fetched on demand as the lens reads them. Zero upfront transfer; only objects the lens actually touches ever cross. This is the sanctioned way to get alternates-like economics.
+
+**Read-only object-DB mounts (alternates) are not part of the contract.** Sharing the host object database into the container via bind mount was prototyped historically and is structurally fragile: it assumes a same-host daemon and compatible uid mapping (breaks under remote daemons, DinD, rootless, and VM-backed engines, where per-object filesystem access is also pathologically slow), it races host-side GC/repack with no cross-process coordination, and it exposes the entire object DB — including private source history — to lens code, where transport exposes only the input-reachable set. An engine MAY offer an alternates mount as an opt-in local fast path when it can verify same-host daemon and uid compatibility and suppress GC for the job's duration, but behavior must be observably identical to transport mode and lens images must not be able to depend on it.
+
 ## Cache (ported)
 
 - Results are cached at the spec-keyed ref (`refs/holo/lens/…`); `cacheFrom`/`cacheTo` fetch/push those refs against remotes, with tracking refs preventing redundant pushes. Cache reads are trusted without re-execution (content-addressing is the integrity model).
