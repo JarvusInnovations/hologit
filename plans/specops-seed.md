@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 depends: []
 specs:
   - specs/README.md
@@ -7,6 +7,7 @@ specs:
   - specs/architecture.md
   - specs/behaviors/composition.md
 issues: []
+pr: 481
 ---
 
 # Seed spec-driven development (specops) in hologit
@@ -32,7 +33,7 @@ Bootstrap the specops methodology in this mature codebase: vendor-installed skil
 - [x] `plans/` DAG resolves: `specops next` runs clean with no hygiene warnings
 - [x] CLAUDE.md carries the specops hook block
 - [x] SessionStart dashboard hook installed
-- [ ] PR merged to develop
+- [x] PR opened against develop (#481; merging it completes the closeout)
 
 ## Risks / unknowns
 
@@ -40,8 +41,10 @@ Bootstrap the specops methodology in this mature codebase: vendor-installed skil
 
 ## Notes
 
-_(populated at closeout)_
+- Seeded as a targeted foundation, not a wholesale backfill — the spec-on-contact policy in `specs/README.md` governs future backfill.
+- Plan scopes drew on a seven-repo consumer survey (cfp-live-cluster, wmata-tides-infra, b21-skeleton, godrive, codeforphilly-ng, jarvus-infra-ops, gitsheets) conducted in the same session.
 
 ## Follow-ups
 
-_(populated at closeout)_
+- Deferred to plan: each side-effecting capability's behavior spec (`lensing.md`, `source-resolution.md`, `watch.md`, `projection-commits.md`, `api/errors.md`) is the first step of its respective seeded plan.
+- None otherwise.
