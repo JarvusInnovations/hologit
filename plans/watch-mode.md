@@ -21,6 +21,7 @@ Continuous re-projection on change: monitor the working tree and/or git refs and
 1. Spec from `commands/watch.js` behavior (watchman for working tree, chokidar for refs), then decide the Rust shape: `notify` crate + gix ref monitoring, or a callback/event boundary where the host (CLI or embedding consumer) owns watching and triggers re-projection.
 2. Prefer the event-boundary design: it keeps the engine pure (per principles) and gives embedding consumers (gitsheets watch mode is its own tracked want, gitsheets#135) the same primitive.
 3. Depends on projector-napi-cli (delegation path exists) and projection-commits (watch cycles that commit).
+4. For lensed holobranches, watch-cycle latency depends on the warm lens-container pool from `specs/behaviors/lensing.md` (Container lifecycle): one container per image digest held for the session, jobs multiplexed over per-job refs, incremental object transfer to warm containers. Watch mode is that design's primary beneficiary — without it, container churn dwarfs the ~27ms composition budget. Not a hard dependency (unlensed branches watch fine; hybrid can lens via JS), but full-speed lensed watch requires lens-execution.
 
 ## Validation
 
