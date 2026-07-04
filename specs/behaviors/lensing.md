@@ -43,6 +43,8 @@ Rules:
 
 - A warm result cache must be usable **offline**: if step 1 or 2 resolves, no network is touched.
 - A **local-only image** (never pushed) is usable (#417): its locally-resolved identity enters the spec with an explicit `resolved = "local"` marker. Such specs cache correctly on that machine and are honestly non-portable — an unpushed image has no cross-machine identity, and the spec says so rather than failing.
+- **Multi-arch normalization**: where a tag names a multi-platform image, the conforming identity is the **manifest-index (manifest list) digest**, never a platform manifest's digest. Rungs 2 and 3 must agree on which digest they name — a ladder where the local rung yields a platform digest and the registry rung yields the index digest silently forks the spec hash across machines. If the local engine cannot report the index digest for a pulled-by-tag image, the rung must be treated as unable to resolve rather than returning a platform digest.
+- **Local shadowing is by design**: because rung 2 precedes rung 3, a floating tag resolves to whatever is present locally — a stale local pull shadows a newer registry version until the operator pulls or pins. This is the deliberate consequence of offline-first resolution, not a defect; the remedy is digest pinning (rung 1), which is immune to both staleness and drift.
 
 ## Job protocol (desired state)
 
@@ -53,10 +55,12 @@ One contract for all lens images; no port publishing, no readiness polling.
 - **Per-job refs** inside the container's repo, keyed by spec hash:
   - `refs/jobs/<spec-hash>/input` — pushed by the engine (the wrapper commit).
   - `refs/jobs/<spec-hash>/output` — written by the lens on success: a commit whose **first parent is the input commit** (integrity check, ported) and whose tree is the result.
-  - `refs/jobs/<spec-hash>/error` — written on failure: a commit whose tree contains at minimum `exit-code` and `log` entries. Structured failure is part of the contract; "no output ref appeared" is a transport error, never a lens error.
+  - `refs/jobs/<spec-hash>/error` — written on failure: a **parentless** commit whose tree contains at minimum `exit-code` and `log` entries. Error commits carry no parent so an error bundle is self-contained — deliverable without dragging input objects along. Structured failure is part of the contract; "no output ref appeared" is a transport error, never a lens error.
 - Distinct spec hashes are distinct jobs: **one container may execute many jobs, concurrently or sequentially**, with no shared mutable refs between them.
 - **Deadlines and supersession**: every job carries a deadline (config `timeout`, engine default); the engine cancels jobs whose deadline passes or whose result is no longer wanted (a newer projection superseded it — #19). Cancellation is a ref deletion plus process signal; a cancelled job must leave no partial `output` ref.
 - **One-shot mode**: the same contract collapsed to a single exchange — wrapper bundle on stdin, result (or error) bundle on stdout, exit code mirroring success/error — for `run --rm`-style execution with no persistent container.
+- **Invocation**: the engine runs the image's **default entrypoint with no arguments**. All job context arrives through the protocol itself (the wrapper commit's `.holospec/lens.toml`); the engine passes no command, no arguments, and no lens-specific environment. Prescribing an in-image path or command to exec would be a hidden image contract (see Principles).
+- **Stdio discipline**: in one-shot mode, stdout belongs exclusively to the result bundle (binary-clean); all lens logging goes to stderr, which the engine relays.
 
 ## Container lifecycle (desired state)
 
