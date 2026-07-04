@@ -28,7 +28,7 @@ Provenance note: the spec/key/cache model dates to the original Habitat-based le
 ## Spec and content addressing (ported, one change)
 
 - A lens spec captures the complete execution identity: normalized lens config, resolved container identity (digest form), and the input tree hash. The spec is written as a content-addressed object; its hash keys all caching.
-- Anything that can change the output must be inside the spec; nothing else may be. (Corollary: lens execution must not read clocks, network, or host state — a lens that does so is defective, and its cache entries are poison.)
+- The spec is governed by [a content-addressed key captures exactly what determines the output](../principles.md#a-content-addressed-key-captures-exactly-what-determines-the-output): everything that can change the output is inside the spec, nothing else is, and lens execution must not read anything outside it (clocks, network, host state — a lens that does so is defective, and its cache entries are poison).
 - **Change:** the spec travels to the lens as a file, not a commit message. The job input commit's tree is a wrapper: `.holospec/lens.toml` alongside `input/` (the input tree). The output commit's tree is the bare result, unwrapped. Commit messages stay human-readable.
 
 ## Container identity resolution (desired state)
@@ -98,6 +98,7 @@ Four sanctioned tiers, all behind the same job protocol; transfer strategy is an
 **Inherited** — from [`principles.md`](../principles.md):
 
 - [Determinism is the product](../principles.md#determinism-is-the-product) — the spec-hash cache is sound only because lenses are required to be pure functions of their spec; identity resolution exists to pin the one input (the image) the config expresses symbolically.
+- [A content-addressed key captures exactly what determines the output](../principles.md#a-content-addressed-key-captures-exactly-what-determines-the-output) — governs every inclusion/exclusion decision in this spec: `timeout` stripped (can't change output), `_resolved` admitted as inert provenance on already-non-portable identities, transfer strategy never hashed, index-digest normalization so identical work keys identically across machines.
 - [Composition is pure; side effects live at the edges](../principles.md#composition-is-pure-side-effects-live-at-the-edges) — lensing is the canonical edge: it wraps composition output, never participates in it.
 - [The legacy engine is the conformance oracle](../principles.md#the-legacy-engine-is-the-conformance-oracle) — applies to lens *semantics* (input/spec/cache/output); the transport/runtime is deliberately redefined by this spec, which is exactly the sanctioned spec-first path for diverging from the oracle.
 

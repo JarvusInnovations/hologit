@@ -10,6 +10,17 @@ This rules out: iteration over unordered collections anywhere results can be ord
 
 > Why: consumers commit projected trees to real branches and diff them across runs (GitOps deploy pipelines, redaction mirrors). A hash that wobbles without an input change is indistinguishable from a corrupted pipeline.
 
+## A content-addressed key captures exactly what determines the output
+
+Every content-addressed spec or cache key (lens specs, source spec-refs, any future cache) must contain **everything that can change the output, and nothing that cannot**. Both halves are violations:
+
+- An output-determining input missing from the key **poisons the cache** — two genuinely different results share a key, and a false hit is served as truth.
+- A non-determining input included in the key **forks it spuriously** — false misses, churn, and cross-machine divergence (the same logical work resolves to different keys on different hosts).
+
+Corollaries: keyed execution must not read anything outside its key's contents (clocks, network, host state — results so produced are poison regardless of key hygiene); engine bookkeeping that cannot affect output stays **out of the key entirely** when it carries no value, or enters as explicitly inert metadata that consumers are contractually bound to ignore (the `_` prefix convention) when it documents provenance.
+
+> Why: content addressing is hologit's integrity model — cached results are trusted *without re-execution* purely on key identity. That trust is only as sound as the key's exactness, in both directions.
+
 ## The legacy engine is the conformance oracle
 
 During the Rust migration, the Node.js engine (`lib/`) defines correct behavior. A ported capability is done when it produces **hash-identical output** to the JS engine on the reference projections (see `behaviors/composition.md` § Conformance fixtures) — not when it "looks right."
