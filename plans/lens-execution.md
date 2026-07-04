@@ -22,10 +22,11 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 2. Settle the runtime question in the spec (recommendation: OCI-only via a container API, with Docker/Podman as interchangeable executors; drop Habitat and the studio's Habitat coupling). Include local-image support (#417 — lenses not yet pushed to a registry).
 3. Implement execution behind a trait/API boundary so composition stays pure and the executor is swappable (also the seam for remote lensing, #79, later).
 4. Cache compatibility: Rust-written lens cache refs must be readable by the JS engine and vice versa during the hybrid period.
+5. Lens-image migration to the v2 job protocol (SDK entrypoint, dual-protocol transition window) is tracked downstream at hologit/lenses#32.
 
 ## Validation
 
-- [ ] `specs/behaviors/lensing.md` accepted, including the runtime decision
+- [x] `specs/behaviors/lensing.md` accepted, including the runtime decision (PR #482, merged 2026-07-04; OCI-only, exec/stdio job protocol, four object-transfer tiers, remoted lensing #79, local-image resolution #417, deadlines/supersession #19)
 - [ ] Lensed reference projections (cfp-live-cluster-style helm3/kustomize, wmata-style tree-patch) produce hashes identical to the JS engine
 - [ ] Lens cache hits work across engines (JS-written cache honored by Rust and vice versa)
 - [ ] A local, unpushed lens image runs (#417 resolved or explicitly deferred in the spec)
