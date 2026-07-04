@@ -28,7 +28,7 @@ Provenance note: the spec/key/cache model dates to the original Habitat-based le
 ## Spec and content addressing (ported, one change)
 
 - A lens spec captures the complete execution identity: normalized lens config, resolved container identity (digest form), and the input tree hash. The spec is written as a content-addressed object; its hash keys all caching.
-- Anything that can change the output must be inside the spec; nothing else may be. (Corollary: lens execution must not read clocks, network, or host state — a lens that does so is defective, and its cache entries are poison.)
+- The spec is governed by [a content-addressed key captures exactly what determines the output](../principles.md#a-content-addressed-key-captures-exactly-what-determines-the-output): everything that can change the output is inside the spec, nothing else is, and lens execution must not read anything outside it (clocks, network, host state — a lens that does so is defective, and its cache entries are poison).
 - **Change:** the spec travels to the lens as a file, not a commit message. The job input commit's tree is a wrapper: `.holospec/lens.toml` alongside `input/` (the input tree). The output commit's tree is the bare result, unwrapped. Commit messages stay human-readable.
 
 ## Container identity resolution (desired state)
@@ -42,7 +42,10 @@ Resolution ladder, tried in order at spec-build time:
 Rules:
 
 - A warm result cache must be usable **offline**: if step 1 or 2 resolves, no network is touched.
-- A **local-only image** (never pushed) is usable (#417): its locally-resolved identity enters the spec with an explicit `resolved = "local"` marker. Such specs cache correctly on that machine and are honestly non-portable — an unpushed image has no cross-machine identity, and the spec says so rather than failing.
+- A **local-only image** (never pushed) is usable (#417): its locally-resolved identity enters the spec with an explicit `_resolved = "local"` marker. Such specs cache correctly on that machine and are honestly non-portable — an unpushed image has no cross-machine identity, and the spec says so rather than failing.
+- **Underscore prefix marks engine bookkeeping.** Spec keys beginning with `_` (e.g. `_resolved`) are engine-written metadata, not lens configuration: lens transforms MUST ignore them, and SDKs that convert spec keys into environment variables MUST exclude them. Engine bookkeeping must never influence lens behavior — a transform that branches on transport-level trivia (such as how the image's identity was resolved) violates spec purity. Engine fields that cannot affect output and carry no provenance value stay out of the spec entirely (precedent: `timeout` is stripped rather than prefixed).
+- **Multi-arch normalization**: where a tag names a multi-platform image, the conforming identity is the **manifest-index (manifest list) digest**, never a platform manifest's digest. Rungs 2 and 3 must agree on which digest they name — a ladder where the local rung yields a platform digest and the registry rung yields the index digest silently forks the spec hash across machines. If the local engine cannot report the index digest for a pulled-by-tag image, the rung must be treated as unable to resolve rather than returning a platform digest.
+- **Local shadowing is by design**: because rung 2 precedes rung 3, a floating tag resolves to whatever is present locally — a stale local pull shadows a newer registry version until the operator pulls or pins. This is the deliberate consequence of offline-first resolution, not a defect; the remedy is digest pinning (rung 1), which is immune to both staleness and drift.
 
 ## Job protocol (desired state)
 
@@ -53,10 +56,12 @@ One contract for all lens images; no port publishing, no readiness polling.
 - **Per-job refs** inside the container's repo, keyed by spec hash:
   - `refs/jobs/<spec-hash>/input` — pushed by the engine (the wrapper commit).
   - `refs/jobs/<spec-hash>/output` — written by the lens on success: a commit whose **first parent is the input commit** (integrity check, ported) and whose tree is the result.
-  - `refs/jobs/<spec-hash>/error` — written on failure: a commit whose tree contains at minimum `exit-code` and `log` entries. Structured failure is part of the contract; "no output ref appeared" is a transport error, never a lens error.
+  - `refs/jobs/<spec-hash>/error` — written on failure: a **parentless** commit whose tree contains at minimum `exit-code`, `phase`, and `log` entries, and SHOULD include `command`. `exit-code` is the **inner transform's real exit status** (the lens tool's own code — never a wrapper's constant); `phase` is one of `setup` | `transform` | `commit`, attributing the failure to SDK plumbing vs. the lens tool itself; `command` is the rendered command line, for debuggability. Error commits carry no parent so an error bundle is self-contained — deliverable without dragging input objects along. Structured failure is part of the contract; "no output ref appeared" is a transport error, never a lens error.
 - Distinct spec hashes are distinct jobs: **one container may execute many jobs, concurrently or sequentially**, with no shared mutable refs between them.
 - **Deadlines and supersession**: every job carries a deadline (config `timeout`, engine default); the engine cancels jobs whose deadline passes or whose result is no longer wanted (a newer projection superseded it — #19). Cancellation is a ref deletion plus process signal; a cancelled job must leave no partial `output` ref.
 - **One-shot mode**: the same contract collapsed to a single exchange — wrapper bundle on stdin, result (or error) bundle on stdout, exit code mirroring success/error — for `run --rm`-style execution with no persistent container.
+- **Invocation**: the engine runs the image's **default entrypoint with no arguments**. All job context arrives through the protocol itself (the wrapper commit's `.holospec/lens.toml`); the engine passes no command, no arguments, and no lens-specific environment. Prescribing an in-image path or command to exec would be a hidden image contract (see Principles).
+- **Stdio discipline**: in one-shot mode, stdout belongs exclusively to the result bundle (binary-clean); all lens logging goes to stderr, which the engine relays.
 
 ## Container lifecycle (desired state)
 
@@ -93,6 +98,7 @@ Four sanctioned tiers, all behind the same job protocol; transfer strategy is an
 **Inherited** — from [`principles.md`](../principles.md):
 
 - [Determinism is the product](../principles.md#determinism-is-the-product) — the spec-hash cache is sound only because lenses are required to be pure functions of their spec; identity resolution exists to pin the one input (the image) the config expresses symbolically.
+- [A content-addressed key captures exactly what determines the output](../principles.md#a-content-addressed-key-captures-exactly-what-determines-the-output) — governs every inclusion/exclusion decision in this spec: `timeout` stripped (can't change output), `_resolved` admitted as inert provenance on already-non-portable identities, transfer strategy never hashed, index-digest normalization so identical work keys identically across machines.
 - [Composition is pure; side effects live at the edges](../principles.md#composition-is-pure-side-effects-live-at-the-edges) — lensing is the canonical edge: it wraps composition output, never participates in it.
 - [The legacy engine is the conformance oracle](../principles.md#the-legacy-engine-is-the-conformance-oracle) — applies to lens *semantics* (input/spec/cache/output); the transport/runtime is deliberately redefined by this spec, which is exactly the sanctioned spec-first path for diverging from the oracle.
 
