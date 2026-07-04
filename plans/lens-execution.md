@@ -3,6 +3,7 @@ status: planned
 depends: [projector-napi-cli]
 specs:
   - specs/behaviors/composition.md
+  - specs/behaviors/lensing.md
 issues: [435]
 ---
 
@@ -23,6 +24,7 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 3. Implement execution behind a trait/API boundary so composition stays pure and the executor is swappable (also the seam for remote lensing, #79, later).
 4. Cache compatibility: Rust-written lens cache refs must be readable by the JS engine and vice versa during the hybrid period.
 5. Lens-image migration to the v2 job protocol (SDK entrypoint, dual-protocol transition window) is tracked downstream at hologit/lenses#32.
+6. Warm container pool and object-transfer tiers 2–4 (incremental warm-ref negotiation, lazy/promisor fetch, shared runtime-host object cache) per specs/behaviors/lensing.md — deferred here from [`lens-protocol-v2-js`](lens-protocol-v2-js.md), which shipped the interim JS engine as one-shot/tier-1 only (PR #484).
 
 ## Validation
 
@@ -30,6 +32,7 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 - [ ] Lensed reference projections (cfp-live-cluster-style helm3/kustomize, wmata-style tree-patch) produce hashes identical to the JS engine
 - [ ] Lens cache hits work across engines (JS-written cache honored by Rust and vice versa)
 - [ ] A local, unpushed lens image runs (#417 resolved or explicitly deferred in the spec)
+- [ ] Warm container pool + transfer tiers 2–4 implemented behind the same job protocol (deferred from [`lens-protocol-v2-js`](lens-protocol-v2-js.md))
 
 ## Risks / unknowns
 

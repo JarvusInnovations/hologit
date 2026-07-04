@@ -1,0 +1,16 @@
+#!/bin/sh
+# Trivial deterministic test lens: writes an LENSED marker file plus an
+# upper-cased copy of each input file. Deterministic output = assertable tree.
+set -eu
+
+cd "$HOLOLENS_INPUT"
+
+find . -type f | sort | while read -r file; do
+    file=${file#./}
+    dir=$(dirname "$file")
+    mkdir -p "$HOLOLENS_OUTPUT/$dir"
+    tr '[:lower:]' '[:upper:]' < "$file" > "$HOLOLENS_OUTPUT/$file"
+done
+
+echo 'lensed' > "$HOLOLENS_OUTPUT/LENSED"
+echo 'holo-lens-test: done'
