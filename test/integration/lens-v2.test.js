@@ -67,11 +67,11 @@ describe('Lens container identity resolution ladder', () => {
 
         expect(execDockerSpy).not.toHaveBeenCalled();
         expect(spec.data.container).toBe(pinned);
-        expect(spec.data.resolved).toBeNull();
+        expect(spec.data._resolved).toBeNull();
 
-        // resolved marker must not appear in the written spec object
+        // bookkeeping marker must not appear in the written spec object
         const specToml = await sandbox.git.catFile({ p: true }, spec.hash);
-        expect(specToml).not.toMatch(/resolved/);
+        expect(specToml).not.toMatch(/_resolved/);
     });
 });
 
@@ -118,15 +118,15 @@ describeWithDocker('Lens v2 job protocol', () => {
         return workspace.getLens(name);
     }
 
-    test('local-only image resolves by image ID with resolved = "local" (#417)', async () => {
+    test('local-only image resolves by image ID with _resolved = "local" (#417)', async () => {
         const lens = await setupLens('test', { container: V2_IMAGE, command: 'holo-lens-test' });
         const spec = await lens.buildSpec(await lens.buildInputTree());
 
         expect(spec.data.container).toMatch(/^sha256:[a-f0-9]{64}$/);
-        expect(spec.data.resolved).toBe('local');
+        expect(spec.data._resolved).toBe('local');
 
         const specToml = await sandbox.git.catFile({ p: true }, spec.hash);
-        expect(specToml).toMatch(/resolved = "local"/);
+        expect(specToml).toMatch(/_resolved = "local"/);
         // deadline is an engine concern and must never enter the spec
         expect(specToml).not.toMatch(/timeout/);
     });

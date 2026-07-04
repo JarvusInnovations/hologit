@@ -30,6 +30,10 @@
 # with those paths. The command's stdout+stderr are captured as the job log
 # and relayed to stderr.
 #
+# Spec keys beginning with `_` (e.g. `_resolved`) are engine bookkeeping:
+# transforms must ignore them, and SDKs that convert spec keys into
+# environment variables must exclude them.
+#
 # Requires only git and a POSIX shell (busybox-compatible).
 
 set -eu
