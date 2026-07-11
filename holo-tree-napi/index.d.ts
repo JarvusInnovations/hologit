@@ -6,6 +6,13 @@
 /** Git's well-known empty-tree hash (`4b825dc6…`). */
 export declare function emptyTreeHash(): string
 /**
+ * Internal self-test hook: deliberately panics inside the binding so the
+ * test suite can prove that a panic surfaces as a catchable JS error with
+ * code `PANIC` rather than aborting the host process (specs/api/errors.md
+ * § Panic policy). Never call this outside tests.
+ */
+export declare function __triggerPanicForTest(): void
+/**
  * A commit identity (author or committer). `timeSeconds`/`offsetMinutes` are
  * optional; when omitted the current wall-clock time at UTC is used. Pass them
  * explicitly to reproduce a specific commit (e.g. match `git commit-tree`
@@ -84,8 +91,9 @@ export declare class Repo {
    * When `expectedOldHash` is provided this is a **compare-and-swap**: the
    * update only succeeds if the ref currently resolves to exactly that hash,
    * so a concurrent writer who moved the ref makes the swap fail rather than
-   * silently clobbering their commit. Omit it to force the ref (the prior
-   * unconditional behavior).
+   * silently clobbering their commit. A lost swap throws with code
+   * `REF_CONFLICT` — the matchable optimistic-concurrency signal. Omit
+   * `expectedOldHash` to force the ref (the prior unconditional behavior).
    */
   updateRef(refname: string, hash: string, expectedOldHash?: string | undefined | null): void
   /**
@@ -107,13 +115,9 @@ export declare class Repo {
  * Holds its own clone of the repo handle so JS callers don't thread a repo
  * argument through every call.
  *
- * Phase-C finding #1: holo-tree's `MutableTree` takes `&gix::Repository` on
- * nearly every method and keeps a *thread-local* tree cache. We smooth the
- * first half here (the handle lives on the `Tree`) but NOT the second: each
- * call does `to_thread_local()`, and whether holo-tree's thread-local cache
- * stays warm across libuv-dispatched calls is the open ergonomics question to
- * resolve upstream (e.g. a repo-bound tree handle, or an explicit session/
- * cache object the consumer owns).
+ * Phase-C finding #5 (thread-local tree cache) is addressed upstream by the
+ * consumer-owned cache/context redesign — see `specs/api/errors.md`
+ * § Thread-safety expectations.
  */
 export declare class Tree {
   /**
