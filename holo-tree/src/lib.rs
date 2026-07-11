@@ -19,6 +19,20 @@
 //! - [`toml`] — Generic TOML-from-git-blob reader
 //! - [`repo`] — Ref resolution, commit creation, ref updates
 
+// Panic policy (specs/api/errors.md): no panicking constructs reachable from
+// public entry points — violated invariants degrade to Error::Internal.
+// Unit-test modules are exempt (tests may unwrap).
+#![cfg_attr(
+    not(test),
+    warn(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::unreachable
+    )
+)]
+
 pub mod error;
 pub mod glob;
 pub mod repo;
