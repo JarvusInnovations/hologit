@@ -54,12 +54,27 @@ fn update_ref_cas_fails_when_expected_does_not_match() {
 
     // ...but we claim it should be at A — the swap must be rejected.
     let err = update_ref(&sb.repo, "refs/heads/work", a, Some(a)).unwrap_err();
-    assert!(
-        matches!(err, holo_tree::Error::Git(_)),
-        "CAS mismatch should surface as a git error, got {err:?}",
+    // Per specs/api/errors.md: assert the stable code, never message text.
+    assert_eq!(
+        err.code(),
+        "REF_CONFLICT",
+        "CAS mismatch must surface as REF_CONFLICT, got {err:?}",
     );
     // Ref is unchanged.
     assert_eq!(resolve_ref(&sb.repo, "refs/heads/work").unwrap(), Some(b));
+}
+
+#[test]
+fn update_ref_cas_fails_when_ref_is_missing() {
+    let sb = Sandbox::new();
+    let (a, b) = two_commits(&sb);
+    // No ref exists, but the caller claims it should be at A.
+    let err = update_ref(&sb.repo, "refs/heads/ghost", b, Some(a)).unwrap_err();
+    assert_eq!(
+        err.code(),
+        "REF_CONFLICT",
+        "CAS against a missing ref must surface as REF_CONFLICT, got {err:?}",
+    );
 }
 
 #[test]

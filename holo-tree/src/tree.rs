@@ -7,9 +7,11 @@
 //!
 //! Key design decisions:
 //! - `BTreeMap` for deterministic iteration matching git's canonical sort
-//! - Thread-local cache eliminates redundant ODB reads across recursive projections
+//! - Module-level cache eliminates redundant ODB reads across recursive projections
 //! - "Clone clean input" optimization skips loading trees that pass through unchanged
 //! - Dirty propagation in `get_or_create_subtree` marks all ancestors
+//! - No panicking constructs on public paths: violated invariants degrade to
+//!   `Error::Internal` per the panic policy in `specs/api/errors.md`
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
@@ -106,11 +108,9 @@ fn cache_write(hash: ObjectId, entries: Vec<CachedEntry>) {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const EMPTY_TREE_HEX: &str = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
-
-/// Git's well-known empty tree hash.
+/// Git's well-known empty tree hash (`4b825dc642cb6eb9a060e54bf8d69288fbee4904`).
 pub fn empty_tree_id() -> ObjectId {
-    ObjectId::from_hex(EMPTY_TREE_HEX.as_bytes()).unwrap()
+    ObjectId::empty_tree(gix::hash::Kind::Sha1)
 }
 
 // ── Entry classification ───────────────────────────────────────────────────
@@ -171,11 +171,11 @@ pub enum Child {
     Commit { hash: ObjectId },
 }
 
-fn child_hash(child: &Child) -> Option<ObjectId> {
+fn child_hash(child: &Child) -> ObjectId {
     match child {
-        Child::Tree(t) => Some(t.hash),
-        Child::Blob { hash, .. } => Some(*hash),
-        Child::Commit { hash } => Some(*hash),
+        Child::Tree(t) => t.hash,
+        Child::Blob { hash, .. } => *hash,
+        Child::Commit { hash } => *hash,
     }
 }
 
@@ -232,6 +232,26 @@ impl MutableTree {
         }
     }
 
+    // ── Loaded-children accessors ────────────────────────────────────────
+    //
+    // Every mutation/read below runs `ensure_children` before touching
+    // `self.children`, so `None` here is a violated internal invariant.
+    // Per the panic policy (specs/api/errors.md) that must degrade to a
+    // catchable `INTERNAL` error, not a panic that aborts an embedding
+    // host across FFI — the exact failure mode of gitsheets finding #1/#6.
+
+    fn children_ref(&self) -> Result<&BTreeMap<String, Child>> {
+        self.children
+            .as_ref()
+            .ok_or_else(|| Error::internal("tree children accessed before being loaded"))
+    }
+
+    fn children_mut(&mut self) -> Result<&mut BTreeMap<String, Child>> {
+        self.children
+            .as_mut()
+            .ok_or_else(|| Error::internal("tree children accessed before being loaded"))
+    }
+
     // ── Child loading ────────────────────────────────────────────────────
 
     /// Load children from the git ODB if not yet loaded.
@@ -252,7 +272,7 @@ impl MutableTree {
                 let obj = repo.find_object(self.hash)?;
                 let tree = obj
                     .try_into_tree()
-                    .map_err(|_| Error::Git(format!("{} is not a tree", self.hash)))?;
+                    .map_err(|_| Error::NotATree(self.hash.to_string()))?;
 
                 TREES_READ.fetch_add(1, Ordering::Relaxed);
 
@@ -314,7 +334,7 @@ impl MutableTree {
 
         for part in parts {
             cur.ensure_children(repo)?;
-            match cur.children.as_mut().unwrap().get_mut(part) {
+            match cur.children_mut()?.get_mut(part) {
                 Some(Child::Tree(ref mut t)) => cur = t,
                 _ => return Ok(None),
             }
@@ -341,8 +361,8 @@ impl MutableTree {
             // Destination is the root itself. Mark dirty and load its children
             // so a mutating caller (e.g. write_child_bytes for a repo-root file
             // like "a.toml", whose dir is ".") can insert alongside existing
-            // entries — rather than panic on `children.as_mut().unwrap()` when
-            // the root was lazily loaded from a ref. Same postcondition as the
+            // entries — rather than fail on unloaded children when the root
+            // was lazily loaded from a ref. Same postcondition as the
             // deep-path return below.
             self.dirty = true;
             self.ensure_children(repo)?;
@@ -354,9 +374,7 @@ impl MutableTree {
         for part in path.split('/') {
             cur.ensure_children(repo)?;
             let child = cur
-                .children
-                .as_mut()
-                .unwrap()
+                .children_mut()?
                 .entry(part.to_string())
                 .or_insert_with(|| {
                     let mut t = MutableTree::empty();
@@ -409,7 +427,7 @@ impl MutableTree {
         };
 
         tree.ensure_children(repo)?;
-        match tree.children.as_ref().unwrap().get(file) {
+        match tree.children_ref()?.get(file) {
             Some(Child::Blob { hash, .. }) => {
                 BLOBS_READ.fetch_add(1, Ordering::Relaxed);
                 let obj = repo.find_object(*hash)?;
@@ -426,7 +444,7 @@ impl MutableTree {
         name: &str,
     ) -> Result<bool> {
         self.ensure_children(repo)?;
-        if self.children.as_mut().unwrap().remove(name).is_some() {
+        if self.children_mut()?.remove(name).is_some() {
             self.dirty = true;
             Ok(true)
         } else {
@@ -458,7 +476,7 @@ impl MutableTree {
         };
 
         tree.ensure_children(repo)?;
-        Ok(tree.children.as_ref().unwrap().get(name))
+        Ok(tree.children_ref()?.get(name))
     }
 
     /// Write string content as a blob at a deep path, creating intermediate
@@ -496,7 +514,7 @@ impl MutableTree {
         };
 
         let tree = self.get_or_create_subtree(repo, dir)?;
-        tree.children.as_mut().unwrap().insert(
+        tree.children_mut()?.insert(
             name.to_string(),
             Child::Blob {
                 mode: 0o100644,
@@ -525,9 +543,10 @@ impl MutableTree {
     ///
     /// # Errors
     ///
-    /// Returns an error if `hash` does not exist in the ODB or is not a blob, if
-    /// `mode` is not a valid blob mode, or if an intermediate path component
-    /// exists but is not a tree (same footgun guard as
+    /// Returns `OBJECT_NOT_FOUND` if `hash` does not exist in the ODB,
+    /// `INVALID_ARGUMENT` if it is not a blob or `mode` is not a valid blob
+    /// mode, and `NOT_A_TREE` if an intermediate path component exists but is
+    /// not a tree (same footgun guard as
     /// [`write_child_bytes`](Self::write_child_bytes)).
     pub fn write_child_hash(
         &mut self,
@@ -537,7 +556,7 @@ impl MutableTree {
         mode: u16,
     ) -> Result<()> {
         if !matches!(mode, 0o100644 | 0o100755 | 0o120000) {
-            return Err(Error::Git(format!(
+            return Err(Error::InvalidArgument(format!(
                 "invalid blob mode {mode:o} for {path}: expected 100644, 100755, or 120000"
             )));
         }
@@ -545,11 +564,9 @@ impl MutableTree {
         // Validate existence + kind from the object header, without decoding the
         // blob — that byte-read is exactly what a place-by-hash caller wants to
         // skip.
-        let header = repo
-            .find_header(hash)
-            .map_err(|e| Error::Git(e.to_string()))?;
+        let header = repo.find_header(hash)?;
         if header.kind() != gix::object::Kind::Blob {
-            return Err(Error::Git(format!(
+            return Err(Error::InvalidArgument(format!(
                 "object {hash} is not a blob (found {:?})",
                 header.kind()
             )));
@@ -561,9 +578,7 @@ impl MutableTree {
         };
 
         let tree = self.get_or_create_subtree(repo, dir)?;
-        tree.children
-            .as_mut()
-            .unwrap()
+        tree.children_mut()?
             .insert(name.to_string(), Child::Blob { mode, hash });
         tree.dirty = true;
         Ok(())
@@ -594,7 +609,7 @@ impl MutableTree {
                 continue;
             }
             cur.ensure_children(repo)?;
-            match cur.children.as_mut().unwrap().get_mut(part) {
+            match cur.children_mut()?.get_mut(part) {
                 Some(Child::Tree(t)) => {
                     t.dirty = true;
                     cur = t;
@@ -635,9 +650,7 @@ impl MutableTree {
         let mut empty = MutableTree::empty();
         empty.dirty = true;
         parent
-            .children
-            .as_mut()
-            .unwrap()
+            .children_mut()?
             .insert(name.to_string(), Child::Tree(empty));
         parent.dirty = true;
         Ok(())
@@ -661,7 +674,7 @@ impl MutableTree {
     ) -> Result<()> {
         self.ensure_children(repo)?;
 
-        let keys: Vec<String> = self.children.as_ref().unwrap().keys().cloned().collect();
+        let keys: Vec<String> = self.children_ref()?.keys().cloned().collect();
         for name in keys {
             let path = if prefix.is_empty() {
                 name.clone()
@@ -669,7 +682,7 @@ impl MutableTree {
                 format!("{prefix}/{name}")
             };
 
-            match self.children.as_mut().unwrap().get_mut(&name) {
+            match self.children_mut()?.get_mut(&name) {
                 Some(Child::Tree(ref mut t)) => t.collect_blobs(repo, &path, out)?,
                 Some(Child::Blob { hash, mode }) => {
                     out.insert(path, BlobInfo { hash: *hash, mode: *mode });
@@ -697,22 +710,16 @@ impl MutableTree {
         self.ensure_children(repo)?;
         input.ensure_children(repo)?;
 
-        let input_names: Vec<String> = input
-            .children
-            .as_ref()
-            .unwrap()
-            .keys()
-            .cloned()
-            .collect();
+        let input_names: Vec<String> = input.children_ref()?.keys().cloned().collect();
 
         for child_name in &input_names {
-            let input_child = match input.children.as_ref().unwrap().get(child_name) {
+            let input_child = match input.children_ref()?.get(child_name) {
                 Some(c) => c,
                 None => continue,
             };
 
             // Skip identical clean subtrees
-            if let Some(base_child) = self.children.as_ref().unwrap().get(child_name) {
+            if let Some(base_child) = self.children_ref()?.get(child_name) {
                 if child_hash(base_child) == child_hash(input_child)
                     && !child_is_dirty(base_child)
                     && !child_is_dirty(input_child)
@@ -755,16 +762,12 @@ impl MutableTree {
             // ── Blob / commit ────────────────────────────────────────────
             if !is_tree {
                 let should_write = match opts.mode {
-                    MergeMode::Underlay => {
-                        !self.children.as_ref().unwrap().contains_key(child_name)
-                    }
+                    MergeMode::Underlay => !self.children_ref()?.contains_key(child_name),
                     MergeMode::Overlay | MergeMode::Replace => true,
                 };
                 if should_write {
-                    self.children
-                        .as_mut()
-                        .unwrap()
-                        .insert(child_name.clone(), clone_child(input_child));
+                    let cloned = clone_child(input_child);
+                    self.children_mut()?.insert(child_name.clone(), cloned);
                     self.dirty = true;
                 }
                 continue;
@@ -772,7 +775,7 @@ impl MutableTree {
 
             // ── Tree ─────────────────────────────────────────────────────
             let has_base_tree = matches!(
-                self.children.as_ref().unwrap().get(child_name),
+                self.children_ref()?.get(child_name),
                 Some(Child::Tree(_))
             );
 
@@ -782,64 +785,79 @@ impl MutableTree {
                 if pending_child_match {
                     // (a) Glob undecided: merge into temp, keep only if dirty
                     let mut temp = MutableTree::empty();
-                    let it = match input.children.as_mut().unwrap().get_mut(child_name)
-                    {
+                    let it = match input.children_mut()?.get_mut(child_name) {
                         Some(Child::Tree(t)) => t,
-                        _ => unreachable!(),
+                        _ => {
+                            return Err(Error::internal(
+                                "merge: input tree child vanished or changed kind",
+                            ))
+                        }
                     };
                     temp.merge(repo, it, opts, &child_path)?;
                     if temp.dirty {
-                        self.children
-                            .as_mut()
-                            .unwrap()
+                        self.children_mut()?
                             .insert(child_name.clone(), Child::Tree(temp));
                         self.dirty = true;
                     }
                     continue;
                 }
 
-                let input_ref =
-                    input.children.as_ref().unwrap().get(child_name).unwrap();
+                let input_ref = input.children_ref()?.get(child_name).ok_or_else(|| {
+                    Error::internal("merge: input tree child vanished during merge")
+                })?;
                 if !child_is_dirty(input_ref) {
                     // (b) Input child is clean — clone by hash, skip merge
-                    let h = child_hash(input_ref).unwrap();
-                    self.children
-                        .as_mut()
-                        .unwrap()
+                    let h = child_hash(input_ref);
+                    self.children_mut()?
                         .insert(child_name.clone(), Child::Tree(MutableTree::new(h)));
                     self.dirty = true;
                     continue;
                 }
 
                 // (c) Input child is dirty — merge into new empty tree
-                let it = match input.children.as_mut().unwrap().get_mut(child_name) {
+                let it = match input.children_mut()?.get_mut(child_name) {
                     Some(Child::Tree(t)) => t,
-                    _ => unreachable!(),
+                    _ => {
+                        return Err(Error::internal(
+                            "merge: input tree child vanished or changed kind",
+                        ))
+                    }
                 };
                 let mut new_base = MutableTree::empty();
                 new_base.merge(repo, it, opts, &child_path)?;
                 if new_base.dirty {
                     self.dirty = true;
                 }
-                self.children
-                    .as_mut()
-                    .unwrap()
+                self.children_mut()?
                     .insert(child_name.clone(), Child::Tree(new_base));
                 continue;
             }
 
             // Both sides are trees — recursive merge
-            let mut input_tree =
-                match input.children.as_mut().unwrap().remove(child_name) {
-                    Some(Child::Tree(t)) => t,
-                    _ => unreachable!(),
-                };
+            let mut input_tree = match input.children_mut()?.remove(child_name) {
+                Some(Child::Tree(t)) => t,
+                Some(other) => {
+                    // Put it back before erroring; kind can't change mid-merge.
+                    input.children_mut()?.insert(child_name.clone(), other);
+                    return Err(Error::internal(
+                        "merge: input tree child changed kind during merge",
+                    ));
+                }
+                None => {
+                    return Err(Error::internal(
+                        "merge: input tree child vanished during merge",
+                    ))
+                }
+            };
 
-            let base_tree =
-                match self.children.as_mut().unwrap().get_mut(child_name) {
-                    Some(Child::Tree(ref mut t)) => t,
-                    _ => unreachable!(),
-                };
+            let base_tree = match self.children_mut()?.get_mut(child_name) {
+                Some(Child::Tree(ref mut t)) => t,
+                _ => {
+                    return Err(Error::internal(
+                        "merge: base tree child vanished or changed kind during merge",
+                    ))
+                }
+            };
 
             base_tree.merge(repo, &mut input_tree, opts, &child_path)?;
             if base_tree.dirty {
@@ -848,23 +866,25 @@ impl MutableTree {
 
             // Restore input tree (we borrowed it temporarily)
             input
-                .children
-                .as_mut()
-                .unwrap()
+                .children_mut()?
                 .insert(child_name.clone(), Child::Tree(input_tree));
         }
 
         // Replace mode: remove target children absent from input
         if opts.mode == MergeMode::Replace {
-            let input_children = input.children.as_ref().unwrap();
-            let self_children = self.children.as_mut().unwrap();
-            let to_remove: Vec<String> = self_children
-                .keys()
-                .filter(|k| !input_children.contains_key(*k))
-                .cloned()
-                .collect();
-            for key in to_remove {
-                self_children.remove(&key);
+            let to_remove: Vec<String> = {
+                let input_children = input.children_ref()?;
+                self.children_ref()?
+                    .keys()
+                    .filter(|k| !input_children.contains_key(*k))
+                    .cloned()
+                    .collect()
+            };
+            if !to_remove.is_empty() {
+                let self_children = self.children_mut()?;
+                for key in &to_remove {
+                    self_children.remove(key);
+                }
                 self.dirty = true;
             }
         }
@@ -886,7 +906,7 @@ impl MutableTree {
             self.ensure_children(repo)?;
         }
 
-        let children = self.children.as_mut().unwrap();
+        let children = self.children_mut()?;
 
         // Recurse into dirty child trees
         let names: Vec<String> = children.keys().cloned().collect();
@@ -904,17 +924,22 @@ impl MutableTree {
             match child {
                 Child::Tree(t) if t.hash == empty_tree_id() => continue,
                 Child::Tree(t) => entries.push(GixEntry {
-                    mode: EntryMode::try_from(0o040000u32).unwrap(),
+                    mode: EntryKind::Tree.into(),
                     filename: name.as_str().into(),
                     oid: t.hash,
                 }),
                 Child::Blob { mode, hash } => entries.push(GixEntry {
-                    mode: EntryMode::try_from(*mode as u32).unwrap(),
+                    // Modes here were either loaded from a valid tree object or
+                    // validated on the way in (write_child_hash); a bad one is
+                    // an internal invariant violation, not a caller error.
+                    mode: EntryMode::try_from(u32::from(*mode)).map_err(|_| {
+                        Error::internal(format!("invalid blob mode {mode:o} for '{name}'"))
+                    })?,
                     filename: name.as_str().into(),
                     oid: *hash,
                 }),
                 Child::Commit { hash } => entries.push(GixEntry {
-                    mode: EntryMode::try_from(0o160000u32).unwrap(),
+                    mode: EntryKind::Commit.into(),
                     filename: name.as_str().into(),
                     oid: *hash,
                 }),

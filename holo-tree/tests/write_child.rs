@@ -236,7 +236,8 @@ fn write_child_hash_rejects_missing_object() {
     let err = tree
         .write_child_hash(&sb.repo, "x", absent, 0o100644)
         .unwrap_err();
-    assert!(matches!(err, holo_tree::Error::Git(_)), "got {err:?}");
+    // Per specs/api/errors.md: assert the stable code, never message text.
+    assert_eq!(err.code(), "OBJECT_NOT_FOUND", "got {err:?}");
 }
 
 /// A hash pointing at a non-blob object (here a tree) is rejected rather than
@@ -250,13 +251,8 @@ fn write_child_hash_rejects_non_blob() {
     let err = tree
         .write_child_hash(&sb.repo, "x", tree_oid, 0o100644)
         .unwrap_err();
-    match err {
-        holo_tree::Error::Git(msg) => assert!(
-            msg.contains("not a blob"),
-            "expected a not-a-blob error, got: {msg}",
-        ),
-        other => panic!("expected Git error, got {other:?}"),
-    }
+    // Wrong object kind is a caller error: INVALID_ARGUMENT (not message prose).
+    assert_eq!(err.code(), "INVALID_ARGUMENT", "got {err:?}");
 }
 
 /// An invalid (non-blob) mode is rejected up front, before any tree mutation —
@@ -271,7 +267,7 @@ fn write_child_hash_rejects_invalid_mode() {
     let err = tree
         .write_child_hash(&sb.repo, "x", blob, 0o040000)
         .unwrap_err();
-    assert!(matches!(err, holo_tree::Error::Git(_)), "got {err:?}");
+    assert_eq!(err.code(), "INVALID_ARGUMENT", "got {err:?}");
     // The tree must be untouched by a rejected call.
     assert_eq!(
         tree.write(&sb.repo).unwrap(),
