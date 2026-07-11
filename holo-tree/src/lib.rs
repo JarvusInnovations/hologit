@@ -14,7 +14,7 @@
 //!
 //! # Modules
 //!
-//! - [`tree`] — MutableTree, Child, merge, write, cache
+//! - [`tree`] — MutableTree, Child, merge, write, TreeCache/Context
 //! - [`glob`] — Minimatch-compatible glob matching
 //! - [`toml`] — Generic TOML-from-git-blob reader
 //! - [`repo`] — Ref resolution, commit creation, ref updates
@@ -28,9 +28,10 @@ pub mod tree;
 // Re-export the most-used types at crate root
 pub use error::{Error, Result};
 pub use gix::ObjectId;
-pub use tree::{BlobInfo, Child, MergeMode, MergeOptions, MutableTree};
+pub use tree::{BlobInfo, Child, Context, MergeMode, MergeOptions, MutableTree, TreeCache};
 
-/// Reset all module-level caches and stats counters.
+/// Reset all stats counters. Tree caches are consumer-owned ([`TreeCache`]) —
+/// drop or clear them directly.
 pub fn reset() {
     tree::reset();
 }

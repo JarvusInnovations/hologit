@@ -5,20 +5,20 @@ mod helpers;
 use helpers::*;
 use holo_projector::holo_tree::tree::MutableTree;
 
-fn list_tree(repo: &gix::Repository, hash: gix::ObjectId) -> Vec<String> {
+fn list_tree(ctx: &holo_projector::holo_tree::Context, hash: gix::ObjectId) -> Vec<String> {
     let mut tree = MutableTree::new(hash);
-    collect_paths(repo, &mut tree, "")
+    collect_paths(ctx, &mut tree, "")
 }
 
-fn collect_paths(repo: &gix::Repository, tree: &mut MutableTree, prefix: &str) -> Vec<String> {
-    tree.ensure_children(repo).unwrap();
+fn collect_paths(ctx: &holo_projector::holo_tree::Context, tree: &mut MutableTree, prefix: &str) -> Vec<String> {
+    tree.ensure_children(ctx).unwrap();
     let mut paths = Vec::new();
     let keys: Vec<String> = tree.children.as_ref().unwrap().keys().cloned().collect();
     for name in keys {
         let path = if prefix.is_empty() { name.clone() } else { format!("{prefix}/{name}") };
         match tree.children.as_mut().unwrap().get_mut(&name) {
             Some(holo_projector::holo_tree::tree::Child::Tree(ref mut t)) => {
-                paths.extend(collect_paths(repo, t, &path));
+                paths.extend(collect_paths(ctx, t, &path));
             }
             Some(holo_projector::holo_tree::tree::Child::Blob { .. }) => paths.push(path),
             _ => {}
@@ -27,9 +27,9 @@ fn collect_paths(repo: &gix::Repository, tree: &mut MutableTree, prefix: &str) -
     paths
 }
 
-fn read_blob(repo: &gix::Repository, hash: gix::ObjectId, path: &str) -> String {
+fn read_blob(ctx: &holo_projector::holo_tree::Context, hash: gix::ObjectId, path: &str) -> String {
     let mut tree = MutableTree::new(hash);
-    let data = tree.read_blob(repo, path).unwrap().unwrap();
+    let data = tree.read_blob(ctx, path).unwrap().unwrap();
     String::from_utf8(data).unwrap()
 }
 
@@ -58,7 +58,7 @@ fn project_self_source_all_files() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"index.html".to_string()));
     assert!(paths.contains(&"style.css".to_string()));
     // .holo should be stripped
@@ -89,7 +89,7 @@ fn project_self_source_with_glob_filter() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"docs/guide.md".to_string()));
     assert!(paths.contains(&"mkdocs.yml".to_string()));
     assert!(!paths.contains(&"src/app.js".to_string()));
@@ -123,7 +123,7 @@ fn project_self_source_with_negation() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"src/app.js".to_string()));
     assert!(!paths.iter().any(|p| p.starts_with(".github")));
     assert!(!paths.iter().any(|p| p.starts_with("node_modules")));
@@ -169,11 +169,11 @@ fn project_two_sources_via_gitlinks() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"a.txt".to_string()));
     assert!(paths.contains(&"b.txt".to_string()));
-    assert_eq!(read_blob(&sb.repo, result, "a.txt"), "from A");
-    assert_eq!(read_blob(&sb.repo, result, "b.txt"), "from B");
+    assert_eq!(read_blob(&sb.ctx(), result, "a.txt"), "from A");
+    assert_eq!(read_blob(&sb.ctx(), result, "b.txt"), "from B");
 }
 
 // ── Mapping root and output paths ──────────────────────────────────────────
@@ -208,7 +208,7 @@ fn project_with_root_path() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     // Files from src/lib/ should appear at /mylib/ (default output = mapping name)
     assert!(paths.contains(&"mylib/util.js".to_string()));
     assert!(paths.contains(&"mylib/core.js".to_string()));
@@ -252,7 +252,7 @@ fn project_branch_extends_chain() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "extended").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"base.txt".to_string()));
     assert!(paths.contains(&"override.txt".to_string()));
 }
@@ -301,7 +301,7 @@ fn project_source_with_inner_projection() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, outer_root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"lib/core.js".to_string()));
     // Inner projection should have filtered these out
     assert!(!paths.contains(&"test/core.test.js".to_string()));
@@ -327,7 +327,7 @@ fn strips_holo_branches_and_sources() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(!paths.iter().any(|p| p.starts_with(".holo/branches")));
     assert!(!paths.iter().any(|p| p.starts_with(".holo/sources")));
 }
@@ -349,7 +349,7 @@ fn strips_holo_entirely_when_only_config_remains() {
     holo_projector::reset();
     let result = holo_projector::project_branch(&sb.repo, root, "site").unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(!paths.iter().any(|p| p.starts_with(".holo")),
         ".holo should be stripped entirely when only config.toml remains. Got: {:?}",
         paths.iter().filter(|p| p.starts_with(".holo")).collect::<Vec<_>>());
@@ -380,7 +380,7 @@ fn project_plan_single_source() {
     )
     .unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"app.js".to_string()));
     assert!(paths.contains(&"style.css".to_string()));
 }
@@ -424,11 +424,11 @@ fn project_plan_two_layers_with_ordering() {
     )
     .unwrap();
 
-    let paths = list_tree(&sb.repo, result);
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"base-only.txt".to_string()));
     assert!(paths.contains(&"overlay-only.txt".to_string()));
     // Overlay wins on shared file
-    assert_eq!(read_blob(&sb.repo, result, "file.txt"), "overlay");
+    assert_eq!(read_blob(&sb.ctx(), result, "file.txt"), "overlay");
 }
 
 // ── Hash stability ─────────────────────────────────────────────────────────

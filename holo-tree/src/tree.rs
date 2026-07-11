@@ -7,7 +7,9 @@
 //!
 //! Key design decisions:
 //! - `BTreeMap` for deterministic iteration matching git's canonical sort
-//! - Module-level cache eliminates redundant ODB reads across recursive projections
+//! - A consumer-owned [`TreeCache`] (lent to operations via [`Context`])
+//!   eliminates redundant ODB reads across recursive projections without any
+//!   thread-implicit state (specs/api/errors.md § Thread-safety expectations)
 //! - "Clone clean input" optimization skips loading trees that pass through unchanged
 //! - Dirty propagation in `get_or_create_subtree` marks all ancestors
 //! - No panicking constructs on public paths: violated invariants degrade to
@@ -57,7 +59,10 @@ pub fn stats() -> Stats {
     }
 }
 
-/// Reset all stats counters and the tree cache.
+/// Reset all stats counters.
+///
+/// The tree cache is consumer-owned ([`TreeCache`]) — drop or
+/// [`TreeCache::clear`] it instead.
 pub fn reset() {
     TREES_READ.store(0, Ordering::Relaxed);
     TREES_WRITTEN.store(0, Ordering::Relaxed);
@@ -65,7 +70,6 @@ pub fn reset() {
     CACHE_HITS.store(0, Ordering::Relaxed);
     CACHE_MISSES.store(0, Ordering::Relaxed);
     BLOBS_READ.store(0, Ordering::Relaxed);
-    TREE_CACHE.with(|c| c.borrow_mut().clear());
 }
 
 // ── Tree cache ─────────────────────────────────────────────────────────────
@@ -79,31 +83,91 @@ struct CachedEntry {
     hash: ObjectId,
 }
 
-thread_local! {
-    static TREE_CACHE: RefCell<HashMap<ObjectId, Vec<CachedEntry>>> =
-        RefCell::new(HashMap::new());
+/// Consumer-owned cache of parsed tree entries, keyed by tree `ObjectId`.
+///
+/// Replaces the former `thread_local!` cache so that no correctness (or
+/// warmth) depends on which thread a call lands on — the failure mode of
+/// gitsheets finding #5. Because entries are keyed by content-addressed
+/// object id, one cache is safe to reuse across trees, operations, and even
+/// repositories (see specs/api/errors.md § Thread-safety expectations).
+///
+/// `Send` but not `Sync`: move it between threads whole; one logical
+/// operation uses it at a time.
+#[derive(Default)]
+pub struct TreeCache {
+    entries: RefCell<HashMap<ObjectId, Vec<CachedEntry>>>,
 }
 
-fn cache_read(hash: &ObjectId) -> Option<Vec<CachedEntry>> {
-    TREE_CACHE.with(|c| {
-        let cache = c.borrow();
-        match cache.get(hash) {
+impl TreeCache {
+    /// Create an empty cache.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Number of cached trees.
+    pub fn len(&self) -> usize {
+        self.entries.try_borrow().map(|m| m.len()).unwrap_or(0)
+    }
+
+    /// Whether the cache holds no trees.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Drop all cached entries.
+    pub fn clear(&self) {
+        if let Ok(mut m) = self.entries.try_borrow_mut() {
+            m.clear();
+        }
+    }
+
+    // `try_borrow` throughout: a (theoretically) re-entrant borrow degrades
+    // to a cache miss / skipped insert instead of a RefCell panic, per the
+    // panic policy in specs/api/errors.md.
+
+    fn read(&self, hash: &ObjectId) -> Option<Vec<CachedEntry>> {
+        let hit = self
+            .entries
+            .try_borrow()
+            .ok()
+            .and_then(|m| m.get(hash).cloned());
+        match hit {
             Some(entries) => {
                 CACHE_HITS.fetch_add(1, Ordering::Relaxed);
-                Some(entries.clone())
+                Some(entries)
             }
             None => {
                 CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
                 None
             }
         }
-    })
+    }
+
+    fn write(&self, hash: ObjectId, entries: Vec<CachedEntry>) {
+        if let Ok(mut m) = self.entries.try_borrow_mut() {
+            m.insert(hash, entries);
+        }
+    }
 }
 
-fn cache_write(hash: ObjectId, entries: Vec<CachedEntry>) {
-    TREE_CACHE.with(|c| {
-        c.borrow_mut().insert(hash, entries);
-    });
+/// A per-operation view binding a repository handle to a consumer-owned
+/// [`TreeCache`]. All `MutableTree` operations take a `&Context` — the repo
+/// and the cache travel together explicitly instead of one being threaded
+/// through every call and the other living in thread-implicit state.
+///
+/// Cheap to construct; hosts that re-derive a per-thread `gix::Repository`
+/// (e.g. via `ThreadSafeRepository::to_thread_local`) build a fresh `Context`
+/// around the long-lived cache per call.
+pub struct Context<'a> {
+    pub repo: &'a gix::Repository,
+    cache: &'a TreeCache,
+}
+
+impl<'a> Context<'a> {
+    /// Bind `repo` and `cache` for a run of tree operations.
+    pub fn new(repo: &'a gix::Repository, cache: &'a TreeCache) -> Self {
+        Context { repo, cache }
+    }
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -256,7 +320,7 @@ impl MutableTree {
 
     /// Load children from the git ODB if not yet loaded.
     /// Checks the module-level cache first.
-    pub fn ensure_children(&mut self, repo: &gix::Repository) -> Result<()> {
+    pub fn ensure_children(&mut self, ctx: &Context) -> Result<()> {
         if self.children.is_some() {
             return Ok(());
         }
@@ -266,10 +330,10 @@ impl MutableTree {
             return Ok(());
         }
 
-        let entries = match cache_read(&self.hash) {
+        let entries = match ctx.cache.read(&self.hash) {
             Some(cached) => cached,
             None => {
-                let obj = repo.find_object(self.hash)?;
+                let obj = ctx.repo.find_object(self.hash)?;
                 let tree = obj
                     .try_into_tree()
                     .map_err(|_| Error::NotATree(self.hash.to_string()))?;
@@ -295,7 +359,7 @@ impl MutableTree {
                     })
                     .collect::<Result<_>>()?;
 
-                cache_write(self.hash, entries.clone());
+                ctx.cache.write(self.hash, entries.clone());
                 entries
             }
         };
@@ -322,7 +386,7 @@ impl MutableTree {
     /// any component is missing or not a tree.
     pub fn get_subtree(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
     ) -> Result<Option<&mut MutableTree>> {
         if path == "." || path.is_empty() {
@@ -333,7 +397,7 @@ impl MutableTree {
         let mut cur = self;
 
         for part in parts {
-            cur.ensure_children(repo)?;
+            cur.ensure_children(ctx)?;
             match cur.children_mut()?.get_mut(part) {
                 Some(Child::Tree(ref mut t)) => cur = t,
                 _ => return Ok(None),
@@ -354,7 +418,7 @@ impl MutableTree {
     /// in `write()`.)
     pub fn get_or_create_subtree(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
     ) -> Result<&mut MutableTree> {
         if path == "." || path.is_empty() {
@@ -365,14 +429,14 @@ impl MutableTree {
             // was lazily loaded from a ref. Same postcondition as the
             // deep-path return below.
             self.dirty = true;
-            self.ensure_children(repo)?;
+            self.ensure_children(ctx)?;
             return Ok(self);
         }
 
         self.dirty = true;
         let mut cur = self;
         for part in path.split('/') {
-            cur.ensure_children(repo)?;
+            cur.ensure_children(ctx)?;
             let child = cur
                 .children_mut()?
                 .entry(part.to_string())
@@ -402,14 +466,14 @@ impl MutableTree {
         // `write_child_bytes`) rely on `children` being `Some` — and loading
         // here is also what preserves existing siblings when writing into an
         // existing directory.
-        cur.ensure_children(repo)?;
+        cur.ensure_children(ctx)?;
         Ok(cur)
     }
 
     /// Read a blob's raw bytes by navigating a slash-separated path.
     pub fn read_blob(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
     ) -> Result<Option<Vec<u8>>> {
         let (dir, file) = match path.rsplit_once('/') {
@@ -420,17 +484,17 @@ impl MutableTree {
         let tree = if dir == "." {
             self
         } else {
-            match self.get_subtree(repo, dir)? {
+            match self.get_subtree(ctx, dir)? {
                 Some(t) => t,
                 None => return Ok(None),
             }
         };
 
-        tree.ensure_children(repo)?;
+        tree.ensure_children(ctx)?;
         match tree.children_ref()?.get(file) {
             Some(Child::Blob { hash, .. }) => {
                 BLOBS_READ.fetch_add(1, Ordering::Relaxed);
-                let obj = repo.find_object(*hash)?;
+                let obj = ctx.repo.find_object(*hash)?;
                 Ok(Some(obj.data.to_vec()))
             }
             _ => Ok(None),
@@ -440,10 +504,10 @@ impl MutableTree {
     /// Remove a direct child by name. Returns whether it existed.
     pub fn delete_child(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         name: &str,
     ) -> Result<bool> {
-        self.ensure_children(repo)?;
+        self.ensure_children(ctx)?;
         if self.children_mut()?.remove(name).is_some() {
             self.dirty = true;
             Ok(true)
@@ -458,7 +522,7 @@ impl MutableTree {
     /// Returns `None` if any path component doesn't exist.
     pub fn get_child(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
     ) -> Result<Option<&Child>> {
         let (dir, name) = match path.rsplit_once('/') {
@@ -469,13 +533,13 @@ impl MutableTree {
         let tree = if dir == "." {
             self
         } else {
-            match self.get_subtree(repo, dir)? {
+            match self.get_subtree(ctx, dir)? {
                 Some(t) => t,
                 None => return Ok(None),
             }
         };
 
-        tree.ensure_children(repo)?;
+        tree.ensure_children(ctx)?;
         Ok(tree.children_ref()?.get(name))
     }
 
@@ -489,21 +553,22 @@ impl MutableTree {
     /// intentional — silently replacing a blob with a tree would be a footgun.
     pub fn write_child(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
         content: &str,
     ) -> Result<ObjectId> {
-        self.write_child_bytes(repo, path, content.as_bytes())
+        self.write_child_bytes(ctx, path, content.as_bytes())
     }
 
     /// Write raw bytes as a blob at a deep path.
     pub fn write_child_bytes(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
         content: &[u8],
     ) -> Result<ObjectId> {
-        let blob_id = repo
+        let blob_id = ctx
+            .repo
             .write_blob(content)
             .map_err(|e| Error::Git(e.to_string()))?
             .detach();
@@ -513,7 +578,7 @@ impl MutableTree {
             None => (".", path),
         };
 
-        let tree = self.get_or_create_subtree(repo, dir)?;
+        let tree = self.get_or_create_subtree(ctx, dir)?;
         tree.children_mut()?.insert(
             name.to_string(),
             Child::Blob {
@@ -550,7 +615,7 @@ impl MutableTree {
     /// [`write_child_bytes`](Self::write_child_bytes)).
     pub fn write_child_hash(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
         hash: ObjectId,
         mode: u16,
@@ -564,7 +629,7 @@ impl MutableTree {
         // Validate existence + kind from the object header, without decoding the
         // blob — that byte-read is exactly what a place-by-hash caller wants to
         // skip.
-        let header = repo.find_header(hash)?;
+        let header = ctx.repo.find_header(hash)?;
         if header.kind() != gix::object::Kind::Blob {
             return Err(Error::InvalidArgument(format!(
                 "object {hash} is not a blob (found {:?})",
@@ -577,7 +642,7 @@ impl MutableTree {
             None => (".", path),
         };
 
-        let tree = self.get_or_create_subtree(repo, dir)?;
+        let tree = self.get_or_create_subtree(ctx, dir)?;
         tree.children_mut()?
             .insert(name.to_string(), Child::Blob { mode, hash });
         tree.dirty = true;
@@ -587,12 +652,12 @@ impl MutableTree {
     /// Delete a child at a deep slash-separated path (not just a direct child).
     pub fn delete_child_deep(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         path: &str,
     ) -> Result<bool> {
         let (dir, name) = match path.rsplit_once('/') {
             Some((d, f)) => (d, f),
-            None => return self.delete_child(repo, path),
+            None => return self.delete_child(ctx, path),
         };
 
         // Mark the path to `dir` dirty as we descend: removing a descendant
@@ -608,7 +673,7 @@ impl MutableTree {
             if part.is_empty() || part == "." {
                 continue;
             }
-            cur.ensure_children(repo)?;
+            cur.ensure_children(ctx)?;
             match cur.children_mut()?.get_mut(part) {
                 Some(Child::Tree(t)) => {
                     t.dirty = true;
@@ -617,7 +682,7 @@ impl MutableTree {
                 _ => return Ok(false),
             }
         }
-        cur.delete_child(repo, name)
+        cur.delete_child(ctx, name)
     }
 
     /// Clear all children under a deep `path`, replacing the subtree there
@@ -630,7 +695,7 @@ impl MutableTree {
     /// exist is a no-op in the written result.
     ///
     /// `path == "."` (or empty) clears the root tree itself.
-    pub fn clear_children(&mut self, repo: &gix::Repository, path: &str) -> Result<()> {
+    pub fn clear_children(&mut self, ctx: &Context, path: &str) -> Result<()> {
         if path == "." || path.is_empty() {
             self.children = Some(BTreeMap::new());
             self.hash = empty_tree_id();
@@ -646,7 +711,7 @@ impl MutableTree {
         // get_or_create_subtree marks the whole navigated path (root included)
         // dirty, which is exactly what we need: every ancestor's serialized
         // form changes once the cleared subtree is pruned on write().
-        let parent = self.get_or_create_subtree(repo, dir)?;
+        let parent = self.get_or_create_subtree(ctx, dir)?;
         let mut empty = MutableTree::empty();
         empty.dirty = true;
         parent
@@ -659,20 +724,20 @@ impl MutableTree {
     /// Recursively collect all blobs into a flat map.
     pub fn get_blob_map(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
     ) -> Result<BTreeMap<String, BlobInfo>> {
         let mut out = BTreeMap::new();
-        self.collect_blobs(repo, "", &mut out)?;
+        self.collect_blobs(ctx, "", &mut out)?;
         Ok(out)
     }
 
     fn collect_blobs(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         prefix: &str,
         out: &mut BTreeMap<String, BlobInfo>,
     ) -> Result<()> {
-        self.ensure_children(repo)?;
+        self.ensure_children(ctx)?;
 
         let keys: Vec<String> = self.children_ref()?.keys().cloned().collect();
         for name in keys {
@@ -683,7 +748,7 @@ impl MutableTree {
             };
 
             match self.children_mut()?.get_mut(&name) {
-                Some(Child::Tree(ref mut t)) => t.collect_blobs(repo, &path, out)?,
+                Some(Child::Tree(ref mut t)) => t.collect_blobs(ctx, &path, out)?,
                 Some(Child::Blob { hash, mode }) => {
                     out.insert(path, BlobInfo { hash: *hash, mode: *mode });
                 }
@@ -702,13 +767,13 @@ impl MutableTree {
     /// pseudocode and invariants.
     pub fn merge(
         &mut self,
-        repo: &gix::Repository,
+        ctx: &Context,
         input: &mut MutableTree,
         opts: &MergeOptions,
         base_path: &str,
     ) -> Result<()> {
-        self.ensure_children(repo)?;
-        input.ensure_children(repo)?;
+        self.ensure_children(ctx)?;
+        input.ensure_children(ctx)?;
 
         let input_names: Vec<String> = input.children_ref()?.keys().cloned().collect();
 
@@ -793,7 +858,7 @@ impl MutableTree {
                             ))
                         }
                     };
-                    temp.merge(repo, it, opts, &child_path)?;
+                    temp.merge(ctx, it, opts, &child_path)?;
                     if temp.dirty {
                         self.children_mut()?
                             .insert(child_name.clone(), Child::Tree(temp));
@@ -824,7 +889,7 @@ impl MutableTree {
                     }
                 };
                 let mut new_base = MutableTree::empty();
-                new_base.merge(repo, it, opts, &child_path)?;
+                new_base.merge(ctx, it, opts, &child_path)?;
                 if new_base.dirty {
                     self.dirty = true;
                 }
@@ -859,7 +924,7 @@ impl MutableTree {
                 }
             };
 
-            base_tree.merge(repo, &mut input_tree, opts, &child_path)?;
+            base_tree.merge(ctx, &mut input_tree, opts, &child_path)?;
             if base_tree.dirty {
                 self.dirty = true;
             }
@@ -896,14 +961,14 @@ impl MutableTree {
 
     /// Recursively write dirty trees to the git ODB.
     /// Returns the hash of this tree.
-    pub fn write(&mut self, repo: &gix::Repository) -> Result<ObjectId> {
+    pub fn write(&mut self, ctx: &Context) -> Result<ObjectId> {
         if !self.dirty {
             TREES_SKIPPED_CLEAN.fetch_add(1, Ordering::Relaxed);
             return Ok(self.hash);
         }
 
         if self.children.is_none() {
-            self.ensure_children(repo)?;
+            self.ensure_children(ctx)?;
         }
 
         let children = self.children_mut()?;
@@ -913,7 +978,7 @@ impl MutableTree {
         for name in &names {
             if let Some(Child::Tree(ref mut ct)) = children.get_mut(name) {
                 if ct.dirty {
-                    ct.write(repo)?;
+                    ct.write(ctx)?;
                 }
             }
         }
@@ -951,7 +1016,7 @@ impl MutableTree {
         } else {
             entries.sort();
             let tree = GixTree { entries };
-            let id = repo.write_object(&tree)?;
+            let id = ctx.repo.write_object(&tree)?;
             self.hash = id.detach();
             TREES_WRITTEN.fetch_add(1, Ordering::Relaxed);
         }

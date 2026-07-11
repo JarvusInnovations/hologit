@@ -115,9 +115,10 @@ export declare class Repo {
  * Holds its own clone of the repo handle so JS callers don't thread a repo
  * argument through every call.
  *
- * Phase-C finding #5 (thread-local tree cache) is addressed upstream by the
- * consumer-owned cache/context redesign — see `specs/api/errors.md`
- * § Thread-safety expectations.
+ * Owns its `TreeCache` (Phase-C finding #5): the cache travels with the
+ * `Tree` object rather than living in thread-implicit state, so whichever
+ * thread the JS engine dispatches a call on sees the same cache — see
+ * `specs/api/errors.md` § Thread-safety expectations.
  */
 export declare class Tree {
   /**

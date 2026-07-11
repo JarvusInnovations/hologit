@@ -37,7 +37,7 @@ use napi_derive::napi;
 
 use holo_tree::repo as ht_repo;
 use holo_tree::tree::empty_tree_id;
-use holo_tree::{MutableTree, ObjectId};
+use holo_tree::{Context, MutableTree, ObjectId, TreeCache};
 
 // ── error plumbing ──────────────────────────────────────────────────────────
 
@@ -195,6 +195,7 @@ impl Repo {
             let inner = ht_repo::create_tree_from_ref(&local, &git_ref).map_err(ht_err)?;
             Ok(Tree {
                 repo: self.inner.clone(),
+                cache: TreeCache::new(),
                 inner,
             })
         })
@@ -205,6 +206,7 @@ impl Repo {
     pub fn create_tree(&self) -> Tree {
         Tree {
             repo: self.inner.clone(),
+            cache: TreeCache::new(),
             inner: MutableTree::empty(),
         }
     }
@@ -348,12 +350,14 @@ fn classify(child: &holo_tree::Child) -> (&'static str, String, u32) {
 /// Holds its own clone of the repo handle so JS callers don't thread a repo
 /// argument through every call.
 ///
-/// Phase-C finding #5 (thread-local tree cache) is addressed upstream by the
-/// consumer-owned cache/context redesign — see `specs/api/errors.md`
-/// § Thread-safety expectations.
+/// Owns its `TreeCache` (Phase-C finding #5): the cache travels with the
+/// `Tree` object rather than living in thread-implicit state, so whichever
+/// thread the JS engine dispatches a call on sees the same cache — see
+/// `specs/api/errors.md` § Thread-safety expectations.
 #[napi]
 pub struct Tree {
     repo: gix::ThreadSafeRepository,
+    cache: TreeCache,
     inner: MutableTree,
 }
 
@@ -365,9 +369,10 @@ impl Tree {
     pub fn write_child(&mut self, path: String, content: String) -> Result<String, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
+            let ctx = Context::new(&local, &self.cache);
             let oid = self
                 .inner
-                .write_child(&local, &path, &content)
+                .write_child(&ctx, &path, &content)
                 .map_err(ht_err)?;
             Ok(oid_hex(oid))
         })
@@ -378,9 +383,10 @@ impl Tree {
     pub fn write_child_bytes(&mut self, path: String, content: Buffer) -> Result<String, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
+            let ctx = Context::new(&local, &self.cache);
             let oid = self
                 .inner
-                .write_child_bytes(&local, &path, content.as_ref())
+                .write_child_bytes(&ctx, &path, content.as_ref())
                 .map_err(ht_err)?;
             Ok(oid_hex(oid))
         })
@@ -401,11 +407,12 @@ impl Tree {
     ) -> Result<String, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
+            let ctx = Context::new(&local, &self.cache);
             let oid = parse_oid(&hash)?;
             let mode =
                 u16::try_from(mode).map_err(|_| invalid_arg(format!("invalid blob mode {mode:o}")))?;
             self.inner
-                .write_child_hash(&local, &path, oid, mode)
+                .write_child_hash(&ctx, &path, oid, mode)
                 .map_err(ht_err)?;
             Ok(oid_hex(oid))
         })
@@ -416,7 +423,8 @@ impl Tree {
     pub fn read_blob(&mut self, path: String) -> Result<Option<Buffer>, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
-            let bytes = self.inner.read_blob(&local, &path).map_err(ht_err)?;
+            let ctx = Context::new(&local, &self.cache);
+            let bytes = self.inner.read_blob(&ctx, &path).map_err(ht_err)?;
             Ok(bytes.map(Buffer::from))
         })
     }
@@ -427,9 +435,10 @@ impl Tree {
     pub fn get_child(&mut self, path: String) -> Result<Option<ChildInfo>, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
+            let ctx = Context::new(&local, &self.cache);
             let info = self
                 .inner
-                .get_child(&local, &path)
+                .get_child(&ctx, &path)
                 .map_err(ht_err)?
                 .map(|child| {
                     let (ty, hash, mode) = classify(child);
@@ -449,11 +458,12 @@ impl Tree {
     pub fn get_children(&mut self, path: String) -> Result<Vec<NamedChildInfo>, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
-            let subtree = match self.inner.get_subtree(&local, &path).map_err(ht_err)? {
+            let ctx = Context::new(&local, &self.cache);
+            let subtree = match self.inner.get_subtree(&ctx, &path).map_err(ht_err)? {
                 Some(t) => t,
                 None => return Ok(vec![]),
             };
-            subtree.ensure_children(&local).map_err(ht_err)?;
+            subtree.ensure_children(&ctx).map_err(ht_err)?;
             let mut out = Vec::new();
             for (name, child) in subtree.children.iter().flatten() {
                 let (ty, hash, mode) = classify(child);
@@ -475,9 +485,10 @@ impl Tree {
     pub fn get_blob_map(&mut self, path: Option<String>) -> Result<Vec<BlobEntry>, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
+            let ctx = Context::new(&local, &self.cache);
             let path = path.unwrap_or_else(|| ".".to_string());
-            let map = match self.inner.get_subtree(&local, &path).map_err(ht_err)? {
-                Some(subtree) => subtree.get_blob_map(&local).map_err(ht_err)?,
+            let map = match self.inner.get_subtree(&ctx, &path).map_err(ht_err)? {
+                Some(subtree) => subtree.get_blob_map(&ctx).map_err(ht_err)?,
                 None => return Ok(vec![]),
             };
             let out = map
@@ -497,7 +508,8 @@ impl Tree {
     pub fn delete_child_deep(&mut self, path: String) -> Result<bool, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
-            self.inner.delete_child_deep(&local, &path).map_err(ht_err)
+            let ctx = Context::new(&local, &self.cache);
+            self.inner.delete_child_deep(&ctx, &path).map_err(ht_err)
         })
     }
 
@@ -509,7 +521,8 @@ impl Tree {
     pub fn clear_children(&mut self, path: String) -> Result<(), ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
-            self.inner.clear_children(&local, &path).map_err(ht_err)
+            let ctx = Context::new(&local, &self.cache);
+            self.inner.clear_children(&ctx, &path).map_err(ht_err)
         })
     }
 
@@ -520,6 +533,7 @@ impl Tree {
     pub fn merge(&mut self, other: &mut Tree, options: MergeOpts) -> Result<(), ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
+            let ctx = Context::new(&local, &self.cache);
             let mode = match options.mode.as_str() {
                 "overlay" => holo_tree::MergeMode::Overlay,
                 "replace" => holo_tree::MergeMode::Replace,
@@ -533,7 +547,7 @@ impl Tree {
             let opts =
                 holo_tree::MergeOptions::new(options.files.as_deref(), mode).map_err(ht_err)?;
             self.inner
-                .merge(&local, &mut other.inner, &opts, ".")
+                .merge(&ctx, &mut other.inner, &opts, ".")
                 .map_err(ht_err)
         })
     }
@@ -543,7 +557,8 @@ impl Tree {
     pub fn write(&mut self) -> Result<String, ErrorCode> {
         contained(|| {
             let local = self.repo.to_thread_local();
-            let oid = self.inner.write(&local).map_err(ht_err)?;
+            let ctx = Context::new(&local, &self.cache);
+            let oid = self.inner.write(&ctx).map_err(ht_err)?;
             Ok(oid_hex(oid))
         })
     }
