@@ -1,9 +1,11 @@
 ---
-status: in-progress
+status: done
 depends: []
 specs:
   - specs/principles.md
+  - specs/api/errors.md
 issues: []
+pr: 490
 ---
 
 # holo-tree FFI robustness
@@ -27,11 +29,11 @@ Make holo-tree safe to embed: no panics reachable from public entry points, stru
 
 ## Validation
 
-- [ ] `specs/api/errors.md` accepted and merged
-- [ ] No `.unwrap()`/`.expect()` reachable from public holo-tree entry points (audited; enforced where practical by lint)
-- [ ] `holo_tree::Error` discriminants are matchable across the napi boundary (test asserts an error kind, not a message substring)
-- [ ] A deliberately-injected panic in a debug test build surfaces as a catchable JS error, not a process abort
-- [ ] Tree cache correctness no longer depends on thread identity (test exercising cross-thread dispatch, or the design removes the possibility)
+- [x] `specs/api/errors.md` accepted and merged (authored spec-first in PR #490; merges with it)
+- [x] No `.unwrap()`/`.expect()` reachable from public holo-tree entry points (audited; enforced where practical by lint)
+- [x] `holo_tree::Error` discriminants are matchable across the napi boundary (test asserts an error kind, not a message substring)
+- [x] A deliberately-injected panic in a debug test build surfaces as a catchable JS error, not a process abort
+- [x] Tree cache correctness no longer depends on thread identity (test exercising cross-thread dispatch, or the design removes the possibility)
 - [ ] gitsheets consumes the new tag and drops at least one string-parsing/formatted-wrap workaround
 
 ## Risks / unknowns
@@ -41,8 +43,35 @@ Make holo-tree safe to embed: no panics reachable from public entry points, stru
 
 ## Notes
 
-_(populated at closeout)_
+- The gitsheets-consumption criterion stays unchecked: `holo-tree-v*` releases
+  are deferred, so no tag was cut and gitsheets still pins `holo-tree-v0.4.0`.
+  It closes out when the v0.5.0 tag ships and gitsheets adopts the coded
+  errors + `Context` API (see Follow-ups).
+- Root cause of the finding-#6 abort: napi-rs's `catch_unwind` is **opt-in
+  per exported fn** (`#[napi(catch_unwind)]`); without it a panic hits the
+  generated `extern "C"` trampoline, which cannot unwind → SIGABRT
+  (reproduced: exit 134). The binding now wraps every export body in its own
+  `contained()` guard (stable `PANIC` code) with the attribute as a backstop
+  for napi marshalling code.
+- napi-rs custom error status gotcha: the `#[napi]` macro detects `Result`
+  **syntactically** — signatures must literally spell
+  `Result<T, ErrorCode>`; a type alias compiles the macro into a
+  ToNapiValue bound error.
+- The cache redesign is hash- and counter-identical on emergence-site
+  (1,482 hits / 1,869 misses; hash `de630914…`, matching the JS engine on
+  current upstream HEAD — CLAUDE.md's `0dc5566e…` predates newer
+  codeforphilly.org commits) and measured faster warm (66–86 ms vs
+  125–250 ms baseline on the same clone).
+- `MutableTree`/`toml` taking `&Context` is a crate-level breaking change;
+  the npm binding's JS API is unchanged.
 
 ## Follow-ups
 
-_(populated at closeout)_
+- Tracked as: `holo-tree-v0.5.0` tag deferred (releases paused) — cutting it
+  and bumping gitsheets (typed-error mapping onto the new codes, `Context`
+  adoption, dropping its formatted-string wraps) is the downstream half of
+  findings #4/#5/#6.
+- Tracked as: extend the panic audit + `cfg_attr(not(test), warn(...))` lint
+  gate to holo-projector's public paths (its `walk_mappings`/projection
+  helpers still `.unwrap()`), before it ships behind an FFI binding — same
+  policy, `specs/api/errors.md` § Panic policy.
