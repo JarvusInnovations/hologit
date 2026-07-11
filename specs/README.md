@@ -15,6 +15,8 @@ specs/
 ├── README.md              # This file
 ├── principles.md          # Project-wide decisive principles
 ├── architecture.md        # Crates, engines, bindings, release tracks, migration strategy
+├── api/                   # Library/binding contracts
+│   └── errors.md          # holo-tree error codes, panic policy, thread-safety expectations
 └── behaviors/             # Cross-cutting rules
     └── composition.md     # Projection/composition semantics (the core operation)
 ```
@@ -23,7 +25,6 @@ Expected to grow as work touches each area (spec-on-contact):
 
 - `behaviors/lensing.md` — lens execution model (write before porting lensing to Rust)
 - `behaviors/source-resolution.md` — if source semantics grow beyond what `composition.md` covers
-- `api/errors.md` — the holo-tree/FFI error contract (write as part of FFI-robustness work)
 - `api/` — napi binding surfaces as they stabilize
 
 ## Workflow
