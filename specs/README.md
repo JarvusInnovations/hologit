@@ -16,14 +16,15 @@ specs/
 ├── principles.md          # Project-wide decisive principles
 ├── architecture.md        # Crates, engines, bindings, release tracks, migration strategy
 ├── api/                   # Library/binding contracts
-│   └── errors.md          # holo-tree error codes, panic policy, thread-safety expectations
+│   ├── errors.md          # holo-tree error codes, panic policy, thread-safety expectations
+│   └── lens-sdk.md        # The in-image SDK's author-facing contract (env, modes, isolation)
 └── behaviors/             # Cross-cutting rules
-    └── composition.md     # Projection/composition semantics (the core operation)
+    ├── composition.md     # Projection/composition semantics (the core operation)
+    └── lensing.md         # Lens execution: spec/cache model, v2 job protocol, lifecycle, transfer tiers
 ```
 
 Expected to grow as work touches each area (spec-on-contact):
 
-- `behaviors/lensing.md` — lens execution model (write before porting lensing to Rust)
 - `behaviors/source-resolution.md` — if source semantics grow beyond what `composition.md` covers
 - `api/` — napi binding surfaces as they stabilize
 
