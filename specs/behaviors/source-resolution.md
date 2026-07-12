@@ -53,10 +53,13 @@ refs/holo/source/{hash[0:2]}/{hash[2:]}/{ref_suffix}
 
 where `ref_suffix` is the source's configured ref with the leading `refs/`
 removed (`refs/heads/master` → `heads/master`, `refs/tags/v1.2.3` →
-`tags/v1.2.3`). Configured refs must be fully qualified (`refs/...`); the
-legacy engine also accepts a bare commit hash, whose suffix handling
-(`hash.substr(5)`) is a degenerate legacy artifact — new behavior must not
-rely on it.
+`tags/v1.2.3`). A configured ref is either fully qualified (`refs/...`) or a
+bare commit hash (7–40 lowercase hex chars) — hash refs occur in real
+configs (e.g. codeforphilly.org pins `google/recaptcha` to a commit), and
+their suffix is the hash minus its **first five characters**, because the
+legacy engine applies `ref.substr(5)` uniformly. Both engines must produce
+this same suffix, quirk included — the cache is only interoperable if they
+agree. Anything else has no spec-ref location and cannot be fetched.
 
 The cached ref stores **exactly the object the remote ref points at**: a ref
 to an annotated tag stores the tag object, unpeeled. Peeling to a commit

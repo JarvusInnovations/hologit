@@ -222,6 +222,46 @@ fn fetched_annotated_tag_stays_unpeeled_and_peels_at_resolution() {
     assert_eq!(resolve_ref(&consumer, "refs/tags/v1.0.0"), None);
 }
 
+#[test]
+fn hash_ref_source_uses_js_compatible_suffix() {
+    // Real configs pin sources to bare commit hashes (e.g. codeforphilly.org
+    // pins google/recaptcha). The spec-ref suffix must be the hash minus its
+    // first five characters — the JS engine's uniform `ref.substr(5)`.
+    let remote = Sandbox::new();
+    let remote_tree = remote.write_tree(&[("pinned.txt", "by-hash")]);
+    let remote_commit = remote.commit(remote_tree, None, "pinned");
+    remote.set_ref("refs/heads/master", remote_commit);
+    // Allow raw-sha fetch over the local transport
+    assert!(std::process::Command::new("git")
+        .args(["--git-dir"])
+        .arg(remote.dir.path())
+        .args(["config", "uploadpack.allowAnySHA1InWant", "true"])
+        .status()
+        .unwrap()
+        .success());
+
+    let hash_ref = remote_commit.to_string();
+    let consumer = Sandbox::new();
+    let url = file_url(&remote);
+    let root = url_source_workspace(&consumer, &url, &hash_ref);
+
+    let fetcher = GitCliFetcher::new(&consumer.repo);
+    holo_projector::reset();
+    let result =
+        holo_projector::project_branch_fetching(&consumer.repo, root, "site", &fetcher).unwrap();
+    assert_eq!(result, remote_tree);
+
+    // Cached at the JS layout: suffix = hash minus first five chars
+    let spec_hash = holo_projector::source::compute_spec_hash(&url).unwrap();
+    let expected = format!(
+        "refs/holo/source/{}/{}/{}",
+        &spec_hash[..2],
+        &spec_hash[2..],
+        &hash_ref[5..]
+    );
+    assert_eq!(resolve_ref(&consumer, &expected), Some(remote_commit));
+}
+
 // ── Resolution-order guarantees ─────────────────────────────────────────────
 
 #[test]

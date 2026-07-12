@@ -220,8 +220,12 @@ fn resolve_commit(
 
 /// Resolve the spec-ref for a url+ref source, answering absence with `None`.
 fn resolve_spec_ref(ctx: &Context, url: &str, git_ref: &str) -> Result<Option<ObjectId>> {
+    let suffix = match spec_ref_suffix(git_ref) {
+        Some(s) => s,
+        None => return Ok(None),
+    };
+
     let spec_hash = compute_spec_hash(url)?;
-    let suffix = git_ref.strip_prefix("refs/").unwrap_or(git_ref);
     let spec_ref = format!(
         "refs/holo/source/{}/{}/{}",
         &spec_hash[..2],
@@ -233,6 +237,33 @@ fn resolve_spec_ref(ctx: &Context, url: &str, git_ref: &str) -> Result<Option<Ob
         Ok(resolved) => Ok(Some(resolved.detach())),
         Err(_) => Ok(None),
     }
+}
+
+/// The spec-ref suffix for a configured source ref
+/// (`specs/behaviors/source-resolution.md` § Ref layout):
+///
+/// - a fully-qualified ref contributes itself minus the leading `refs/`;
+/// - a bare commit hash (7–40 lowercase hex chars — legacy but present in
+///   real configs) contributes the hash minus its first five characters,
+///   because the JS engine applies `ref.substr(5)` uniformly;
+/// - anything else has no spec-ref location (`None`).
+pub fn spec_ref_suffix(git_ref: &str) -> Option<String> {
+    if let Some(s) = git_ref.strip_prefix("refs/") {
+        if s.is_empty() {
+            return None;
+        }
+        return Some(s.to_string());
+    }
+
+    let is_hash = (7..=40).contains(&git_ref.len())
+        && git_ref
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+    if is_hash {
+        return Some(git_ref[5..].to_string());
+    }
+
+    None
 }
 
 /// Ensure a gitlink's commit object is present locally, fetching in

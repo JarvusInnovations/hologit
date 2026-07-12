@@ -99,12 +99,14 @@ impl GitCliFetcher {
 
 impl SourceFetcher for GitCliFetcher {
     fn fetch(&self, url: &str, git_ref: &str, kind: FetchKind) -> Result<String> {
-        let suffix = match git_ref.strip_prefix("refs/") {
-            Some(s) if !s.is_empty() => s,
-            _ => {
+        let suffix = match source::spec_ref_suffix(git_ref) {
+            Some(s) => s,
+            None => {
                 return Err(Error::SourceFetch {
                     url: url.to_string(),
-                    reason: format!("ref '{git_ref}' must be fully qualified (refs/...)"),
+                    reason: format!(
+                        "ref '{git_ref}' must be fully qualified (refs/...) or a commit hash"
+                    ),
                 })
             }
         };
