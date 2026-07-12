@@ -6,6 +6,16 @@
 /** Git's well-known empty-tree hash (`4b825dc6…`). */
 export declare function emptyTreeHash(): string
 /**
+ * The compile profile of the loaded binding: `"release"` or `"debug"`.
+ *
+ * The runtime guard for the release-build requirement (#464 item 4): a debug
+ * build of this binding measures *slower* than the JS + `git`-subprocess path
+ * it replaces (~2.4x on the reference workload), while a release build is
+ * ~4–5x faster. The bundled benchmark refuses to run against a debug build;
+ * consumers embedding a from-source build can use this to assert the same.
+ */
+export declare function buildProfile(): string
+/**
  * Internal self-test hook: deliberately panics inside the binding so the
  * test suite can prove that a panic surfaces as a catchable JS error with
  * code `PANIC` rather than aborting the host process (specs/api/errors.md
@@ -63,8 +73,9 @@ export interface MergeOpts {
  * A handle to a git repository, backed by gix.
  *
  * Stored as a `ThreadSafeRepository` so the handle is `Send + Sync` and can be
- * cheaply cloned into each `Tree`; every call derives a thread-local
- * `gix::Repository` via `to_thread_local()`.
+ * cheaply cloned into each `Tree`; calls use a memoized thread-local
+ * `gix::Repository` (see [`local_repo`]), re-derived only when a call lands
+ * on a different thread.
  */
 export declare class Repo {
   /**
@@ -118,7 +129,8 @@ export declare class Repo {
  * Owns its `TreeCache` (Phase-C finding #5): the cache travels with the
  * `Tree` object rather than living in thread-implicit state, so whichever
  * thread the JS engine dispatches a call on sees the same cache — see
- * `specs/api/errors.md` § Thread-safety expectations.
+ * `specs/api/errors.md` § Thread-safety expectations. Likewise owns its
+ * memoized thread-local repo derivation (see [`local_repo`]).
  */
 export declare class Tree {
   /**
