@@ -310,11 +310,12 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { __triggerPanicForTest, compositeBranch, projectBranch, projectPlan, stats, resetStats } = nativeBinding
+const { __triggerPanicForTest, compositeBranch, projectBranch, projectPlan, ProjectionSession, stats, resetStats } = nativeBinding
 
 module.exports.__triggerPanicForTest = __triggerPanicForTest
 module.exports.compositeBranch = compositeBranch
 module.exports.projectBranch = projectBranch
 module.exports.projectPlan = projectPlan
+module.exports.ProjectionSession = ProjectionSession
 module.exports.stats = stats
 module.exports.resetStats = resetStats
