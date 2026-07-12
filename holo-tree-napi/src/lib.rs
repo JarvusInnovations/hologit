@@ -113,6 +113,22 @@ pub fn empty_tree_hash() -> String {
     oid_hex(empty_tree_id())
 }
 
+/// The compile profile of the loaded binding: `"release"` or `"debug"`.
+///
+/// The runtime guard for the release-build requirement (#464 item 4): a debug
+/// build of this binding measures *slower* than the JS + `git`-subprocess path
+/// it replaces (~2.4x on the reference workload), while a release build is
+/// ~4–5x faster. The bundled benchmark refuses to run against a debug build;
+/// consumers embedding a from-source build can use this to assert the same.
+#[napi(catch_unwind)]
+pub fn build_profile() -> String {
+    if cfg!(debug_assertions) {
+        "debug".to_string()
+    } else {
+        "release".to_string()
+    }
+}
+
 /// Internal self-test hook: deliberately panics inside the binding so the
 /// test suite can prove that a panic surfaces as a catchable JS error with
 /// code `PANIC` rather than aborting the host process (specs/api/errors.md
