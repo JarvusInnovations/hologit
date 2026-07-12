@@ -1399,6 +1399,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "holo-projector-napi"
+version = "0.1.0"
+dependencies = [
+ "gix",
+ "holo-projector",
+ "napi",
+ "napi-build",
+ "napi-derive",
+]
+
+[[package]]
 name = "holo-tree"
 version = "0.1.0"
 dependencies = [
