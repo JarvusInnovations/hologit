@@ -36,24 +36,39 @@ function write(dir, path, content) {
   writeFileSync(join(dir, path), content);
 }
 
-/** A workspace whose `site` holobranch maps the self-source plus a
- * ref-resolved sibling source (`dep`, pinned to refs/heads/dep in the same
- * repository) — the ref is what the staleness tests advance. */
+const DEP_URL = 'https://example.com/dep';
+const DEP_REF = 'refs/heads/dep';
+
+/** The spec-ref where source resolution looks for the `dep` source's head
+ * (specs/behaviors/source-resolution.md): the spec hash is the git blob hash
+ * of the canonical holospec TOML for the source url; the suffix is the
+ * configured ref minus `refs/`. */
+function depSpecRef(dir) {
+  const specToml = '[holospec.source]\nhost = "example.com"\npath = "/dep"\n';
+  const hash = execFileSync('git', ['hash-object', '--stdin'], { cwd: dir, input: specToml, encoding: 'utf8' }).trim();
+  return `refs/holo/source/${hash.slice(0, 2)}/${hash.slice(2)}/${DEP_REF.slice('refs/'.length)}`;
+}
+
+/** A workspace whose `site` holobranch maps the self-source plus a sibling
+ * source (`dep`) resolved via its spec-ref — the ref the staleness tests
+ * advance behind the open session. A local `dep` branch tracks the same
+ * commits for the test's own bookkeeping. */
 function scratchWorkspace() {
   const dir = mkdtempSync(join(tmpdir(), 'holo-projector-session-'));
   git(dir, 'init', '-q', '-b', 'master');
   git(dir, 'config', 'user.name', 'Test');
   git(dir, 'config', 'user.email', 'test@example.com');
 
-  // dep branch: content the site holobranch pulls in by ref
+  // dep branch: content the site holobranch pulls in through the spec-ref
   write(dir, 'dep-file.txt', 'dep v1\n');
   git(dir, 'add', '-A');
   git(dir, 'commit', '-q', '-m', 'dep v1');
   git(dir, 'branch', 'dep');
+  git(dir, 'update-ref', depSpecRef(dir), git(dir, 'rev-parse', 'dep'));
   git(dir, 'rm', '-q', 'dep-file.txt');
 
   write(dir, '.holo/config.toml', '[holospace]\nname = "myapp"\n');
-  write(dir, '.holo/sources/dep.toml', '[holosource]\nurl = "."\nref = "refs/heads/dep"\n');
+  write(dir, '.holo/sources/dep.toml', `[holosource]\nurl = "${DEP_URL}"\nref = "${DEP_REF}"\n`);
   write(dir, '.holo/branches/site/_myapp.toml', '[holomapping]\nfiles = "**"\n');
   write(dir, '.holo/branches/site/vendor/_dep.toml', '[holomapping]\nfiles = "**"\n');
   write(dir, 'index.html', '<html>\n');
@@ -113,13 +128,14 @@ test('a ref advanced behind the session is observed by the next call', (t) => {
   const before = session.compositeBranch(root, 'site');
   assert.ok(lsTree(dir, before).includes('vendor/dep-file.txt'));
 
-  // Advance refs/heads/dep behind the open session with the external git
-  // CLI: new commit objects land in the ODB and the ref moves, all without
-  // the session's involvement.
+  // Advance the dep source's spec-ref behind the open session with the
+  // external git CLI: new commit objects land in the ODB and the ref moves,
+  // all without the session's involvement.
   git(dir, 'switch', '-q', 'dep');
   write(dir, 'dep-file-2.txt', 'dep v2\n');
   git(dir, 'add', '-A');
   git(dir, 'commit', '-q', '-m', 'dep v2');
+  git(dir, 'update-ref', depSpecRef(dir), git(dir, 'rev-parse', 'dep'));
   git(dir, 'switch', '-q', 'master');
 
   const after = session.compositeBranch(root, 'site');
