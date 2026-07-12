@@ -118,6 +118,12 @@ What **hosts must uphold**:
 - A `gix::Repository` is thread-local by design; to cross threads, hold a
   `gix::ThreadSafeRepository` and derive a per-thread `Repository` (as the
   napi binding does), constructing a fresh `Context` around it per call.
+  Memoizing the derived `Repository` **keyed by thread id** is a sound warmth
+  optimization: a call landing on the memoized thread reuses the handle; a
+  call landing on any other thread re-derives. Results never depend on which
+  thread a call lands on — only warmth does — which is exactly the guarantee
+  above. (A memoized handle must never be *used* from a thread other than the
+  one it was derived on.)
 - The napi binding's `Repo`/`Tree` objects may be called from whichever thread
   the JS engine dispatches on; because each `Tree` owns its cache, correctness
   never depends on which thread that is.
