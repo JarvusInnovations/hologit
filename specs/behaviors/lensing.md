@@ -94,6 +94,13 @@ Four sanctioned tiers, all behind the same job protocol; transfer strategy is an
 
 **OCI-only.** Habitat package execution (`config.package`, BLDR depot lookup, studio-mediated exec) is deprecated and not ported to the Rust engine. Existing Habitat lenses migrate by wrapping their tool in an image build; a minimal lens SDK (an entrypoint script implementing the job protocol) ships with the lens image toolchain so a lens image is `FROM <anything>` + the SDK + the tool. The SDK's author-facing contract (environment, materialization modes, per-job isolation) is specced at [`api/lens-sdk.md`](../api/lens-sdk.md). The engine abstracts the container runtime behind the exec/stdio seam — Docker and Podman are equally supported; nothing in this spec may depend on Docker-specific tooling.
 
+## Engine embedding
+
+Lens execution is an **edge capability of the engine as a host-facing surface** — the Rust library API (`holo_projector::lens`, behind runtime/registry seams the host supplies) and the engine CLI — not of every embedding:
+
+- **The napi binding does not expose lens execution (yet).** In the hybrid CLI (`engine-selection.md`), composition runs in Rust and lensing stays owned by the JS engine; a napi consumer that needs lensed output goes through that seam. Exposing native lens execution to napi consumers is deliberately deferred until the warm pool ships — watch mode is its primary consumer, and freezing a one-shot-only napi surface now would commit to the wrong API shape.
+- **Interop is guaranteed at the cache, not the embedding**: because spec hashing is byte-identical across engines and results live at the spec-keyed refs, whichever engine executes a lens, the other trusts and reuses the result. Which engine ran a lens must never be observable in output.
+
 ## Principles
 
 **Inherited** — from [`principles.md`](../principles.md):
