@@ -63,7 +63,7 @@ exports.handler = async function project ({
     cacheTo = null
 }) {
     const logger = require('../lib/logger.js');
-    const { Repo, Projection } = require('../lib');
+    const { Repo, Projection, WatchLoop } = require('../lib');
 
 
     // check inputs
@@ -150,23 +150,55 @@ exports.handler = async function project ({
     console.log(outputHash);
 
 
-    // watch for changes
+    // watch for changes (specs/behaviors/watch.md): cycles are serialized
+    // and latest-wins — rapid changes coalesce, and a cycle whose input was
+    // superseded mid-flight discards its result at the publication gate,
+    // before the output line and any commit
     if (watch) {
-        const { watching } = await repo.watch({
-            callback: async (newTreeHash, newCommitHash=null) => {
-                logger.info('watch new hash: %s (from:%s)', newTreeHash, newCommitHash||'unknown');
-
-                const newWorkspace = await repo.createWorkspaceFromTreeHash(newTreeHash);
-                outputHash = await Projection.projectBranch(newWorkspace.getBranch(holobranch), {
+        const watchLoop = new WatchLoop({
+            cycle: async ({ treeHash }) => {
+                const cycleWorkspace = await repo.createWorkspaceFromTreeHash(treeHash);
+                return Projection.projectBranch(cycleWorkspace.getBranch(holobranch), {
                     debug,
                     lens,
-                    commitTo,
-                    commitMessage,
-                    parentCommit: commitSourceParent ? newCommitHash : null,
                     cacheFrom,
                     cacheTo
                 });
-                console.log(outputHash);
+            },
+            publish: async (projectedHash, { commitHash }) => {
+                if (commitTo) {
+                    projectedHash = await Projection.commitTree(repo, holobranch, projectedHash, commitTo, {
+                        parentCommit: commitSourceParent ? commitHash : null,
+                        commitMessage
+                    });
+                }
+
+                outputHash = projectedHash;
+                console.log(projectedHash);
+            },
+            onError: (err, { treeHash }) => {
+                // a failed cycle publishes nothing and never stops the
+                // watch; the next change triggers a normal cycle
+                logger.error('projection cycle failed for %s: %s', treeHash, err.message);
+                lastQueuedTreeHash = null; // allow an identical re-trigger to retry
+            }
+        });
+
+        // suppress re-projection of an input state identical to the last
+        // queued one (duplicate suppression is by hash, not by event)
+        let lastQueuedTreeHash = await workspace.root.write();
+
+        const { watching } = await repo.watch({
+            callback: (newTreeHash, newCommitHash = null) => {
+                logger.info('watch new hash: %s (from:%s)', newTreeHash, newCommitHash || 'unknown');
+
+                if (newTreeHash == lastQueuedTreeHash) {
+                    logger.debug('input tree unchanged, skipping cycle');
+                    return;
+                }
+
+                lastQueuedTreeHash = newTreeHash;
+                watchLoop.push({ treeHash: newTreeHash, commitHash: newCommitHash });
             }
         });
 
