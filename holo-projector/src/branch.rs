@@ -6,6 +6,7 @@ use gix::ObjectId;
 
 use crate::config::{self, MappingConfig};
 use crate::error::{Error, Result};
+use crate::fetch::SourceFetcher;
 use crate::source;
 use holo_tree::{Context, MergeMode, MergeOptions, MutableTree};
 
@@ -20,6 +21,7 @@ pub fn composite(
     workspace_name: &str,
     output: &mut MutableTree,
     project_fn: &mut dyn FnMut(&Context, ObjectId, &str) -> Result<ObjectId>,
+    fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<()> {
     let mappings = config::discover_mappings(ctx, workspace_tree, branch_name)?;
     if mappings.is_empty() {
@@ -36,6 +38,7 @@ pub fn composite(
             &mapping.holosource,
             workspace_name,
             project_fn,
+            fetcher,
         )?;
 
         // Navigate to root subtree within source
@@ -63,6 +66,7 @@ pub fn composite_plan(
     workspace_tree: &mut MutableTree,
     output: &mut MutableTree,
     project_fn: &mut dyn FnMut(&Context, ObjectId, &str) -> Result<ObjectId>,
+    fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<()> {
     let sorted = toposort(mappings)?;
 
@@ -73,6 +77,7 @@ pub fn composite_plan(
             &mapping.holosource,
             workspace_name,
             project_fn,
+            fetcher,
         )?;
 
         let mut source_tree = source::resolve_tree_at_path(ctx.repo, source_tree_hash, &mapping.root)?;

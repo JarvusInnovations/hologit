@@ -5,6 +5,7 @@ use gix::ObjectId;
 use crate::branch;
 use crate::config::{self, BranchConfig, BranchConfigFile, MappingConfig, WorkspaceConfigFile};
 use crate::error::Result;
+use crate::fetch::SourceFetcher;
 use holo_tree::{Context, MutableTree, TreeCache};
 
 /// Project a holobranch by reading `.holo/` config from a git tree.
@@ -31,7 +32,20 @@ pub fn project_branch_in(
     root_tree_id: ObjectId,
     branch_name: &str,
 ) -> Result<ObjectId> {
-    compose_branch(ctx, root_tree_id, branch_name, true)
+    compose_branch(ctx, root_tree_id, branch_name, true, None)
+}
+
+/// [`project_branch_in`] with remote source fetching enabled: sources that
+/// don't resolve locally are fetched into `refs/holo/source/...` through
+/// `fetcher` and resolution retried (`specs/behaviors/source-resolution.md`).
+/// Recursive sub-projections inherit the fetcher.
+pub fn project_branch_fetching_in(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, true, Some(fetcher))
 }
 
 /// Compose a holobranch and return the **pre-lens tree**: the extends chain
@@ -59,7 +73,18 @@ pub fn composite_branch_in(
     root_tree_id: ObjectId,
     branch_name: &str,
 ) -> Result<ObjectId> {
-    compose_branch(ctx, root_tree_id, branch_name, false)
+    compose_branch(ctx, root_tree_id, branch_name, false, None)
+}
+
+/// [`composite_branch_in`] with remote source fetching enabled (see
+/// [`project_branch_fetching_in`]).
+pub fn composite_branch_fetching_in(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, false, Some(fetcher))
 }
 
 fn compose_branch(
@@ -67,6 +92,7 @@ fn compose_branch(
     root_tree_id: ObjectId,
     branch_name: &str,
     final_strip: bool,
+    fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<ObjectId> {
     let mut ws_tree = MutableTree::new(root_tree_id);
 
@@ -84,7 +110,8 @@ fn compose_branch(
             name,
             &ws_name,
             &mut output,
-            &mut |c, tree_id, bn| project_branch_in(c, tree_id, bn),
+            &mut |c, tree_id, bn| compose_branch(c, tree_id, bn, true, fetcher),
+            fetcher,
         )?;
     }
 
@@ -174,6 +201,7 @@ pub fn project_plan_in(
         &mut ws_tree,
         &mut output,
         &mut |c, tree_id, bn| project_branch_in(c, tree_id, bn),
+        None,
     )?;
 
     strip_branches_sources(ctx, &mut output)?;
