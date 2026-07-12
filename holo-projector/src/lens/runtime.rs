@@ -162,13 +162,21 @@ impl ContainerRuntime for ContainerCli {
 
     fn pull(&self, reference: &str) -> Result<()> {
         eprintln!("pulling required image: {reference}");
-        let status = Command::new(&self.program)
+        // Progress lands on stderr: stdout belongs to the engine's own
+        // output contract (the projected tree hash).
+        let mut child = Command::new(&self.program)
             .args(["pull", reference])
             .stdin(Stdio::null())
-            .stdout(Stdio::inherit())
+            .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
-            .status()
+            .spawn()
             .map_err(|e| Error::Other(format!("failed to spawn {}: {e}", self.program)))?;
+        if let Some(mut stdout) = child.stdout.take() {
+            let _ = std::io::copy(&mut stdout, &mut std::io::stderr());
+        }
+        let status = child
+            .wait()
+            .map_err(|e| Error::Other(format!("failed to reap {} pull: {e}", self.program)))?;
         if !status.success() {
             return Err(Error::LensIdentity {
                 container: reference.to_string(),
