@@ -19,7 +19,7 @@ Projecting a holobranch is a pure, deterministic transformation: given a root tr
 3. **Source resolution** — each mapping's holosource resolves in this order: self-source (the repo projecting itself) → gitlink (submodule pointer) → spec-ref (`refs/holo/source/...`) → local ref from the source's configured `ref`. Refs that point at annotated tags are peeled to commits. A `source=>holobranch` or `=>holobranch` reference triggers **recursive sub-projection**: the referenced holobranch is projected first (against the source's tree or the current tree respectively) and its output tree becomes the mapping's input.
 4. **Merge** — each mapping's source tree (optionally re-rooted via `root`) merges into the output at the mapping's target path, filtered by the mapping's `files` globs. Later mappings win over earlier ones for overlapping paths (overlay semantics), subject to each merge's mode.
 5. **Metadata strip** — `.holo/` is removed from the output tree.
-6. **Output** — the final tree is written and its hash returned. Composition itself never writes refs or commits.
+6. **Output** — the final tree is written and its hash returned. Composition itself never writes refs or commits; wrapping the output in a projection commit and advancing a ref is an explicit edge capability specced in `projection-commits.md`.
 
 ### Glob semantics
 
