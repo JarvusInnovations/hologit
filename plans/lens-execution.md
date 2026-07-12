@@ -25,7 +25,8 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 3. Implement execution behind a trait/API boundary so composition stays pure and the executor is swappable (also the seam for remote lensing, #79, later).
 4. Cache compatibility: Rust-written lens cache refs must be readable by the JS engine and vice versa during the hybrid period.
 5. Lens-image migration to the v2 job protocol (SDK entrypoint, dual-protocol transition window) is tracked downstream at hologit/lenses#32. SDK-contract conformance per `specs/api/lens-sdk.md` rides with it: the base-image gaps flagged on hologit/lenses#33 (wrapper-constant exit codes, fixed-path job state) must close before the warm pool ships — per-job isolation is its precondition — and the spec's desired-state modes (git-native, warm incremental materialization) are SDK follow-ups this plan should spawn, not blockers.
-6. Warm container pool and object-transfer tiers 2–4 (incremental warm-ref negotiation, lazy/promisor fetch, shared runtime-host object cache) per specs/behaviors/lensing.md — deferred here from [`lens-protocol-v2-js`](lens-protocol-v2-js.md), which shipped the interim JS engine as one-shot/tier-1 only (PR #484).
+6. Retire the `LENSED_SUBPROJECTION` refusal (deferred from [`projector-napi-cli`](projector-napi-cli.md)): once the engine executes lenses, recursive sub-projections with an effective lens flag lens natively instead of erroring for the dispatcher to fall back to JS (`specs/behaviors/composition.md` § Sub-projection lensing governs when lensing must apply).
+7. Warm container pool and object-transfer tiers 2–4 (incremental warm-ref negotiation, lazy/promisor fetch, shared runtime-host object cache) per specs/behaviors/lensing.md — deferred here from [`lens-protocol-v2-js`](lens-protocol-v2-js.md), which shipped the interim JS engine as one-shot/tier-1 only (PR #484).
 
 ## Validation
 
@@ -34,6 +35,7 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 - [ ] Lens cache hits work across engines (JS-written cache honored by Rust and vice versa)
 - [ ] A local, unpushed lens image runs (#417 resolved or explicitly deferred in the spec)
 - [ ] Warm container pool + transfer tiers 2–4 implemented behind the same job protocol (deferred from [`lens-protocol-v2-js`](lens-protocol-v2-js.md))
+- [ ] Lensed recursive sub-projections compose-and-lens natively — the `LENSED_SUBPROJECTION` refusal and its JS fallback are retired (deferred from [`projector-napi-cli`](projector-napi-cli.md))
 
 ## Risks / unknowns
 
