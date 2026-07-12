@@ -22,9 +22,51 @@ to its tree.
 | `compositeBranch(gitDir, rootTree, holobranch)` | tree hash | The **pre-lens composed tree**: the extends chain and all mappings composed per `specs/behaviors/composition.md`, with `.holo/{branches,sources}` stripped but the final `.holo` strip **skipped** (`.holo/config.toml` and `.holo/lenses` are retained for the JS lens phase). |
 | `projectBranch(gitDir, rootTree, holobranch)` | tree hash | Full composition-only projection, including the final metadata strip. Hash-equal to the oracle with lensing disabled. |
 | `projectPlan(gitDir, sources, mappings)` | tree hash | Structured-config composition (the `ProjectionPlan` path); no `.holo/` config needed. `sources`: `{ name, url?, ref?, projectHolobranch? }`. `mappings`: `{ source, files?, root?, output?, layer?, after?, before? }` with the same defaults as `ProjectionPlan.addMapping`. |
+| `new ProjectionSession(gitDir)` | session | Warm engine context: a persistent repository handle + `TreeCache` reused across calls (see § ProjectionSession). |
 | `stats()` | `{ treesRead, treesWritten, treesSkippedClean, cacheHits, cacheMisses, blobsRead }` | Process-global monotonic counters (metrics only). |
 | `resetStats()` | — | Reset counters and module caches. |
 | `__triggerPanicForTest()` | throws `PANIC` | Test hook proving panic containment; never call outside tests. |
+
+The top-level functions are one-shot: each call opens the repository and
+builds a fresh cache. Hosts making repeat projections (watch cycles, servers,
+gitsheets-style embedders) hold a `ProjectionSession` instead.
+
+## ProjectionSession
+
+An explicitly consumer-owned warm context — never hidden module state (the
+post-`TreeCache` philosophy from `specs/api/errors.md` § Thread-safety
+expectations, projected onto this binding). Construction opens the repository
+once (`GIT` on failure); the session holds a `ThreadSafeRepository`, a
+thread-id-memoized derived handle (the holo-tree-napi `local_repo` pattern —
+a call landing on a new thread re-derives, costing warmth, never
+correctness), and one `TreeCache`.
+
+| Method | Returns | Semantics |
+| --- | --- | --- |
+| `compositeBranch(rootTree, holobranch)` | tree hash | As the top-level export, against the session's warm context. |
+| `projectBranch(rootTree, holobranch)` | tree hash | As the top-level export. |
+| `projectPlan(sources, mappings)` | tree hash | As the top-level export. |
+| `commitProjection(options)` | commit hash | Create a projection commit and advance the target ref per `specs/behaviors/projection-commits.md`. `options`: `{ commitRef, holobranch, tree, sourceCommit?, sourceDescription?, workTreePath?, message?, author?, committer? }`. Exactly one of `sourceDescription` (ref mode) / `workTreePath` (working-tree mode) is required (`INVALID_ARGUMENT` otherwise); the description is host-computed, never engine-derived. `author`/`committer` are `{ name, email, timeSeconds?, offsetMinutes? }`; omitted, identity resolves from repo config (incl. `GIT_AUTHOR_*`/`GIT_COMMITTER_*` env). A concurrent ref move surfaces as `REF_CONFLICT`. |
+| `cachedTrees()` | number | `TreeCache` entry count — observability so warmth is provable in tests; metrics only. |
+| `clearCache()` | — | Drop the session's `TreeCache` (never required for correctness; a memory valve for long-lived hosts). |
+
+### Staleness contract
+
+The session caches **only content-addressed state** (parsed trees keyed by
+tree id; the gix object cache keyed by object id) — immutable by
+construction, reusable forever. Everything mutable is read fresh on every
+call:
+
+- **Refs are never cached.** Source heads, spec refs, and commit targets are
+  re-resolved from the repository per call; a ref advanced behind the session
+  is observed by the next call.
+- **Objects written behind the session are visible.** New loose objects and
+  packs (e.g. trees the host hashed from a working tree, commits written by
+  the JS side between calls) are found without reopening the session.
+
+Serving stale state is a correctness bug (`specs/behaviors/watch.md` § Warm
+session and staleness); the binding's test suite writes refs and objects
+behind an open session and asserts the next call observes them.
 
 ## Error contract
 
@@ -56,9 +98,12 @@ matching the holo-tree binding.
   platform packages yet — publication is a follow-up. When it happens, the
   release tag track is prefix-namespaced (`holo-projector-v*`); a bare `v*`
   tag is never acceptable (it collides with the `hologit` release namespace).
-- The binding opens the repository per call; callers batch work per
+- The one-shot exports open the repository per call; callers batch work per
   projection, and tree caching lives inside the engine for the duration of a
-  call.
+  call. `ProjectionSession` is the warm path: repeat projections against the
+  same repository reuse the handle and cache across calls.
+- `Error::RefConflict` forwards as `REF_CONFLICT` via the `Error::Tree`
+  passthrough (relevant to `commitProjection`).
 
 ## Principles
 

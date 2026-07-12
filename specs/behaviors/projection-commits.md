@@ -19,9 +19,12 @@ summarized under [Ported vs. desired state](#ported-vs-desired-state).
 
 - `holo_projector::commit_projection` (Rust engine capability)
 - `lib/Projection.js` `Projection#commit` — the conformance oracle, and the
-  hybrid CLI's `--commit-to` path today (JS owns commits per
-  `specs/behaviors/engine-selection.md`; wiring the Rust capability into the
-  CLI lands with watch-mode's warm-context work)
+  hybrid CLI's default `--commit-to` path (engine choice for commits is
+  specced in `specs/behaviors/engine-selection.md` § Commit dispatch; the
+  Rust path runs via the binding's `commitProjection` under
+  `HOLO_ENGINE=rust`)
+- `specs/behaviors/watch.md` — per-cycle commit inputs and the CAS/
+  `REF_CONFLICT` behavior of committing watch cycles
 
 ## Details
 
