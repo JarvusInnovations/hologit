@@ -310,9 +310,10 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { emptyTreeHash, __triggerPanicForTest, Repo, Tree } = nativeBinding
+const { emptyTreeHash, buildProfile, __triggerPanicForTest, Repo, Tree } = nativeBinding
 
 module.exports.emptyTreeHash = emptyTreeHash
+module.exports.buildProfile = buildProfile
 module.exports.__triggerPanicForTest = __triggerPanicForTest
 module.exports.Repo = Repo
 module.exports.Tree = Tree

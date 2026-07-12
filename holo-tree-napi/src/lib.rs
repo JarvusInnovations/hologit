@@ -113,6 +113,76 @@ pub fn empty_tree_hash() -> String {
     oid_hex(empty_tree_id())
 }
 
+/// The compile profile of the loaded binding: `"release"` or `"debug"`.
+///
+/// The runtime guard for the release-build requirement (#464 item 4): a debug
+/// build of this binding measures *slower* than the JS + `git`-subprocess path
+/// it replaces (~2.4x on the reference workload), while a release build is
+/// ~4–5x faster. The bundled benchmark refuses to run against a debug build;
+/// consumers embedding a from-source build can use this to assert the same.
+#[napi(catch_unwind)]
+pub fn build_profile() -> String {
+    if cfg!(debug_assertions) {
+        "debug".to_string()
+    } else {
+        "release".to_string()
+    }
+}
+
+// ── per-thread repo derivation (memoized) ───────────────────────────────────
+
+/// gix object cache size applied to every derived thread-local repository.
+///
+/// gix leaves the object cache at size 0 unless set (#464 item 2); read-heavy
+/// paths (repeated `readBlob`, deep navigation) then decode the same objects
+/// redundantly. 16 MiB follows gix's own sizing guidance (~10 MB per 10k
+/// objects of typical source-repo shape). Memoizing the derived repo (below)
+/// is what makes the cache effective at all — a per-call derivation would
+/// start cold every time.
+const OBJECT_CACHE_BYTES: usize = 16 * 1024 * 1024;
+
+/// A `gix::Repository` derived on — and only ever *used* on — one thread.
+struct ThreadLocalRepo {
+    thread: std::thread::ThreadId,
+    repo: gix::Repository,
+}
+
+// The memoized handle may be *moved* between threads with its owning object
+// (napi may finalize on another thread), which requires `gix::Repository:
+// Send`. Usage stays confined to the recorded thread via `local_repo`.
+const _: () = {
+    const fn assert_send<T: Send>() {}
+    assert_send::<gix::Repository>();
+};
+
+fn derive_local(shared: &gix::ThreadSafeRepository) -> ThreadLocalRepo {
+    let mut repo = shared.to_thread_local();
+    repo.object_cache_size_if_unset(OBJECT_CACHE_BYTES);
+    ThreadLocalRepo {
+        thread: std::thread::current().id(),
+        repo,
+    }
+}
+
+/// Reuse the memoized thread-local `gix::Repository`, re-deriving if this call
+/// landed on a different thread than the memo (#464 item 1 — previously every
+/// call paid a fresh `to_thread_local()`).
+///
+/// Sound per `specs/api/errors.md` § Thread-safety expectations: the memo is
+/// keyed by thread id, so a handle is only ever used on the thread it was
+/// derived on, and a thread switch costs at most warmth (a re-derivation and a
+/// cold object cache) — never a behavioral difference.
+fn local_repo<'a>(
+    slot: &'a mut Option<ThreadLocalRepo>,
+    shared: &gix::ThreadSafeRepository,
+) -> &'a gix::Repository {
+    let tid = std::thread::current().id();
+    if !matches!(slot, Some(memo) if memo.thread == tid) {
+        *slot = None; // discard a handle derived on another thread
+    }
+    &slot.get_or_insert_with(|| derive_local(shared)).repo
+}
+
 /// Internal self-test hook: deliberately panics inside the binding so the
 /// test suite can prove that a panic surfaces as a catchable JS error with
 /// code `PANIC` rather than aborting the host process (specs/api/errors.md
@@ -165,11 +235,13 @@ fn to_gix_signature(sig: Signature) -> CodedResult<gix::actor::Signature> {
 /// A handle to a git repository, backed by gix.
 ///
 /// Stored as a `ThreadSafeRepository` so the handle is `Send + Sync` and can be
-/// cheaply cloned into each `Tree`; every call derives a thread-local
-/// `gix::Repository` via `to_thread_local()`.
+/// cheaply cloned into each `Tree`; calls use a memoized thread-local
+/// `gix::Repository` (see [`local_repo`]), re-derived only when a call lands
+/// on a different thread.
 #[napi]
 pub struct Repo {
     inner: gix::ThreadSafeRepository,
+    local: Option<ThreadLocalRepo>,
 }
 
 #[napi]
@@ -182,20 +254,21 @@ impl Repo {
             let inner = gix::open(&git_dir)
                 .map_err(|e| git_err(format!("failed to open repo at '{git_dir}': {e}")))?
                 .into_sync();
-            Ok(Repo { inner })
+            Ok(Repo { inner, local: None })
         })
     }
 
     /// Resolve a ref (branch, tag, or commit hash) to its tree and return a
     /// mutable, in-memory view of it.
     #[napi(catch_unwind)]
-    pub fn create_tree_from_ref(&self, git_ref: String) -> Result<Tree, ErrorCode> {
+    pub fn create_tree_from_ref(&mut self, git_ref: String) -> Result<Tree, ErrorCode> {
         contained(|| {
-            let local = self.inner.to_thread_local();
-            let inner = ht_repo::create_tree_from_ref(&local, &git_ref).map_err(ht_err)?;
+            let local = local_repo(&mut self.local, &self.inner);
+            let inner = ht_repo::create_tree_from_ref(local, &git_ref).map_err(ht_err)?;
             Ok(Tree {
                 repo: self.inner.clone(),
                 cache: TreeCache::new(),
+                local: None,
                 inner,
             })
         })
@@ -207,6 +280,7 @@ impl Repo {
         Tree {
             repo: self.inner.clone(),
             cache: TreeCache::new(),
+            local: None,
             inner: MutableTree::empty(),
         }
     }
@@ -216,7 +290,7 @@ impl Repo {
     /// identity, then a "holo-tree" default. Returns the new commit hash.
     #[napi(catch_unwind)]
     pub fn commit_tree(
-        &self,
+        &mut self,
         tree_hash: String,
         parents: Vec<String>,
         message: String,
@@ -224,7 +298,7 @@ impl Repo {
         committer: Option<Signature>,
     ) -> Result<String, ErrorCode> {
         contained(|| {
-            let local = self.inner.to_thread_local();
+            let local = local_repo(&mut self.local, &self.inner);
             let tree = parse_oid(&tree_hash)?;
             let parent_oids = parents
                 .iter()
@@ -233,7 +307,7 @@ impl Repo {
             let author = author.map(to_gix_signature).transpose()?;
             let committer = committer.map(to_gix_signature).transpose()?;
             let commit =
-                ht_repo::commit_tree(&local, tree, &parent_oids, &message, author, committer)
+                ht_repo::commit_tree(local, tree, &parent_oids, &message, author, committer)
                     .map_err(ht_err)?;
             Ok(oid_hex(commit))
         })
@@ -249,16 +323,16 @@ impl Repo {
     /// `expectedOldHash` to force the ref (the prior unconditional behavior).
     #[napi(catch_unwind)]
     pub fn update_ref(
-        &self,
+        &mut self,
         refname: String,
         hash: String,
         expected_old_hash: Option<String>,
     ) -> Result<(), ErrorCode> {
         contained(|| {
-            let local = self.inner.to_thread_local();
+            let local = local_repo(&mut self.local, &self.inner);
             let oid = parse_oid(&hash)?;
             let expected = expected_old_hash.as_deref().map(parse_oid).transpose()?;
-            ht_repo::update_ref(&local, &refname, oid, expected).map_err(ht_err)
+            ht_repo::update_ref(local, &refname, oid, expected).map_err(ht_err)
         })
     }
 
@@ -267,10 +341,10 @@ impl Repo {
     /// resolve — the natural "does this ref exist?" probe before a CAS
     /// `updateRef`.
     #[napi(catch_unwind)]
-    pub fn resolve_ref(&self, git_ref: String) -> Result<Option<String>, ErrorCode> {
+    pub fn resolve_ref(&mut self, git_ref: String) -> Result<Option<String>, ErrorCode> {
         contained(|| {
-            let local = self.inner.to_thread_local();
-            let oid = ht_repo::resolve_ref(&local, &git_ref).map_err(ht_err)?;
+            let local = local_repo(&mut self.local, &self.inner);
+            let oid = ht_repo::resolve_ref(local, &git_ref).map_err(ht_err)?;
             Ok(oid.map(oid_hex))
         })
     }
@@ -278,9 +352,9 @@ impl Repo {
     /// Hash raw bytes as a loose blob in the ODB and return its hash, without
     /// inserting it into any tree. Binary-safe.
     #[napi(catch_unwind)]
-    pub fn write_blob(&self, content: Buffer) -> Result<String, ErrorCode> {
+    pub fn write_blob(&mut self, content: Buffer) -> Result<String, ErrorCode> {
         contained(|| {
-            let local = self.inner.to_thread_local();
+            let local = local_repo(&mut self.local, &self.inner);
             let oid = local
                 .write_blob(content.as_ref())
                 .map_err(git_err)?
@@ -353,11 +427,13 @@ fn classify(child: &holo_tree::Child) -> (&'static str, String, u32) {
 /// Owns its `TreeCache` (Phase-C finding #5): the cache travels with the
 /// `Tree` object rather than living in thread-implicit state, so whichever
 /// thread the JS engine dispatches a call on sees the same cache — see
-/// `specs/api/errors.md` § Thread-safety expectations.
+/// `specs/api/errors.md` § Thread-safety expectations. Likewise owns its
+/// memoized thread-local repo derivation (see [`local_repo`]).
 #[napi]
 pub struct Tree {
     repo: gix::ThreadSafeRepository,
     cache: TreeCache,
+    local: Option<ThreadLocalRepo>,
     inner: MutableTree,
 }
 
@@ -368,8 +444,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn write_child(&mut self, path: String, content: String) -> Result<String, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let oid = self
                 .inner
                 .write_child(&ctx, &path, &content)
@@ -382,8 +458,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn write_child_bytes(&mut self, path: String, content: Buffer) -> Result<String, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let oid = self
                 .inner
                 .write_child_bytes(&ctx, &path, content.as_ref())
@@ -406,8 +482,8 @@ impl Tree {
         mode: u32,
     ) -> Result<String, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let oid = parse_oid(&hash)?;
             let mode =
                 u16::try_from(mode).map_err(|_| invalid_arg(format!("invalid blob mode {mode:o}")))?;
@@ -422,8 +498,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn read_blob(&mut self, path: String) -> Result<Option<Buffer>, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let bytes = self.inner.read_blob(&ctx, &path).map_err(ht_err)?;
             Ok(bytes.map(Buffer::from))
         })
@@ -434,8 +510,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn get_child(&mut self, path: String) -> Result<Option<ChildInfo>, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let info = self
                 .inner
                 .get_child(&ctx, &path)
@@ -457,8 +533,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn get_children(&mut self, path: String) -> Result<Vec<NamedChildInfo>, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let subtree = match self.inner.get_subtree(&ctx, &path).map_err(ht_err)? {
                 Some(t) => t,
                 None => return Ok(vec![]),
@@ -484,8 +560,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn get_blob_map(&mut self, path: Option<String>) -> Result<Vec<BlobEntry>, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let path = path.unwrap_or_else(|| ".".to_string());
             let map = match self.inner.get_subtree(&ctx, &path).map_err(ht_err)? {
                 Some(subtree) => subtree.get_blob_map(&ctx).map_err(ht_err)?,
@@ -507,8 +583,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn delete_child_deep(&mut self, path: String) -> Result<bool, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             self.inner.delete_child_deep(&ctx, &path).map_err(ht_err)
         })
     }
@@ -520,8 +596,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn clear_children(&mut self, path: String) -> Result<(), ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             self.inner.clear_children(&ctx, &path).map_err(ht_err)
         })
     }
@@ -532,8 +608,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn merge(&mut self, other: &mut Tree, options: MergeOpts) -> Result<(), ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let mode = match options.mode.as_str() {
                 "overlay" => holo_tree::MergeMode::Overlay,
                 "replace" => holo_tree::MergeMode::Replace,
@@ -556,8 +632,8 @@ impl Tree {
     #[napi(catch_unwind)]
     pub fn write(&mut self) -> Result<String, ErrorCode> {
         contained(|| {
-            let local = self.repo.to_thread_local();
-            let ctx = Context::new(&local, &self.cache);
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
             let oid = self.inner.write(&ctx).map_err(ht_err)?;
             Ok(oid_hex(oid))
         })

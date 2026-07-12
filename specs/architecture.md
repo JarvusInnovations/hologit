@@ -11,7 +11,7 @@ The project is mid-migration from a Node.js engine to a Rust core. Both engines 
 | `lib/` + `commands/` + `bin/cli.js` | Node.js (CJS) | The shipping CLI (`git holo`). Sole owner of lensing, remote source fetching, watch mode, projection commits, and the studio. |
 | `holo-tree/` | Rust | Shared mutable git-tree primitives over gix: merge (overlay/replace/underlay), glob, blob/commit/ref ops, tree cache. Consumed by holo-projector and, as a Cargo git-tag dependency, by gitsheets-core. |
 | `holo-projector/` | Rust | The projection engine: `.holo/` config parsing, source resolution, mapping toposort, recursive sub-projection, composition. Pure — no network, containers, or ref writes. Benchmark CLI behind the `cli` feature. |
-| `holo-tree-napi/` | Rust (napi-rs) | Node binding over holo-tree only (tree/ref/blob CRUD), published to npm as `@hologit/holo-tree`. Does **not** expose projection. |
+| `holo-tree-napi/` | Rust (napi-rs) | Node binding over holo-tree only (tree/ref/blob CRUD), published to npm as `@hologit/holo-tree` — a supported standalone primitive for Node consumers (see Embedding consumers). Does **not** expose projection. |
 
 The three Rust crates form a Cargo workspace at the repo root.
 
@@ -26,14 +26,24 @@ The migration proceeds capability-by-capability, pure core outward (see [princip
 
 ## Embedding consumers
 
-holo-tree is a substrate for external git-backed systems. The reference consumer is **gitsheets** (`gitsheets-core` links holo-tree via Cargo git tags, `holo-tree-v*`). Embedding imposes the FFI robustness requirements in [principles.md — never abort a host process](principles.md#never-abort-a-host-process): no panics on public paths, structured error discriminants, and no reliance on thread-implicit state under host-controlled thread dispatch (napi/libuv, pyo3).
+holo-tree is a substrate for external git-backed systems, consumed in **two first-class modes** — both are supported surfaces of the same crate, neither is a stepping-stone for the other:
+
+- **Cargo git-dependency** — Rust consumers pin holo-tree directly via `holo-tree-v*` git tags. The reference consumer is **gitsheets** (`gitsheets-core`).
+- **npm `@hologit/holo-tree`** — the napi binding, a **supported standalone primitive** for Node consumers: git tree/ref/blob/commit operations on bare or normal repos with no `git` binary. It began as gitsheets' integration vehicle; it now stands on its own as the substrate for Node-side git-backed systems, with its own support posture, performance story, and optimization backlog (#464).
+
+Both modes implement the same contract:
+
+- The **error contract** in [api/errors.md](api/errors.md): stable machine-matchable codes (append-only), panic containment at the FFI boundary, and the thread-safety guarantees consumers rely on.
+- The FFI robustness requirements in [principles.md — never abort a host process](principles.md#never-abort-a-host-process): no panics on public paths, structured error discriminants, and no reliance on thread-implicit state under host-controlled thread dispatch (napi/libuv, pyo3).
+
+**Semver posture (npm binding)**: while the package is pre-1.0, breaking changes to the JS surface (removed/renamed methods, changed shapes) bump the minor version; additive changes and fixes bump the patch. Error codes are append-only regardless of version, per the stability rules in [api/errors.md](api/errors.md). The binding must ship as a release build — a debug build inverts its performance advantage (documented prominently in `holo-tree-napi/README.md`).
 
 ## Release tracks
 
 Two independent npm packages ship from this repo on prefix-namespaced git-tag tracks:
 
 - **`hologit`** (Node CLI/library) — `v*` tags via the develop→master Release-PR flow.
-- **`@hologit/holo-tree`** (napi binding) — `holo-tree-v*` tags; the same tags serve as Cargo git-dependency pins for Rust consumers. Never tag the binding with a bare `v*`.
+- **`@hologit/holo-tree`** (napi binding) — `holo-tree-v*` tags. One tag serves **both** consumption modes: it triggers the npm publish (platform prebuilds + trusted publishing) *and* is the Cargo git-dependency pin Rust consumers reference. Never tag the binding with a bare `v*`.
 
 The `actions/projector/v1` ref publishes the GitHub Action consumers use to project holobranches in CI.
 
