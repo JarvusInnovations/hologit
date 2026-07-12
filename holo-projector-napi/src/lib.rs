@@ -99,8 +99,30 @@ pub fn trigger_panic_for_test() -> Result<(), ErrorCode> {
 
 // ── repo/object helpers ─────────────────────────────────────────────────────
 
+/// gix object cache size applied to the repository handle each entry point
+/// opens.
+///
+/// gix leaves the object cache at size 0 unless set; without it, a projection
+/// re-decodes objects it touches repeatedly (config blobs, shared subtrees
+/// across mappings and recursive sub-projections). 16 MiB follows gix's own
+/// sizing guidance and mirrors holo-tree-napi's `OBJECT_CACHE_BYTES`.
+///
+/// Unlike holo-tree-napi — whose `Repo`/`Tree` objects persist across many
+/// short calls and therefore memoize the derived thread-local repository per
+/// thread id (see its `local_repo`) — this binding's entry points are
+/// one-shot: one call opens one handle, runs one whole projection (thousands
+/// of object reads), and drops it. The cache is warm for exactly the lifetime
+/// that matters here; holding a handle *across* calls (watch mode's repeat
+/// projections) is deliberately deferred to the watch-mode plan, where the
+/// staleness questions (refs and packs written between projections) get
+/// designed rather than assumed.
+const OBJECT_CACHE_BYTES: usize = 16 * 1024 * 1024;
+
 fn open_repo(git_dir: &str) -> CodedResult<gix::Repository> {
-    gix::open(git_dir).map_err(|e| git_err(format!("failed to open repo at '{git_dir}': {e}")))
+    let mut repo = gix::open(git_dir)
+        .map_err(|e| git_err(format!("failed to open repo at '{git_dir}': {e}")))?;
+    repo.object_cache_size_if_unset(OBJECT_CACHE_BYTES);
+    Ok(repo)
 }
 
 fn parse_oid(hex: &str) -> CodedResult<ObjectId> {
