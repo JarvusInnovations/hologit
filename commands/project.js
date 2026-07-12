@@ -133,34 +133,32 @@ exports.handler = async function project ({
     }
 
 
-    /**
-     * create a reusable block for the rest of the process so it can be repeated
-     * in watch mode--until a more efficient watch response can be developed
-     */
-    let outputHash = await Projection.projectBranch(workspaceBranch, {
-        debug,
-        lens,
-        commitTo,
-        commitMessage,
-        parentCommit: commitSourceParent ? parentCommit : null,
-        fetch,
-        cacheFrom,
-        cacheTo
-    });
-    console.log(outputHash);
+    let outputHash = null;
 
-
-    // watch for changes (specs/behaviors/watch.md): cycles are serialized
-    // and latest-wins — rapid changes coalesce, and a cycle whose input was
-    // superseded mid-flight discards its result at the publication gate,
-    // before the output line and any commit
-    if (watch) {
+    if (!watch) {
+        outputHash = await Projection.projectBranch(workspaceBranch, {
+            debug,
+            lens,
+            commitTo,
+            commitMessage,
+            parentCommit: commitSourceParent ? parentCommit : null,
+            fetch,
+            cacheFrom,
+            cacheTo
+        });
+        console.log(outputHash);
+    } else {
+        // watch for changes (specs/behaviors/watch.md): cycles are
+        // serialized and latest-wins — rapid changes coalesce, and a cycle
+        // whose input was superseded mid-flight discards its result at the
+        // publication gate, before the output line and any commit
         const watchLoop = new WatchLoop({
-            cycle: async ({ treeHash }) => {
+            cycle: async ({ treeHash, fetch: cycleFetch = false }) => {
                 const cycleWorkspace = await repo.createWorkspaceFromTreeHash(treeHash);
                 return Projection.projectBranch(cycleWorkspace.getBranch(holobranch), {
                     debug,
                     lens,
+                    fetch: cycleFetch,
                     cacheFrom,
                     cacheTo
                 });
@@ -186,8 +184,10 @@ exports.handler = async function project ({
 
         // suppress re-projection of an input state identical to the last
         // queued one (duplicate suppression is by hash, not by event)
-        let lastQueuedTreeHash = await workspace.root.write();
+        let lastQueuedTreeHash = null;
 
+        // establish the watcher before the initial projection so a change
+        // racing watch startup supersedes it instead of being lost
         const { watching } = await repo.watch({
             callback: (newTreeHash, newCommitHash = null) => {
                 logger.info('watch new hash: %s (from:%s)', newTreeHash, newCommitHash || 'unknown');
@@ -201,6 +201,12 @@ exports.handler = async function project ({
                 watchLoop.push({ treeHash: newTreeHash, commitHash: newCommitHash });
             }
         });
+
+        // initial cycle: a watch session's first publication is the current
+        // state, through the same loop as every later cycle (fetch, when
+        // requested, is a startup-only side effect)
+        lastQueuedTreeHash = await workspace.root.write();
+        watchLoop.push({ treeHash: lastQueuedTreeHash, commitHash: parentCommit, fetch });
 
         await watching;
     }

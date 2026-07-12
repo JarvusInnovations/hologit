@@ -84,6 +84,29 @@ jobs:
           echo "rust: ${rust_hash}"
           test "${js_hash}" = "${rust_hash}"
 
+      # Commit parity (specs/behaviors/projection-commits.md +
+      # specs/behaviors/engine-selection.md § Commit dispatch): under pinned
+      # identity, both engines must produce byte-identical projection commits
+      # — HOLO_ENGINE=rust routes the commit through the binding's
+      # commitProjection, so equal commit hashes prove the Rust commit path
+      # ran and matches the JS oracle byte-for-byte.
+      - name: 'Test projection commit: docs-site --commit-to (JS vs Rust engine, pinned identity)'
+        env:
+          GIT_AUTHOR_NAME: 'Holo Author'
+          GIT_AUTHOR_EMAIL: 'author@example.com'
+          GIT_AUTHOR_DATE: '1700000000 +0000'
+          GIT_COMMITTER_NAME: 'Holo Committer'
+          GIT_COMMITTER_EMAIL: 'committer@example.com'
+          GIT_COMMITTER_DATE: '1700000001 +0000'
+        run: |
+          set -euo pipefail
+          js_commit=$(HOLO_ENGINE=js node bin/cli.js project --no-cache-from --no-lens --commit-to=refs/holo-ci/js docs-site | tail -1)
+          rust_commit=$(HOLO_ENGINE=rust node bin/cli.js project --no-cache-from --no-lens --commit-to=refs/holo-ci/rust docs-site | tail -1)
+          echo "js:   ${js_commit}"
+          echo "rust: ${rust_commit}"
+          test "${js_commit}" = "${rust_commit}"
+          test "$(git rev-parse refs/holo-ci/js)" = "$(git rev-parse refs/holo-ci/rust)"
+
   test-action:
 
     runs-on: ubuntu-latest
