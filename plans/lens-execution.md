@@ -4,6 +4,7 @@ depends: [projector-napi-cli]
 specs:
   - specs/behaviors/composition.md
   - specs/behaviors/lensing.md
+  - specs/api/lens-sdk.md
 issues: [435]
 ---
 
@@ -23,7 +24,7 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 2. Settle the runtime question in the spec (recommendation: OCI-only via a container API, with Docker/Podman as interchangeable executors; drop Habitat and the studio's Habitat coupling). Include local-image support (#417 — lenses not yet pushed to a registry).
 3. Implement execution behind a trait/API boundary so composition stays pure and the executor is swappable (also the seam for remote lensing, #79, later).
 4. Cache compatibility: Rust-written lens cache refs must be readable by the JS engine and vice versa during the hybrid period.
-5. Lens-image migration to the v2 job protocol (SDK entrypoint, dual-protocol transition window) is tracked downstream at hologit/lenses#32.
+5. Lens-image migration to the v2 job protocol (SDK entrypoint, dual-protocol transition window) is tracked downstream at hologit/lenses#32. SDK-contract conformance per `specs/api/lens-sdk.md` rides with it: the base-image gaps flagged on hologit/lenses#33 (wrapper-constant exit codes, fixed-path job state) must close before the warm pool ships — per-job isolation is its precondition — and the spec's desired-state modes (git-native, warm incremental materialization) are SDK follow-ups this plan should spawn, not blockers.
 6. Warm container pool and object-transfer tiers 2–4 (incremental warm-ref negotiation, lazy/promisor fetch, shared runtime-host object cache) per specs/behaviors/lensing.md — deferred here from [`lens-protocol-v2-js`](lens-protocol-v2-js.md), which shipped the interim JS engine as one-shot/tier-1 only (PR #484).
 
 ## Validation
