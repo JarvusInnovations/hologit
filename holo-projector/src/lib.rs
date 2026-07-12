@@ -8,8 +8,10 @@
 //!
 //! - [`project_branch`] — TOML-driven: reads `.holo/` config from a git tree
 //! - [`project_plan`] — Programmatic: accepts structured source/mapping definitions
+//! - [`commit_projection`] — Edge capability: commit a composed tree and advance a ref
 
 pub mod branch;
+pub mod commit;
 pub mod config;
 pub mod error;
 pub mod projection;
@@ -20,6 +22,10 @@ use gix::ObjectId;
 
 // Re-export holo-tree for consumers that need the tree primitives
 pub use holo_tree;
+
+// Projection-commit creation (specs/behaviors/projection-commits.md):
+// the side-effecting edge capability layered on pure composition.
+pub use commit::{commit_projection, CommitProjectionOptions, ProjectionSource};
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
