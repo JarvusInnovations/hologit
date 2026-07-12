@@ -38,7 +38,8 @@ Codes added by `holo_projector::Error` (surfaced via `Error::code()`):
 | Code | Rust variant | Raised when |
 | --- | --- | --- |
 | `CONFIG` | `Error::Config` | A `.holo/` TOML file is malformed or semantically invalid (e.g. a holomapping with no `files`). |
-| `SOURCE_RESOLUTION` | `Error::SourceResolution` | A holosource resolved to no commit via gitlink → spec-ref → local ref. The dispatcher's cue that the source is unfetched — JS fetches on demand; Rust never does. |
+| `SOURCE_RESOLUTION` | `Error::SourceResolution` | A holosource resolved to no commit via gitlink → spec-ref → local ref (`specs/behaviors/source-resolution.md`). Without a fetcher this is the dispatcher's cue that the source may simply be unfetched; the crate's `*_fetching` entry points fetch on demand instead. |
+| `SOURCE_FETCH` | `Error::SourceFetch` | A remote source fetch failed (network, auth, unknown remote ref, non-zero git exit). Distinct from `SOURCE_RESOLUTION` per `specs/behaviors/source-resolution.md` § Errors. |
 | `CIRCULAR_DEPENDENCY` | `Error::CircularDependency` | Mapping `before`/`after` constraints form a cycle. |
 | `LENSED_SUBPROJECTION` | `Error::LensedSubprojection` | A recursive sub-projection would lens under the oracle's semantics (see `specs/behaviors/composition.md` § Sub-projection lensing). The composition-only engine refuses rather than silently skipping the lens. |
 | `PROJECTION` | `Error::Other` | Residual projection failure not classified above. |
