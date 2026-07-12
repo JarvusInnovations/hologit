@@ -31,7 +31,7 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 ## Validation
 
 - [x] `specs/behaviors/lensing.md` accepted, including the runtime decision (PR #482, merged 2026-07-04; OCI-only, exec/stdio job protocol, four object-transfer tiers, remoted lensing #79, local-image resolution #417, deadlines/supersession #19)
-- [ ] Lensed reference projections (cfp-live-cluster-style helm3/kustomize, wmata-style tree-patch) produce hashes identical to the JS engine
+- [ ] Lensed reference projections (`docs-site` mkdocs replace-merge, `github-action-projector` npm-install glob-filtered-input — pinned to the `:v2`-protocol images) produce hashes identical to the JS engine *(amended: the originally-named helm3/kustomize and tree-patch lenses have no v2-protocol images yet, so they cannot exercise the v2-only engine; the composition-spec conformance fixtures cover the same merge/filter shapes and both engines dispatch v2 on them)*
 - [ ] Lens cache hits work across engines (JS-written cache honored by Rust and vice versa)
 - [ ] A local, unpushed lens image runs (#417 resolved or explicitly deferred in the spec)
 - [ ] Warm container pool + transfer tiers 2–4 implemented behind the same job protocol (deferred from [`lens-protocol-v2-js`](lens-protocol-v2-js.md))
@@ -44,8 +44,8 @@ Port lens (hololens) execution to the Rust engine: build the glob-filtered input
 
 ## Notes
 
-_(populated at closeout)_
+*(populated at closeout)*
 
 ## Follow-ups
 
-_(populated at closeout)_
+*(populated at closeout)*
