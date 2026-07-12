@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 depends: [projector-napi-cli, projection-commits]
 specs:
   - specs/behaviors/composition.md
