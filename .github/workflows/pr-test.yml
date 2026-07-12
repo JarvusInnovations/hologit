@@ -45,6 +45,10 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
       - name: Configure git identity
         run: |
           git config user.name "Github Action $GITHUB_JOB"
@@ -52,11 +56,33 @@ jobs:
 
       - run: npm install
 
-      - name: 'Test projection: github-action-projector'
-        run: node bin/cli.js project --no-cache-from --cache-to=origin github-action-projector
+      - name: Build Rust projector addon
+        run: npm run build:projector-addon
 
-      - name: 'Test projection: docs-site'
-        run: node bin/cli.js project --no-cache-from --cache-to=origin docs-site
+      - name: Test holo-projector-napi binding
+        run: npm --prefix holo-projector-napi test
+
+      # Each projection runs under both engines (specs/behaviors/engine-selection.md):
+      # HOLO_ENGINE=rust errors loudly instead of falling back, so a passing
+      # rust run proves the Rust composition path actually executed — and the
+      # hash comparison is the determinism gate between the engines.
+      - name: 'Test projection: github-action-projector (JS vs Rust engine)'
+        run: |
+          set -euo pipefail
+          js_hash=$(HOLO_ENGINE=js node bin/cli.js project --no-cache-from --cache-to=origin github-action-projector | tail -1)
+          rust_hash=$(HOLO_ENGINE=rust node bin/cli.js project --no-cache-from --cache-to=origin github-action-projector | tail -1)
+          echo "js:   ${js_hash}"
+          echo "rust: ${rust_hash}"
+          test "${js_hash}" = "${rust_hash}"
+
+      - name: 'Test projection: docs-site (JS vs Rust engine)'
+        run: |
+          set -euo pipefail
+          js_hash=$(HOLO_ENGINE=js node bin/cli.js project --no-cache-from --cache-to=origin docs-site | tail -1)
+          rust_hash=$(HOLO_ENGINE=rust node bin/cli.js project --no-cache-from --cache-to=origin docs-site | tail -1)
+          echo "js:   ${js_hash}"
+          echo "rust: ${rust_hash}"
+          test "${js_hash}" = "${rust_hash}"
 
   test-action:
 

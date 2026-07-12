@@ -1,0 +1,44 @@
+{
+  "name": "@hologit/holo-projector",
+  "version": "0.0.0",
+  "description": "Node.js native binding for holo-projector — the Rust holobranch composition engine",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JarvusInnovations/hologit.git",
+    "directory": "holo-projector-napi"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "napi": {
+    "name": "holo-projector",
+    "triples": {
+      "defaults": false,
+      "additional": [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ]
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "test": "node --test test/*.mjs",
+    "version": "napi version"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4"
+  }
+}

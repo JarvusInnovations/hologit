@@ -14,8 +14,29 @@ pub enum Error {
     #[error("circular dependency in {kind} ordering")]
     CircularDependency { kind: String },
 
+    #[error("sub-projection of holobranch '{branch}' requires lensing ({reason}); composition-only engines must refuse rather than skip the lens phase")]
+    LensedSubprojection { branch: String, reason: String },
+
     #[error("{0}")]
     Other(String),
+}
+
+impl Error {
+    /// Stable, machine-matchable error code (`specs/api/projector-napi.md`).
+    ///
+    /// [`Error::Tree`] forwards the underlying `holo_tree::Error` code
+    /// unchanged; the remaining variants add projector-level codes. Codes are
+    /// append-only — consumers match on codes, never on message prose.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Error::Tree(e) => e.code(),
+            Error::Config { .. } => "CONFIG",
+            Error::SourceResolution { .. } => "SOURCE_RESOLUTION",
+            Error::CircularDependency { .. } => "CIRCULAR_DEPENDENCY",
+            Error::LensedSubprojection { .. } => "LENSED_SUBPROJECTION",
+            Error::Other(_) => "PROJECTION",
+        }
+    }
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -29,6 +29,12 @@ Glob matching is **minimatch-compatible**, because the legacy engine used minima
 - Negation patterns (`!pattern`) subtract from the preceding include set; evaluation order is the config's declared order.
 - A bare directory-name pattern and its `/**` expansion should behave consistently (#111 tracks a known legacy inconsistency — resolve spec-first when that work is picked up).
 
+### Sub-projection lensing
+
+A recursive sub-projection has an **effective lens flag** resolved exactly as the legacy engine does: the sub-branch config's `lens` when boolean; otherwise (for `holosource.project` references) the source's `project.lens` when boolean; otherwise `true`. When the flag is true, the oracle lenses the sub-projection's output before it becomes the mapping's input.
+
+A **composition-only engine** (one that does not execute lenses) must therefore **refuse** — with a structured, matchable error (`LENSED_SUBPROJECTION`, see `specs/api/projector-napi.md`) — any sub-projection whose lensing would actually alter output: effective lens flag true **and** at least one lens exists (external configs under `.holo/branches/<branch>.lenses/*.toml` in the sub-workspace, or internal configs at `.holo/lenses/*.toml` in the composited sub-output). Silently skipping the lens phase is forbidden — it produces a wrong hash instead of an error. When the flag is true but no lens exists, lensing is a no-op and composition-only output is already oracle-identical.
+
 ### Merge modes
 
 Tree merges support three modes: **overlay** (incoming wins on conflicts), **underlay** (existing wins), **replace** (incoming replaces the subtree wholesale). Mapping composition uses overlay ordering as described above; lens output uses the mode declared by the lens config.
@@ -45,7 +51,9 @@ An engine implementation conforms when it produces hash-identical output to the 
 | --- | --- | --- |
 | hologit (this repo) | `docs-site` | |
 | hologit (this repo) | `github-action-projector` | |
-| CodeForPhilly/codeforphilly.org | `emergence-site` | ~3,000 tree writes, 9 recursive sub-projections, 50+ sources; expected hash `0dc5566ea56b34afe9de7da93d6ae3de42876d8d` |
+| CodeForPhilly/codeforphilly.org | `emergence-site` | ~3,000 tree writes, 9 recursive sub-projections, 50+ sources |
+
+The reference result is **the JS engine's output on the same commit** — upstream fixture repos move, so conformance is engine-vs-engine hash equality at whatever commit is checked out, not a pinned hash. (Historical anchor: at the commit used during the Rust-engine port, `emergence-site` produced `0dc5566ea56b34afe9de7da93d6ae3de42876d8d`.)
 
 Regression tests for known determinism/correctness hazards live in `holo-tree/tests/` (dirty-path propagation, root-node children loading, glob zero-segment matching, stable toposort).
 

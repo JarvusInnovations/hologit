@@ -20,7 +20,7 @@ The three Rust crates form a Cargo workspace at the repo root.
 The migration proceeds capability-by-capability, pure core outward (see [principles.md — composition is pure](principles.md#composition-is-pure-side-effects-live-at-the-edges)):
 
 1. **Done:** tree primitives (holo-tree) and pure composition (holo-projector), validated hash-identical and ~130x faster warm on the reference projections.
-2. **Next:** wire the Rust projector into the Node CLI via a `holo-projector-napi` binding (#434). The interim CLI is a **hybrid**: JS handles side effects (fetching, lensing, commits, watch), delegating pure composition to Rust.
+2. **Done:** wire the Rust projector into the Node CLI via the `holo-projector-napi` binding (#434). The interim CLI is a **hybrid**: JS handles side effects (fetching, lensing, commits, watch), delegating pure composition to Rust per `specs/behaviors/engine-selection.md`. The binding is not yet published — the CLI loads it from the in-repo build with graceful pure-JS degradation.
 3. **Then:** port the side-effecting edges — projection commits (#438), remote fetching (#436), lens execution (#435), watch mode (#437) — each spec-first, since these are the areas where desired state may deliberately diverge from current JS behavior (notably the lens runtime).
 4. **End state:** the JS engine retires; the CLI becomes a thin shell over the Rust engine.
 
