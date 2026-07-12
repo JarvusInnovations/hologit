@@ -17,10 +17,13 @@ specs/
 ├── architecture.md        # Crates, engines, bindings, release tracks, migration strategy
 ├── api/                   # Library/binding contracts
 │   ├── errors.md          # holo-tree error codes, panic policy, thread-safety expectations
-│   └── lens-sdk.md        # The in-image SDK's author-facing contract (env, modes, isolation)
+│   ├── lens-sdk.md        # The in-image SDK's author-facing contract (env, modes, isolation)
+│   └── projector-napi.md  # holo-projector-napi binding surface and error codes
 └── behaviors/             # Cross-cutting rules
     ├── composition.md     # Projection/composition semantics (the core operation)
-    └── lensing.md         # Lens execution: spec/cache model, v2 job protocol, lifecycle, transfer tiers
+    ├── engine-selection.md    # Hybrid Rust/JS dispatch: per-phase seam, fallback, HOLO_ENGINE
+    ├── lensing.md         # Lens execution: spec/cache model, v2 job protocol, lifecycle, transfer tiers
+    └── projection-commits.md  # Projection-commit shape (parents, trailers, message, ref advance)
 ```
 
 Expected to grow as work touches each area (spec-on-contact):
