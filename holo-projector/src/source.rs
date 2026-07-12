@@ -10,20 +10,20 @@ use gix::ObjectId;
 
 use crate::config::{self, SourceConfig, SourceConfigFile};
 use crate::error::{Error, Result};
-use holo_tree::MutableTree;
+use holo_tree::{Context, MutableTree};
 
 /// Resolve a source to a tree hash.
 ///
 /// `project_fn` is called for recursive projections (source.project and
-/// =>holobranch). It takes `(repo, tree_id, branch_name)` and returns a
-/// tree hash — this is `project_branch` passed as a callback to break the
+/// =>holobranch). It takes `(ctx, tree_id, branch_name)` and returns a
+/// tree hash — this is `project_branch_in` passed as a callback to break the
 /// circular dependency between source and projection.
 pub fn resolve(
-    repo: &gix::Repository,
+    ctx: &Context,
     workspace_tree: &mut MutableTree,
     source_name: &str,
     workspace_name: &str,
-    project_fn: &mut dyn FnMut(&gix::Repository, ObjectId, &str) -> Result<ObjectId>,
+    project_fn: &mut dyn FnMut(&Context, ObjectId, &str) -> Result<ObjectId>,
 ) -> Result<ObjectId> {
     let (base_name, mapping_holobranch) = match source_name.split_once("=>") {
         Some((base, branch)) => (base, Some(branch)),
@@ -34,28 +34,28 @@ pub fn resolve(
     if base_name == workspace_name {
         let mut head = workspace_tree.hash;
         if let Some(hb) = mapping_holobranch {
-            head = project_fn(repo, head, hb)?;
+            head = project_fn(ctx, head, hb)?;
         }
         return Ok(head);
     }
 
     // Read source config
-    let source_config = read_source_config(repo, workspace_tree, base_name)?;
+    let source_config = read_source_config(ctx, workspace_tree, base_name)?;
 
     // Resolve commit via gitlink → spec-ref → local ref
-    let commit = resolve_commit(repo, workspace_tree, source_name, base_name, &source_config)?;
+    let commit = resolve_commit(ctx, workspace_tree, source_name, base_name, &source_config)?;
 
     // Peel to tree
-    let mut head = commit_to_tree(repo, commit)?;
+    let mut head = commit_to_tree(ctx.repo, commit)?;
 
     // Apply source.project.holobranch
     if let Some(ref project) = source_config.project {
-        head = project_fn(repo, head, &project.holobranch)?;
+        head = project_fn(ctx, head, &project.holobranch)?;
     }
 
     // Apply mapping holobranch (=>syntax)
     if let Some(hb) = mapping_holobranch {
-        head = project_fn(repo, head, hb)?;
+        head = project_fn(ctx, head, hb)?;
     }
 
     Ok(head)
@@ -64,18 +64,18 @@ pub fn resolve(
 // ── Commit resolution ──────────────────────────────────────────────────────
 
 fn resolve_commit(
-    repo: &gix::Repository,
+    ctx: &Context,
     workspace_tree: &mut MutableTree,
     source_name: &str,
     base_name: &str,
     config: &SourceConfig,
 ) -> Result<ObjectId> {
     // 1. Gitlink
-    if let Some(hash) = config::resolve_gitlink(repo, workspace_tree, source_name)? {
+    if let Some(hash) = config::resolve_gitlink(ctx, workspace_tree, source_name)? {
         return Ok(hash);
     }
     if base_name != source_name {
-        if let Some(hash) = config::resolve_gitlink(repo, workspace_tree, base_name)? {
+        if let Some(hash) = config::resolve_gitlink(ctx, workspace_tree, base_name)? {
             return Ok(hash);
         }
     }
@@ -92,16 +92,16 @@ fn resolve_commit(
                 suffix
             );
 
-            if let Ok(resolved) = repo.rev_parse_single(spec_ref.as_str()) {
-                return peel_to_commit(repo, resolved.detach());
+            if let Ok(resolved) = ctx.repo.rev_parse_single(spec_ref.as_str()) {
+                return peel_to_commit(ctx.repo, resolved.detach());
             }
         }
     }
 
     // 3. Local ref
     if let Some(ref git_ref) = config.git_ref {
-        if let Ok(resolved) = repo.rev_parse_single(git_ref.as_str()) {
-            return peel_to_commit(repo, resolved.detach());
+        if let Ok(resolved) = ctx.repo.rev_parse_single(git_ref.as_str()) {
+            return peel_to_commit(ctx.repo, resolved.detach());
         }
     }
 
@@ -112,12 +112,12 @@ fn resolve_commit(
 }
 
 fn read_source_config(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     name: &str,
 ) -> Result<SourceConfig> {
     let path = format!(".holo/sources/{name}.toml");
-    match config::read_toml::<SourceConfigFile>(repo, tree, &path)? {
+    match config::read_toml::<SourceConfigFile>(ctx, tree, &path)? {
         Some(f) => Ok(f.holosource),
         None => Ok(SourceConfig::default()),
     }

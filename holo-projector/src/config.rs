@@ -6,7 +6,7 @@
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
-use holo_tree::MutableTree;
+use holo_tree::{Context, MutableTree};
 
 // ── Workspace (.holo/config.toml) ──────────────────────────────────────────
 
@@ -165,40 +165,40 @@ impl StringOrVec {
 /// Read and parse a TOML file from a blob inside a git tree.
 /// Delegates to `holo_tree::toml::read_toml` for the generic parsing.
 pub fn read_toml<T: serde::de::DeserializeOwned>(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     path: &str,
 ) -> Result<Option<T>> {
-    Ok(holo_tree::toml::read_toml(repo, tree, path)?)
+    Ok(holo_tree::toml::read_toml(ctx, tree, path)?)
 }
 
 // ── Mapping discovery ──────────────────────────────────────────────────────
 
 /// Walk `.holo/branches/{branch_name}/` and collect all mapping configs.
 pub fn discover_mappings(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     branch_name: &str,
 ) -> Result<Vec<MappingConfig>> {
     let path = format!(".holo/branches/{branch_name}");
-    let branch_tree = match tree.get_subtree(repo, &path)? {
+    let branch_tree = match tree.get_subtree(ctx, &path)? {
         Some(t) => t,
         None => return Ok(vec![]),
     };
 
     let mut out = Vec::new();
-    walk_mappings(repo, branch_tree, "", &mut out)?;
+    walk_mappings(ctx, branch_tree, "", &mut out)?;
     Ok(out)
 }
 
 /// Recursively walk a mapping tree directory.
 fn walk_mappings(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     prefix: &str,
     out: &mut Vec<MappingConfig>,
 ) -> Result<()> {
-    tree.ensure_children(repo)?;
+    tree.ensure_children(ctx)?;
 
     // Snapshot names + types to avoid borrow conflicts during recursion
     let entries: Vec<(String, bool, Option<gix::ObjectId>)> = tree
@@ -223,8 +223,8 @@ fn walk_mappings(
             } else {
                 format!("{prefix}/{name}")
             };
-            let subtree = tree.get_subtree(repo, &name)?.unwrap();
-            walk_mappings(repo, subtree, &new_prefix, out)?;
+            let subtree = tree.get_subtree(ctx, &name)?.unwrap();
+            walk_mappings(ctx, subtree, &new_prefix, out)?;
             continue;
         }
 
@@ -234,7 +234,7 @@ fn walk_mappings(
         };
 
         let hash = blob_hash.unwrap();
-        let obj = repo.find_object(hash)?;
+        let obj = ctx.repo.find_object(hash)?;
         let text = std::str::from_utf8(&obj.data).map_err(|_| Error::Config {
             path: name.clone(),
             message: "non-UTF8".into(),
@@ -260,16 +260,16 @@ fn walk_mappings(
 
 /// Look for a gitlink (commit entry) at `.holo/sources/{name}` in the tree.
 pub fn resolve_gitlink(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     source_name: &str,
 ) -> Result<Option<gix::ObjectId>> {
-    let sources = match tree.get_subtree(repo, ".holo/sources")? {
+    let sources = match tree.get_subtree(ctx, ".holo/sources")? {
         Some(t) => t,
         None => return Ok(None),
     };
 
-    sources.ensure_children(repo)?;
+    sources.ensure_children(ctx)?;
     let children = match &sources.children {
         Some(c) => c,
         None => return Ok(None),

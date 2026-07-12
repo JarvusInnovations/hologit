@@ -10,6 +10,7 @@ use gix::ObjectId;
 pub struct Sandbox {
     pub dir: tempfile::TempDir,
     pub repo: gix::Repository,
+    pub cache: holo_tree::TreeCache,
 }
 
 impl Sandbox {
@@ -17,7 +18,16 @@ impl Sandbox {
     pub fn new() -> Self {
         let dir = tempfile::tempdir().expect("failed to create temp dir");
         let repo = gix::init_bare(dir.path()).expect("failed to init bare repo");
-        Sandbox { dir, repo }
+        Sandbox {
+            dir,
+            repo,
+            cache: holo_tree::TreeCache::new(),
+        }
+    }
+
+    /// A per-call [`holo_tree::Context`] over this sandbox's repo and cache.
+    pub fn ctx(&self) -> holo_tree::Context<'_> {
+        holo_tree::Context::new(&self.repo, &self.cache)
     }
 
     /// Write a blob and return its OID.
@@ -34,10 +44,10 @@ impl Sandbox {
 
         for (path, content) in files {
             let blob_hash = self.write_blob(content);
-            insert_blob_at_path(&self.repo, &mut tree, path, blob_hash);
+            insert_blob_at_path(&self.ctx(), &mut tree, path, blob_hash);
         }
 
-        tree.write(&self.repo).unwrap()
+        tree.write(&self.ctx()).unwrap()
     }
 
     /// Build a tree from entries that can include blobs, trees, and gitlinks.
@@ -133,7 +143,7 @@ impl Sandbox {
             spec.name
         );
         let config_blob = self.write_blob(&config_toml);
-        insert_blob_at_path(&self.repo, &mut tree, ".holo/config.toml", config_blob);
+        insert_blob_at_path(&self.ctx(), &mut tree, ".holo/config.toml", config_blob);
 
         // .holo/sources/{name}.toml
         for (name, source) in &spec.sources {
@@ -149,7 +159,7 @@ impl Sandbox {
             }
             let blob = self.write_blob(&toml);
             insert_blob_at_path(
-                &self.repo,
+                &self.ctx(),
                 &mut tree,
                 &format!(".holo/sources/{name}.toml"),
                 blob,
@@ -168,7 +178,7 @@ impl Sandbox {
                 }
                 let blob = self.write_blob(&toml);
                 insert_blob_at_path(
-                    &self.repo,
+                    &self.ctx(),
                     &mut tree,
                     &format!(".holo/branches/{branch_name}.toml"),
                     blob,
@@ -211,7 +221,7 @@ impl Sandbox {
 
                 let blob = self.write_blob(&toml);
                 insert_blob_at_path(
-                    &self.repo,
+                    &self.ctx(),
                     &mut tree,
                     &format!(".holo/branches/{branch_name}/{key}.toml"),
                     blob,
@@ -222,7 +232,7 @@ impl Sandbox {
         // Gitlink entries for sources in .holo/sources/
         for (name, commit_hash) in &spec.gitlinks {
             let sources_tree = tree
-                .get_or_create_subtree(&self.repo, ".holo/sources")
+                .get_or_create_subtree(&self.ctx(), ".holo/sources")
                 .unwrap();
             sources_tree.children.as_mut().unwrap().insert(
                 name.clone(),
@@ -234,16 +244,16 @@ impl Sandbox {
         // Additional content files (outside .holo/)
         for (path, content) in &spec.files {
             let blob = self.write_blob(content);
-            insert_blob_at_path(&self.repo, &mut tree, path, blob);
+            insert_blob_at_path(&self.ctx(), &mut tree, path, blob);
         }
 
-        tree.write(&self.repo).unwrap()
+        tree.write(&self.ctx()).unwrap()
     }
 }
 
 /// Insert a blob at a slash-separated path in a MutableTree.
 fn insert_blob_at_path(
-    repo: &gix::Repository,
+    ctx: &holo_tree::Context,
     tree: &mut holo_tree::tree::MutableTree,
     path: &str,
     blob_hash: ObjectId,
@@ -252,7 +262,7 @@ fn insert_blob_at_path(
         Some((d, f)) => (d, f),
         None => (".", path),
     };
-    let parent = tree.get_or_create_subtree(repo, dir).unwrap();
+    let parent = tree.get_or_create_subtree(ctx, dir).unwrap();
     parent.children.as_mut().unwrap().insert(
         file.to_string(),
         holo_tree::tree::Child::Blob {

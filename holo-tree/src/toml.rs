@@ -1,16 +1,16 @@
 //! Generic TOML-from-git-blob reader.
 
 use crate::error::{Error, Result};
-use crate::tree::MutableTree;
+use crate::tree::{Context, MutableTree};
 
 /// Read and parse a TOML file from a blob inside a git tree.
 /// Returns `None` if the blob doesn't exist at the given path.
 pub fn read_toml<T: serde::de::DeserializeOwned>(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     path: &str,
 ) -> Result<Option<T>> {
-    let blob = tree.read_blob(repo, path)?;
+    let blob = tree.read_blob(ctx, path)?;
     match blob {
         None => Ok(None),
         Some(data) => {

@@ -27,7 +27,7 @@ impl GlobMatcher {
     /// absent, or the single pattern `**`.
     pub fn new(files: Option<&[String]>) -> Result<Self> {
         let patterns = match files {
-            Some(pats) if !(pats.len() == 1 && pats[0] == "**") => {
+            Some(pats) if !(pats.len() == 1 && pats.first().is_some_and(|p| p == "**")) => {
                 let mut entries = Vec::with_capacity(pats.len());
                 let mut has_neg = false;
 

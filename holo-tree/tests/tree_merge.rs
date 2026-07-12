@@ -5,13 +5,13 @@ mod helpers;
 use helpers::Sandbox;
 use holo_tree::tree::{MergeMode, MergeOptions, MutableTree};
 
-fn list_tree(repo: &gix::Repository, hash: gix::ObjectId) -> Vec<String> {
+fn list_tree(ctx: &holo_tree::Context, hash: gix::ObjectId) -> Vec<String> {
     let mut tree = MutableTree::new(hash);
-    collect_paths(repo, &mut tree, "")
+    collect_paths(ctx, &mut tree, "")
 }
 
-fn collect_paths(repo: &gix::Repository, tree: &mut MutableTree, prefix: &str) -> Vec<String> {
-    tree.ensure_children(repo).unwrap();
+fn collect_paths(ctx: &holo_tree::Context, tree: &mut MutableTree, prefix: &str) -> Vec<String> {
+    tree.ensure_children(ctx).unwrap();
     let mut paths = Vec::new();
     // snapshot keys to avoid borrow issues
     let keys: Vec<String> = tree.children.as_ref().unwrap().keys().cloned().collect();
@@ -23,7 +23,7 @@ fn collect_paths(repo: &gix::Repository, tree: &mut MutableTree, prefix: &str) -
         };
         match tree.children.as_mut().unwrap().get_mut(&name) {
             Some(holo_tree::tree::Child::Tree(ref mut t)) => {
-                paths.extend(collect_paths(repo, t, &path));
+                paths.extend(collect_paths(ctx, t, &path));
             }
             Some(holo_tree::tree::Child::Blob { .. }) => paths.push(path),
             Some(holo_tree::tree::Child::Commit { .. }) => paths.push(format!("{path} [gitlink]")),
@@ -33,9 +33,9 @@ fn collect_paths(repo: &gix::Repository, tree: &mut MutableTree, prefix: &str) -
     paths
 }
 
-fn read_blob(repo: &gix::Repository, hash: gix::ObjectId, path: &str) -> String {
+fn read_blob(ctx: &holo_tree::Context, hash: gix::ObjectId, path: &str) -> String {
     let mut tree = MutableTree::new(hash);
-    let data = tree.read_blob(repo, path).unwrap().unwrap();
+    let data = tree.read_blob(ctx, path).unwrap().unwrap();
     String::from_utf8(data).unwrap()
 }
 
@@ -50,10 +50,10 @@ fn overlay_overwrites_existing_files() {
     let mut target = MutableTree::new(target_hash);
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    assert_eq!(read_blob(&sb.repo, result, "file.txt"), "updated");
+    let result = target.write(&sb.ctx()).unwrap();
+    assert_eq!(read_blob(&sb.ctx(), result, "file.txt"), "updated");
 }
 
 #[test]
@@ -65,14 +65,14 @@ fn overlay_preserves_non_overlapping_files() {
     let mut target = MutableTree::new(target_hash);
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let files = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let files = list_tree(&sb.ctx(), result);
     assert!(files.contains(&"keep.txt".to_string()));
     assert!(files.contains(&"shared.txt".to_string()));
-    assert_eq!(read_blob(&sb.repo, result, "keep.txt"), "kept");
-    assert_eq!(read_blob(&sb.repo, result, "shared.txt"), "v2");
+    assert_eq!(read_blob(&sb.ctx(), result, "keep.txt"), "kept");
+    assert_eq!(read_blob(&sb.ctx(), result, "shared.txt"), "v2");
 }
 
 #[test]
@@ -84,10 +84,10 @@ fn overlay_adds_new_files() {
     let mut target = MutableTree::new(target_hash);
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let files = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let files = list_tree(&sb.ctx(), result);
     assert!(files.contains(&"a.txt".to_string()));
     assert!(files.contains(&"b.txt".to_string()));
 }
@@ -101,10 +101,10 @@ fn overlay_merges_nested_directories() {
     let mut target = MutableTree::new(target_hash);
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let files = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let files = list_tree(&sb.ctx(), result);
     assert!(files.contains(&"a/b/file1.txt".to_string()));
     assert!(files.contains(&"a/b/file2.txt".to_string()));
     assert!(files.contains(&"a/c/file3.txt".to_string()));
@@ -121,10 +121,10 @@ fn replace_removes_unmatched_target_children() {
     let mut target = MutableTree::new(target_hash);
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Replace).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let files = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let files = list_tree(&sb.ctx(), result);
     assert!(!files.contains(&"remove.txt".to_string()));
     assert!(files.contains(&"shared.txt".to_string()));
 }
@@ -140,10 +140,10 @@ fn underlay_does_not_overwrite_existing() {
     let mut target = MutableTree::new(target_hash);
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Underlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    assert_eq!(read_blob(&sb.repo, result, "file.txt"), "original");
+    let result = target.write(&sb.ctx()).unwrap();
+    assert_eq!(read_blob(&sb.ctx(), result, "file.txt"), "original");
 }
 
 #[test]
@@ -155,10 +155,10 @@ fn underlay_fills_gaps() {
     let mut target = MutableTree::new(target_hash);
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Underlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let files = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let files = list_tree(&sb.ctx(), result);
     assert!(files.contains(&"existing.txt".to_string()));
     assert!(files.contains(&"new.txt".to_string()));
 }
@@ -178,10 +178,10 @@ fn glob_includes_only_matching_files() {
     let mut source = MutableTree::new(source_hash);
     let files = vec!["**/*.js".to_string()];
     let opts = MergeOptions::new(Some(&files), MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let paths = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"src/app.js".to_string()));
     assert!(!paths.contains(&"src/style.css".to_string()));
     assert!(!paths.contains(&"src/index.html".to_string()));
@@ -201,10 +201,10 @@ fn glob_double_star_matches_root_level() {
     let mut source = MutableTree::new(source_hash);
     let files = vec!["**/*.php".to_string()];
     let opts = MergeOptions::new(Some(&files), MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let paths = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"Admin.php".to_string()), "** must match zero segments");
     assert!(paths.contains(&"sub/Nested.php".to_string()));
     assert!(!paths.contains(&"README.md".to_string()));
@@ -222,10 +222,10 @@ fn glob_negation_excludes_directory() {
     let mut source = MutableTree::new(source_hash);
     let files = vec!["*/**".to_string(), "!.github/".to_string()];
     let opts = MergeOptions::new(Some(&files), MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let paths = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"src/app.js".to_string()));
     assert!(!paths.iter().any(|p| p.starts_with(".github")));
 }
@@ -249,10 +249,10 @@ fn glob_multiple_negations() {
         "!docs/".to_string(),
     ];
     let opts = MergeOptions::new(Some(&files), MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let paths = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"src/app.js".to_string()));
     assert!(!paths.iter().any(|p| p.starts_with(".github")));
     assert!(!paths.iter().any(|p| p.starts_with(".vscode")));
@@ -269,7 +269,7 @@ fn identical_merge_stays_clean() {
     let mut target = MutableTree::new(hash);
     let mut source = MutableTree::new(hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
     assert!(!target.dirty, "merging identical trees should not set dirty");
 }
@@ -282,10 +282,10 @@ fn write_resets_dirty() {
     let mut target = MutableTree::empty();
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
     assert!(target.dirty);
 
-    target.write(&sb.repo).unwrap();
+    target.write(&sb.ctx()).unwrap();
     assert!(!target.dirty);
 }
 
@@ -295,7 +295,7 @@ fn get_or_create_subtree_marks_ancestors_dirty() {
     // subtrees created via get_or_create_subtree were silently lost.
     let sb = Sandbox::new();
     let mut tree = MutableTree::empty();
-    let sub = tree.get_or_create_subtree(&sb.repo, "a/b/c").unwrap();
+    let sub = tree.get_or_create_subtree(&sb.ctx(), "a/b/c").unwrap();
     // Insert a blob into the deepest subtree
     sub.children.as_mut().unwrap().insert(
         "file.txt".to_string(),
@@ -308,8 +308,8 @@ fn get_or_create_subtree_marks_ancestors_dirty() {
 
     assert!(tree.dirty, "root must be dirty after creating subtree path");
 
-    let result = tree.write(&sb.repo).unwrap();
-    let paths = list_tree(&sb.repo, result);
+    let result = tree.write(&sb.ctx()).unwrap();
+    let paths = list_tree(&sb.ctx(), result);
     assert!(
         paths.contains(&"a/b/c/file.txt".to_string()),
         "file in created subtree must survive write(). Got: {:?}",
@@ -329,13 +329,13 @@ fn sequential_merges_accumulate() {
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
 
     let mut src_a = MutableTree::new(source_a);
-    target.merge(&sb.repo, &mut src_a, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut src_a, &opts, ".").unwrap();
 
     let mut src_b = MutableTree::new(source_b);
-    target.merge(&sb.repo, &mut src_b, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut src_b, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let paths = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&"a.txt".to_string()));
     assert!(paths.contains(&"b.txt".to_string()));
 }
@@ -348,7 +348,7 @@ fn empty_into_empty_is_noop() {
     let mut target = MutableTree::empty();
     let mut source = MutableTree::empty();
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
     assert!(!target.dirty);
 }
 
@@ -367,11 +367,11 @@ fn preserves_executable_mode() {
     let mut target = MutableTree::empty();
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
+    let result = target.write(&sb.ctx()).unwrap();
     let mut check = MutableTree::new(result);
-    check.ensure_children(&sb.repo).unwrap();
+    check.ensure_children(&sb.ctx()).unwrap();
     match check.children.as_ref().unwrap().get("run.sh") {
         Some(Child::Blob { mode, .. }) => assert_eq!(*mode, 0o100755),
         other => panic!("expected executable blob, got {:?}", other.is_some()),
@@ -392,11 +392,11 @@ fn preserves_gitlink_entries() {
     let mut target = MutableTree::empty();
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
+    let result = target.write(&sb.ctx()).unwrap();
     let mut check = MutableTree::new(result);
-    check.ensure_children(&sb.repo).unwrap();
+    check.ensure_children(&sb.ctx()).unwrap();
     match check.children.as_ref().unwrap().get("submodule") {
         Some(holo_tree::tree::Child::Commit { hash }) => assert_eq!(*hash, fake_commit),
         _ => panic!("expected gitlink"),
@@ -417,9 +417,9 @@ fn deep_nesting_20_levels() {
     let mut target = MutableTree::empty();
     let mut source = MutableTree::new(source_hash);
     let opts = MergeOptions::new(None, MergeMode::Overlay).unwrap();
-    target.merge(&sb.repo, &mut source, &opts, ".").unwrap();
+    target.merge(&sb.ctx(), &mut source, &opts, ".").unwrap();
 
-    let result = target.write(&sb.repo).unwrap();
-    let paths = list_tree(&sb.repo, result);
+    let result = target.write(&sb.ctx()).unwrap();
+    let paths = list_tree(&sb.ctx(), result);
     assert!(paths.contains(&deep_path));
 }

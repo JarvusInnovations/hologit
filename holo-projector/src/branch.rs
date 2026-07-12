@@ -7,21 +7,21 @@ use gix::ObjectId;
 use crate::config::{self, MappingConfig};
 use crate::error::{Error, Result};
 use crate::source;
-use holo_tree::{MergeMode, MergeOptions, MutableTree};
+use holo_tree::{Context, MergeMode, MergeOptions, MutableTree};
 
 /// Composite a single branch's mappings into the output tree.
 ///
 /// `project_fn` is passed through to source resolution for recursive
-/// projections. It takes `(repo, tree_id, branch_name)` → tree hash.
+/// projections. It takes `(ctx, tree_id, branch_name)` → tree hash.
 pub fn composite(
-    repo: &gix::Repository,
+    ctx: &Context,
     workspace_tree: &mut MutableTree,
     branch_name: &str,
     workspace_name: &str,
     output: &mut MutableTree,
-    project_fn: &mut dyn FnMut(&gix::Repository, ObjectId, &str) -> Result<ObjectId>,
+    project_fn: &mut dyn FnMut(&Context, ObjectId, &str) -> Result<ObjectId>,
 ) -> Result<()> {
-    let mappings = config::discover_mappings(repo, workspace_tree, branch_name)?;
+    let mappings = config::discover_mappings(ctx, workspace_tree, branch_name)?;
     if mappings.is_empty() {
         return Ok(());
     }
@@ -31,7 +31,7 @@ pub fn composite(
     for mapping in &sorted {
         // Resolve source → tree hash
         let source_tree_hash = source::resolve(
-            repo,
+            ctx,
             workspace_tree,
             &mapping.holosource,
             workspace_name,
@@ -39,14 +39,14 @@ pub fn composite(
         )?;
 
         // Navigate to root subtree within source
-        let mut source_tree = source::resolve_tree_at_path(repo, source_tree_hash, &mapping.root)?;
+        let mut source_tree = source::resolve_tree_at_path(ctx.repo, source_tree_hash, &mapping.root)?;
 
         // Navigate to (or create) output subtree
-        let target = output.get_or_create_subtree(repo, &mapping.output)?;
+        let target = output.get_or_create_subtree(ctx, &mapping.output)?;
 
         // Merge
         let opts = MergeOptions::new(Some(&mapping.files), MergeMode::Overlay)?;
-        target.merge(repo, &mut source_tree, &opts, ".")?;
+        target.merge(ctx, &mut source_tree, &opts, ".")?;
     }
 
     Ok(())
@@ -57,28 +57,28 @@ pub fn composite(
 /// Sources are resolved by name using the provided source configs,
 /// which are looked up via `source_config_fn`.
 pub fn composite_plan(
-    repo: &gix::Repository,
+    ctx: &Context,
     mappings: &[MappingConfig],
     workspace_name: &str,
     workspace_tree: &mut MutableTree,
     output: &mut MutableTree,
-    project_fn: &mut dyn FnMut(&gix::Repository, ObjectId, &str) -> Result<ObjectId>,
+    project_fn: &mut dyn FnMut(&Context, ObjectId, &str) -> Result<ObjectId>,
 ) -> Result<()> {
     let sorted = toposort(mappings)?;
 
     for mapping in &sorted {
         let source_tree_hash = source::resolve(
-            repo,
+            ctx,
             workspace_tree,
             &mapping.holosource,
             workspace_name,
             project_fn,
         )?;
 
-        let mut source_tree = source::resolve_tree_at_path(repo, source_tree_hash, &mapping.root)?;
-        let target = output.get_or_create_subtree(repo, &mapping.output)?;
+        let mut source_tree = source::resolve_tree_at_path(ctx.repo, source_tree_hash, &mapping.root)?;
+        let target = output.get_or_create_subtree(ctx, &mapping.output)?;
         let opts = MergeOptions::new(Some(&mapping.files), MergeMode::Overlay)?;
-        target.merge(repo, &mut source_tree, &opts, ".")?;
+        target.merge(ctx, &mut source_tree, &opts, ".")?;
     }
 
     Ok(())
