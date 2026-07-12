@@ -9,9 +9,10 @@ The project is migrating its performance-critical core from Node.js to Rust:
 - **`holo-tree/`** — Shared crate: mutable git tree primitives (merge, write, glob, cache) via gix. Also used by gitsheets.
 - **`holo-projector/`** — Projection crate: holobranch config, source resolution, composition. Depends on holo-tree.
 - **`holo-tree-napi/`** — napi-rs binding exposing holo-tree to Node.js; published to npm as `@hologit/holo-tree` (the package gitsheets consumes). See its [`README.md`](../holo-tree-napi/README.md).
-- **`lib/`** — Existing Node.js implementation (still the CLI entry point).
+- **`holo-projector-napi/`** — napi-rs binding exposing holo-projector to the CLI (unpublished; loaded from the in-repo build via `npm run build:projector-addon`). See its [`README.md`](../holo-projector-napi/README.md).
+- **`lib/`** — Existing Node.js implementation (still the CLI entry point). The CLI is a **hybrid**: pure composition delegates to the Rust engine when the projection shape allows (`specs/behaviors/engine-selection.md`), with observable fallback to the JS engine; `HOLO_ENGINE=js|rust` forces either path.
 
-The three Rust crates form a Cargo workspace defined in the root `Cargo.toml`.
+The four Rust crates form a Cargo workspace defined in the root `Cargo.toml`.
 
 ## Spec-driven development (specops)
 
@@ -74,7 +75,7 @@ release + one-time-bootstrap details: [`holo-tree-napi/README.md`](../holo-tree-
 The Cargo workspace is at the repo root. Use `asdf` for the Rust toolchain (version in `.tool-versions`).
 
 ```sh
-# Run all tests across both crates
+# Run all tests across the workspace
 cargo test
 
 # Run tests for one crate
@@ -83,6 +84,10 @@ cargo test -p holo-projector
 
 # Build the benchmark CLI
 cargo build --release -p holo-projector --features cli
+
+# Build the CLI's projector addon (release) and run its node --test suite
+npm run build:projector-addon
+npm --prefix holo-projector-napi test
 ```
 
 ### Benchmarking
