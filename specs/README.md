@@ -23,12 +23,12 @@ specs/
     ├── composition.md     # Projection/composition semantics (the core operation)
     ├── engine-selection.md    # Hybrid Rust/JS dispatch: per-phase seam, fallback, HOLO_ENGINE
     ├── lensing.md         # Lens execution: spec/cache model, v2 job protocol, lifecycle, transfer tiers
-    └── projection-commits.md  # Projection-commit shape (parents, trailers, message, ref advance)
+    ├── projection-commits.md  # Projection-commit shape (parents, trailers, message, ref advance)
+    └── source-resolution.md   # Source resolution order, refs/holo/source layout, remote fetching
 ```
 
 Expected to grow as work touches each area (spec-on-contact):
 
-- `behaviors/source-resolution.md` — if source semantics grow beyond what `composition.md` covers
 - `api/` — napi binding surfaces as they stabilize
 
 ## Workflow

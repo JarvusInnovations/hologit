@@ -22,6 +22,11 @@ struct Cli {
     /// Print timing and tree stats
     #[arg(long)]
     stats: bool,
+
+    /// Fetch unresolvable remote sources into refs/holo/source/... (via
+    /// `git fetch`) instead of erroring on them
+    #[arg(long)]
+    fetch: bool,
 }
 
 fn main() -> Result<()> {
@@ -42,8 +47,13 @@ fn main() -> Result<()> {
     let root_tree_id = commit.tree_id().context("commit has no tree")?;
     let t_resolve = start.elapsed();
 
-    let output_hash = holo_projector::project_branch(&repo, root_tree_id.detach(), &cli.branch)
-        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    let output_hash = if cli.fetch {
+        let fetcher = holo_projector::GitCliFetcher::new(&repo);
+        holo_projector::project_branch_fetching(&repo, root_tree_id.detach(), &cli.branch, &fetcher)
+    } else {
+        holo_projector::project_branch(&repo, root_tree_id.detach(), &cli.branch)
+    }
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
     let t_project = start.elapsed();
 
     println!("{output_hash}");

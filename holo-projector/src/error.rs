@@ -11,6 +11,9 @@ pub enum Error {
     #[error("source '{name}' could not be resolved: {reason}")]
     SourceResolution { name: String, reason: String },
 
+    #[error("fetch from '{url}' failed: {reason}")]
+    SourceFetch { url: String, reason: String },
+
     #[error("circular dependency in {kind} ordering")]
     CircularDependency { kind: String },
 
@@ -32,6 +35,7 @@ impl Error {
             Error::Tree(e) => e.code(),
             Error::Config { .. } => "CONFIG",
             Error::SourceResolution { .. } => "SOURCE_RESOLUTION",
+            Error::SourceFetch { .. } => "SOURCE_FETCH",
             Error::CircularDependency { .. } => "CIRCULAR_DEPENDENCY",
             Error::LensedSubprojection { .. } => "LENSED_SUBPROJECTION",
             Error::Other(_) => "PROJECTION",

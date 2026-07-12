@@ -14,6 +14,7 @@ pub mod branch;
 pub mod commit;
 pub mod config;
 pub mod error;
+pub mod fetch;
 pub mod projection;
 pub mod source;
 
@@ -27,6 +28,10 @@ pub use holo_tree;
 // the side-effecting edge capability layered on pure composition.
 pub use commit::{commit_projection, CommitProjectionOptions, ProjectionSource};
 
+// Remote source fetching (specs/behaviors/source-resolution.md): the edge
+// capability that populates refs/holo/source/... for the *_fetching entries.
+pub use fetch::{FetchKind, GitCliFetcher, SourceFetcher};
+
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /// Project a holobranch by reading `.holo/` config from a git tree.
@@ -36,6 +41,33 @@ pub fn project_branch(
     branch_name: &str,
 ) -> Result<ObjectId> {
     projection::project_branch(repo, root_tree_id, branch_name)
+}
+
+/// [`project_branch`] with remote source fetching enabled: sources that
+/// don't resolve locally are fetched into `refs/holo/source/...` through
+/// `fetcher` and resolution retried (`specs/behaviors/source-resolution.md`).
+pub fn project_branch_fetching(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    let cache = holo_tree::TreeCache::new();
+    let ctx = holo_tree::Context::new(repo, &cache);
+    projection::project_branch_fetching_in(&ctx, root_tree_id, branch_name, fetcher)
+}
+
+/// [`composite_branch`] with remote source fetching enabled (see
+/// [`project_branch_fetching`]).
+pub fn composite_branch_fetching(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    let cache = holo_tree::TreeCache::new();
+    let ctx = holo_tree::Context::new(repo, &cache);
+    projection::composite_branch_fetching_in(&ctx, root_tree_id, branch_name, fetcher)
 }
 
 /// Compose a holobranch to its **pre-lens tree**: mappings composed and
