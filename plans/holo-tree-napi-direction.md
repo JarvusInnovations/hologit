@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 depends: [holo-tree-ffi-robustness]
 specs:
   - specs/architecture.md
