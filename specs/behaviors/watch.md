@@ -37,13 +37,16 @@ A change event that does not change the effective input (same ref target, or
 a tree hash identical to the previous cycle's) publishes nothing — duplicate
 suppression is by hash, not by event.
 
-Ref watching must survive git's rename-based ref updates: a ref advances by
-a lock file renamed over it, which permanently orphans a file-level inotify
-watch (later updates then fire no event at all — observed, not theoretical).
-The watcher monitors each ref's parent directory and filters by path; event
-*coalescing* is harmless because the handler reads the ref's current value
-at processing time, but event *loss* violates "the newest observed state
-always wins".
+Ref watching must survive git's rename-based ref updates. Two observed (not
+theoretical) inotify failure modes: a file-level watch is permanently
+orphaned by the first rename-over (later updates fire no event at all), and
+even a directory-level watch can coalesce a rapid burst into one event
+delivered *before* the burst's final state. Event *coalescing* is harmless —
+the handler reads the ref's current value at processing time — but event
+*loss* violates "the newest observed state always wins". The watcher
+therefore layers a low-latency event path (the ref's parent directory,
+filtered by path) over a stat-polling safety net per watched ref, whose
+interval bounds the worst-case detection delay for a dropped event.
 
 ### The watcher belongs to the host
 
