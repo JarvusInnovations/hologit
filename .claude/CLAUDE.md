@@ -112,7 +112,7 @@ const h = require('/path/to/hologit');
 "
 ```
 
-**Hash verification:** Both must produce `0dc5566ea56b34afe9de7da93d6ae3de42876d8d` for emergence-site. Also verify `docs-site` and `github-action-projector` on the hologit repo itself.
+**Hash verification:** the invariant is that the Rust and JS engines produce **identical hashes on the same commit** — upstream HEAD moves, so compare engine-vs-engine rather than against a pinned hash. (Historical anchor: `0dc5566ea56b34afe9de7da93d6ae3de42876d8d` at the commit used during the Rust-engine port.) Also verify `docs-site` and `github-action-projector` on the hologit repo itself.
 
 ### Correctness invariants
 

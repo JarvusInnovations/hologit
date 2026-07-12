@@ -4,6 +4,8 @@ depends: []
 specs:
   - specs/architecture.md
   - specs/behaviors/composition.md
+  - specs/behaviors/engine-selection.md
+  - specs/api/projector-napi.md
 issues: [434]
 ---
 
