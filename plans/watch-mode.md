@@ -21,6 +21,7 @@ Continuous re-projection on change: monitor the working tree and/or git refs and
 1. Spec from `commands/watch.js` behavior (watchman for working tree, chokidar for refs), then decide the Rust shape: `notify` crate + gix ref monitoring, or a callback/event boundary where the host (CLI or embedding consumer) owns watching and triggers re-projection.
 2. Prefer the event-boundary design: it keeps the engine pure (per principles) and gives embedding consumers (gitsheets watch mode is its own tracked want, gitsheets#135) the same primitive.
 3. Depends on projector-napi-cli (delegation path exists) and projection-commits (watch cycles that commit).
+   Wire the engine's `commit_projection` through the napi binding and the CLI's commit path (deferred from [`projection-commits`](projection-commits.md)): expose it as a binding export per `specs/api/projector-napi.md` conventions, and have the hybrid dispatcher use it — the host supplies the `git describe --always --tags` string and identity, per `specs/behaviors/projection-commits.md` (provenance is host-supplied).
 4. Warm engine context across binding calls (deferred from [`projector-napi-cli`](projector-napi-cli.md)): the napi binding currently opens the repo and builds a fresh `TreeCache` per call (~130ms/composition on emergence-site). Hold a persistent handle + cache across watch cycles via holo-projector's `*_in` Context variants — designing for the staleness hazards (refs and packs written between projections) — to reach the warm target. Consider holo-tree-napi's thread-id-memoized `local_repo` pattern (PR #491) for the handle.
 5. For lensed holobranches, watch-cycle latency depends on the warm lens-container pool from `specs/behaviors/lensing.md` (Container lifecycle): one container per image digest held for the session, jobs multiplexed over per-job refs, incremental object transfer to warm containers. Watch mode is that design's primary beneficiary — without it, container churn dwarfs the ~27ms composition budget. Not a hard dependency (unlensed branches watch fine; hybrid can lens via JS), but full-speed lensed watch requires lens-execution.
 
@@ -31,6 +32,7 @@ Continuous re-projection on change: monitor the working tree and/or git refs and
 - [ ] Repeat projections reuse a warm engine context (persistent repo handle + `TreeCache` across binding calls; deferred from [`projector-napi-cli`](projector-napi-cli.md))
 - [ ] Rapid successive changes coalesce (debounce) and stale in-flight projections are superseded
 - [ ] `--working` projections reflect uncommitted changes correctly (watch is the main consumer of working-tree trees)
+- [ ] Watch cycles that commit do so through the Rust `commit_projection` path via the binding, hash-identical to the JS commit path (deferred from [`projection-commits`](projection-commits.md))
 
 ## Risks / unknowns
 
