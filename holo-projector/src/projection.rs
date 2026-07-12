@@ -94,6 +94,52 @@ fn compose_branch(
     final_strip: bool,
     fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<ObjectId> {
+    let mut output = compose_branch_tree(
+        ctx,
+        root_tree_id,
+        branch_name,
+        &mut |c, tree_id, bn, default_lens| {
+            composition_only_project(c, tree_id, bn, default_lens, fetcher)
+        },
+        fetcher,
+    )?;
+
+    if final_strip {
+        strip_bare_holo(ctx, &mut output)?;
+    }
+
+    Ok(output.write(ctx)?)
+}
+
+/// The composition-only recursive-projection callback: project the
+/// sub-branch through the pure pipeline (inheriting the fetcher), then
+/// refuse when its lensing would have altered output
+/// (`specs/behaviors/composition.md` § Sub-projection lensing). A lensing
+/// engine (`lens::project_branch_lensed`) supplies a callback that lenses
+/// natively instead of refusing.
+fn composition_only_project(
+    ctx: &Context,
+    tree_id: ObjectId,
+    branch_name: &str,
+    default_lens: Option<bool>,
+    fetcher: Option<&dyn SourceFetcher>,
+) -> Result<ObjectId> {
+    let projected = compose_branch(ctx, tree_id, branch_name, true, fetcher)?;
+    crate::source::refuse_lensed_subprojection(ctx, tree_id, branch_name, default_lens, projected)?;
+    Ok(projected)
+}
+
+/// Composite a holobranch (extends chain + mappings) and strip
+/// `.holo/{branches,sources}` — the shared pre-lens portion of the pipeline.
+/// The caller decides what happens next: the pure pipeline applies the final
+/// `.holo` strip and writes; the lensing pipeline runs the lens phase first.
+pub(crate) fn compose_branch_tree(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    project_fn: &mut dyn FnMut(&Context, ObjectId, &str, Option<bool>) -> Result<ObjectId>,
+    fetcher: Option<&dyn SourceFetcher>,
+) -> Result<MutableTree> {
     let mut ws_tree = MutableTree::new(root_tree_id);
 
     let ws_name = read_workspace_name(ctx, &mut ws_tree)?;
@@ -110,17 +156,14 @@ fn compose_branch(
             name,
             &ws_name,
             &mut output,
-            &mut |c, tree_id, bn| compose_branch(c, tree_id, bn, true, fetcher),
+            project_fn,
             fetcher,
         )?;
     }
 
     strip_branches_sources(ctx, &mut output)?;
-    if final_strip {
-        strip_bare_holo(ctx, &mut output)?;
-    }
 
-    Ok(output.write(ctx)?)
+    Ok(output)
 }
 
 /// Compose git trees from structured source/mapping definitions.
@@ -200,7 +243,9 @@ pub fn project_plan_in(
         ws_name,
         &mut ws_tree,
         &mut output,
-        &mut |c, tree_id, bn| project_branch_in(c, tree_id, bn),
+        &mut |c, tree_id, bn, default_lens| {
+            composition_only_project(c, tree_id, bn, default_lens, None)
+        },
         None,
     )?;
 
@@ -269,7 +314,7 @@ fn strip_branches_sources(ctx: &Context, output: &mut MutableTree) -> Result<()>
 
 /// Strip `.holo` entirely if only `config.toml` remains (the final metadata
 /// strip, applied after any lens phase would have run).
-fn strip_bare_holo(ctx: &Context, output: &mut MutableTree) -> Result<()> {
+pub(crate) fn strip_bare_holo(ctx: &Context, output: &mut MutableTree) -> Result<()> {
     if let Some(holo) = output.get_subtree(ctx, ".holo")? {
         holo.ensure_children(ctx)?;
         let empty = holo

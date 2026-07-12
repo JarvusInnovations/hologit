@@ -9,12 +9,15 @@
 //! - [`project_branch`] — TOML-driven: reads `.holo/` config from a git tree
 //! - [`project_plan`] — Programmatic: accepts structured source/mapping definitions
 //! - [`commit_projection`] — Edge capability: commit a composed tree and advance a ref
+//! - [`lens::project_branch_lensed`] — Edge capability: the full pipeline
+//!   (composite → lens → strip) with native container-lens execution
 
 pub mod branch;
 pub mod commit;
 pub mod config;
 pub mod error;
 pub mod fetch;
+pub mod lens;
 pub mod projection;
 pub mod source;
 
