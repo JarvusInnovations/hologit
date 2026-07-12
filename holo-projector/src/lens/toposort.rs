@@ -44,77 +44,69 @@ pub fn toposort(nodes: &[String], edges: &[(String, String)]) -> Result<Vec<Stri
     }
 
     let n = nodes.len();
-    let mut sorted: Vec<Option<String>> = vec![None; n];
-    let mut cursor = n;
-    let mut visited = vec![false; n];
+    let mut walk = Walk {
+        nodes,
+        node_index: &node_index,
+        outgoing: &outgoing,
+        visited: vec![false; n],
+        sorted: vec![None; n],
+        cursor: n,
+        predecessors: Vec::new(),
+    };
 
-    fn visit<'a>(
-        node: &'a str,
-        index: usize,
-        predecessors: &mut Vec<&'a str>,
-        nodes: &'a [String],
-        node_index: &BTreeMap<&'a str, usize>,
-        outgoing: &BTreeMap<&'a str, Vec<&'a str>>,
-        visited: &mut [bool],
-        sorted: &mut [Option<String>],
-        cursor: &mut usize,
-    ) -> Result<()> {
-        if predecessors.contains(&node) {
+    for i in (0..n).rev() {
+        if !walk.visited[i] {
+            walk.visit(nodes[i].as_str(), i)?;
+        }
+    }
+
+    Ok(walk
+        .sorted
+        .into_iter()
+        .map(|s| s.expect("every slot is filled by a visit"))
+        .collect())
+}
+
+struct Walk<'a> {
+    nodes: &'a [String],
+    node_index: &'a BTreeMap<&'a str, usize>,
+    outgoing: &'a BTreeMap<&'a str, Vec<&'a str>>,
+    visited: Vec<bool>,
+    sorted: Vec<Option<String>>,
+    cursor: usize,
+    predecessors: Vec<&'a str>,
+}
+
+impl<'a> Walk<'a> {
+    fn visit(&mut self, node: &'a str, index: usize) -> Result<()> {
+        if self.predecessors.contains(&node) {
             return Err(Error::CircularDependency {
                 kind: "lens".to_string(),
             });
         }
-        if visited[index] {
+        if self.visited[index] {
             return Ok(());
         }
-        visited[index] = true;
+        self.visited[index] = true;
 
         // Upstream walks the outgoing set from last to first.
-        let targets = outgoing.get(node).cloned().unwrap_or_default();
+        let targets = self.outgoing.get(node).cloned().unwrap_or_default();
         if !targets.is_empty() {
-            predecessors.push(node);
+            self.predecessors.push(node);
             for &child in targets.iter().rev() {
-                let child_index = *node_index
+                let child_index = *self
+                    .node_index
                     .get(child)
                     .ok_or_else(|| Error::Other(format!("unknown lens in ordering: {child}")))?;
-                visit(
-                    child,
-                    child_index,
-                    predecessors,
-                    nodes,
-                    node_index,
-                    outgoing,
-                    visited,
-                    sorted,
-                    cursor,
-                )?;
+                self.visit(child, child_index)?;
             }
-            predecessors.pop();
+            self.predecessors.pop();
         }
 
-        *cursor -= 1;
-        sorted[*cursor] = Some(nodes[index].clone());
+        self.cursor -= 1;
+        self.sorted[self.cursor] = Some(self.nodes[index].clone());
         Ok(())
     }
-
-    let mut predecessors: Vec<&str> = Vec::new();
-    for i in (0..n).rev() {
-        if !visited[i] {
-            visit(
-                nodes[i].as_str(),
-                i,
-                &mut predecessors,
-                nodes,
-                &node_index,
-                &outgoing,
-                &mut visited,
-                &mut sorted,
-                &mut cursor,
-            )?;
-        }
-    }
-
-    Ok(sorted.into_iter().map(|s| s.expect("filled")).collect())
 }
 
 #[cfg(test)]

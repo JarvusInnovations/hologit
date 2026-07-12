@@ -424,7 +424,7 @@ fn stringify_float(f: f64) -> String {
 /// formatting produces the same digits as V8 for round-trip values.
 fn js_number_to_string(f: f64) -> String {
     let abs = f.abs();
-    if f != 0.0 && (abs >= 1e21 || abs < 1e-6) {
+    if f != 0.0 && !(1e-6..1e21).contains(&abs) {
         // format {:e} → "1.5e30" / "1e30" / "1.5e-7"; JS wants a '+' on
         // non-negative exponents.
         let s = format!("{f:e}");

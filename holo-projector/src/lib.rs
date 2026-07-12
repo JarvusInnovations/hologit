@@ -24,6 +24,20 @@ pub mod source;
 use error::Result;
 use gix::ObjectId;
 
+/// Recursive-projection callback threaded through composition:
+/// `(ctx, workspace_tree, branch_name, default_lens)` → output tree hash.
+/// `default_lens` is the source's `project.lens`, feeding the sub-branch's
+/// effective lens flag (`specs/behaviors/composition.md` § Sub-projection
+/// lensing); the composition-only callback refuses lensed sub-projections,
+/// the lensing engine's callback lenses them natively.
+pub type ProjectFn<'e> = dyn FnMut(
+        &holo_tree::Context,
+        ObjectId,
+        &str,
+        Option<bool>,
+    ) -> Result<ObjectId>
+    + 'e;
+
 // Re-export holo-tree for consumers that need the tree primitives
 pub use holo_tree;
 

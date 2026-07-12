@@ -137,7 +137,7 @@ pub(crate) fn compose_branch_tree(
     ctx: &Context,
     root_tree_id: ObjectId,
     branch_name: &str,
-    project_fn: &mut dyn FnMut(&Context, ObjectId, &str, Option<bool>) -> Result<ObjectId>,
+    project_fn: &mut crate::ProjectFn<'_>,
     fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<MutableTree> {
     let mut ws_tree = MutableTree::new(root_tree_id);

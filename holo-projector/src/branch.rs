@@ -2,7 +2,6 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use gix::ObjectId;
 
 use crate::config::{self, MappingConfig};
 use crate::error::{Error, Result};
@@ -20,7 +19,7 @@ pub fn composite(
     branch_name: &str,
     workspace_name: &str,
     output: &mut MutableTree,
-    project_fn: &mut dyn FnMut(&Context, ObjectId, &str, Option<bool>) -> Result<ObjectId>,
+    project_fn: &mut crate::ProjectFn<'_>,
     fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<()> {
     let mappings = config::discover_mappings(ctx, workspace_tree, branch_name)?;
@@ -65,7 +64,7 @@ pub fn composite_plan(
     workspace_name: &str,
     workspace_tree: &mut MutableTree,
     output: &mut MutableTree,
-    project_fn: &mut dyn FnMut(&Context, ObjectId, &str, Option<bool>) -> Result<ObjectId>,
+    project_fn: &mut crate::ProjectFn<'_>,
     fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<()> {
     let sorted = toposort(mappings)?;

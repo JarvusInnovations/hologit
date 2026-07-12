@@ -31,7 +31,7 @@ pub fn resolve(
     workspace_tree: &mut MutableTree,
     source_name: &str,
     workspace_name: &str,
-    project_fn: &mut dyn FnMut(&Context, ObjectId, &str, Option<bool>) -> Result<ObjectId>,
+    project_fn: &mut crate::ProjectFn<'_>,
     fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<ObjectId> {
     let (base_name, mapping_holobranch) = match source_name.split_once("=>") {
