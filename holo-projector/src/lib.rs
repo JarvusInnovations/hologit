@@ -32,6 +32,18 @@ pub fn project_branch(
     projection::project_branch(repo, root_tree_id, branch_name)
 }
 
+/// Compose a holobranch to its **pre-lens tree**: mappings composed and
+/// `.holo/{branches,sources}` stripped, but the final `.holo` strip skipped
+/// so a host-driven lens phase can run on the result. This is the hybrid
+/// CLI's composition seam (`specs/behaviors/engine-selection.md`).
+pub fn composite_branch(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+) -> Result<ObjectId> {
+    projection::composite_branch(repo, root_tree_id, branch_name)
+}
+
 /// Compose git trees from structured source/mapping definitions.
 pub fn project_plan(
     repo: &gix::Repository,

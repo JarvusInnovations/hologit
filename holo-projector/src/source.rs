@@ -34,7 +34,9 @@ pub fn resolve(
     if base_name == workspace_name {
         let mut head = workspace_tree.hash;
         if let Some(hb) = mapping_holobranch {
-            head = project_fn(ctx, head, hb)?;
+            let projected = project_fn(ctx, head, hb)?;
+            refuse_lensed_subprojection(ctx, head, hb, None, projected)?;
+            head = projected;
         }
         return Ok(head);
     }
@@ -50,15 +52,91 @@ pub fn resolve(
 
     // Apply source.project.holobranch
     if let Some(ref project) = source_config.project {
-        head = project_fn(ctx, head, &project.holobranch)?;
+        let projected = project_fn(ctx, head, &project.holobranch)?;
+        refuse_lensed_subprojection(ctx, head, &project.holobranch, project.lens, projected)?;
+        head = projected;
     }
 
     // Apply mapping holobranch (=>syntax)
     if let Some(hb) = mapping_holobranch {
-        head = project_fn(ctx, head, hb)?;
+        let projected = project_fn(ctx, head, hb)?;
+        refuse_lensed_subprojection(ctx, head, hb, None, projected)?;
+        head = projected;
     }
 
     Ok(head)
+}
+
+// ── Sub-projection lensing guard ───────────────────────────────────────────
+
+/// Refuse a recursive sub-projection whose lensing would alter output
+/// (`specs/behaviors/composition.md` § Sub-projection lensing).
+///
+/// The legacy engine lenses a sub-projection when its **effective lens
+/// flag** is true: the sub-branch config's `lens` when boolean, else the
+/// source's `project.lens` when boolean (`default_lens`), else `true`. This
+/// engine is composition-only, so when the flag is true *and* any lens
+/// actually exists — external configs under
+/// `.holo/branches/<branch>.lenses/*.toml` in the sub-workspace, or internal
+/// configs at `.holo/lenses/*.toml` in the composited output — silently
+/// skipping the lens phase would produce a wrong hash. Refusing with a
+/// matchable error (`LENSED_SUBPROJECTION`) lets a host fall back to an
+/// engine that lenses.
+fn refuse_lensed_subprojection(
+    ctx: &Context,
+    workspace_tree_id: ObjectId,
+    branch_name: &str,
+    default_lens: Option<bool>,
+    output_tree_id: ObjectId,
+) -> Result<()> {
+    let mut ws_tree = MutableTree::new(workspace_tree_id);
+
+    let branch_config = config::read_toml::<crate::config::BranchConfigFile>(
+        ctx,
+        &mut ws_tree,
+        &format!(".holo/branches/{branch_name}.toml"),
+    )?;
+    let effective_lens = branch_config
+        .and_then(|f| f.holobranch.lens)
+        .or(default_lens)
+        .unwrap_or(true);
+
+    if !effective_lens {
+        return Ok(());
+    }
+
+    if has_toml_blob(ctx, &mut ws_tree, &format!(".holo/branches/{branch_name}.lenses"))? {
+        return Err(Error::LensedSubprojection {
+            branch: branch_name.to_string(),
+            reason: "external lens configs present in sub-workspace".into(),
+        });
+    }
+
+    let mut output_tree = MutableTree::new(output_tree_id);
+    if has_toml_blob(ctx, &mut output_tree, ".holo/lenses")? {
+        return Err(Error::LensedSubprojection {
+            branch: branch_name.to_string(),
+            reason: "internal lens configs present in composited output".into(),
+        });
+    }
+
+    Ok(())
+}
+
+/// Does the subtree at `path` contain any direct `*.toml` blob child?
+/// Mirrors the legacy engine's lens discovery (`Branch.getLenses` /
+/// `Workspace.getLenses`): only direct blob children named `*.toml` count.
+fn has_toml_blob(ctx: &Context, tree: &mut MutableTree, path: &str) -> Result<bool> {
+    let subtree = match tree.get_subtree(ctx, path)? {
+        Some(t) => t,
+        None => return Ok(false),
+    };
+    subtree.ensure_children(ctx)?;
+    Ok(subtree.children.iter().flatten().any(|(name, child)| {
+        name.ends_with(".toml")
+            && !name.trim_end_matches(".toml").is_empty()
+            && matches!(child, holo_tree::Child::Blob { .. })
+    }))
 }
 
 // ── Commit resolution ──────────────────────────────────────────────────────

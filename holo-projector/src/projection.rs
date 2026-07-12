@@ -31,6 +31,43 @@ pub fn project_branch_in(
     root_tree_id: ObjectId,
     branch_name: &str,
 ) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, true)
+}
+
+/// Compose a holobranch and return the **pre-lens tree**: the extends chain
+/// and all mappings composed, `.holo/{branches,sources}` stripped, but the
+/// final `.holo` strip **skipped** so `.holo/config.toml` and `.holo/lenses`
+/// survive for a host-driven lens phase (`specs/api/projector-napi.md`).
+///
+/// This is the hybrid CLI's seam: it must be hash-identical to the JS
+/// engine's post-composite state. Recursive sub-projections still run the
+/// full pipeline ([`project_branch_in`]) — only the top level skips the
+/// final strip, because only the top level gets lensed by the caller.
+pub fn composite_branch(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+) -> Result<ObjectId> {
+    let cache = TreeCache::new();
+    let ctx = Context::new(repo, &cache);
+    composite_branch_in(&ctx, root_tree_id, branch_name)
+}
+
+/// [`composite_branch`] against a caller-supplied [`Context`].
+pub fn composite_branch_in(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, false)
+}
+
+fn compose_branch(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    final_strip: bool,
+) -> Result<ObjectId> {
     let mut ws_tree = MutableTree::new(root_tree_id);
 
     let ws_name = read_workspace_name(ctx, &mut ws_tree)?;
@@ -51,7 +88,10 @@ pub fn project_branch_in(
         )?;
     }
 
-    strip_metadata(ctx, &mut output)?;
+    strip_branches_sources(ctx, &mut output)?;
+    if final_strip {
+        strip_bare_holo(ctx, &mut output)?;
+    }
 
     Ok(output.write(ctx)?)
 }
@@ -136,7 +176,8 @@ pub fn project_plan_in(
         &mut |c, tree_id, bn| project_branch_in(c, tree_id, bn),
     )?;
 
-    strip_metadata(ctx, &mut output)?;
+    strip_branches_sources(ctx, &mut output)?;
+    strip_bare_holo(ctx, &mut output)?;
 
     Ok(output.write(ctx)?)
 }
@@ -187,15 +228,20 @@ fn resolve_extends_chain(
     Ok(stack)
 }
 
-/// Strip `.holo/{branches,sources}` from output, then strip `.holo`
-/// entirely if only `config.toml` remains.
-fn strip_metadata(ctx: &Context, output: &mut MutableTree) -> Result<()> {
+/// Strip `.holo/{branches,sources}` from output (the post-composite state
+/// shared by both the full pipeline and the pre-lens seam).
+fn strip_branches_sources(ctx: &Context, output: &mut MutableTree) -> Result<()> {
     if let Some(holo) = output.get_subtree(ctx, ".holo")? {
         holo.delete_child(ctx, "branches")?;
         holo.delete_child(ctx, "sources")?;
     }
 
-    // Strip .holo if only config.toml remains
+    Ok(())
+}
+
+/// Strip `.holo` entirely if only `config.toml` remains (the final metadata
+/// strip, applied after any lens phase would have run).
+fn strip_bare_holo(ctx: &Context, output: &mut MutableTree) -> Result<()> {
     if let Some(holo) = output.get_subtree(ctx, ".holo")? {
         holo.ensure_children(ctx)?;
         let empty = holo
