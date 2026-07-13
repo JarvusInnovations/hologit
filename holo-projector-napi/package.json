@@ -1,6 +1,6 @@
 {
   "name": "@hologit/holo-projector",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Node.js native binding for holo-projector — the Rust holobranch composition engine",
   "main": "index.js",
   "types": "index.d.ts",
@@ -31,10 +31,19 @@
     "index.js",
     "index.d.ts"
   ],
+  "optionalDependencies": {
+    "@hologit/holo-projector-linux-x64-gnu": "0.0.1",
+    "@hologit/holo-projector-linux-arm64-gnu": "0.0.1",
+    "@hologit/holo-projector-linux-x64-musl": "0.0.1",
+    "@hologit/holo-projector-darwin-arm64": "0.0.1",
+    "@hologit/holo-projector-darwin-x64": "0.0.1",
+    "@hologit/holo-projector-win32-x64-msvc": "0.0.1"
+  },
   "scripts": {
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm --skip-gh-release",
     "test": "node --test test/*.mjs",
     "version": "napi version"
   },
