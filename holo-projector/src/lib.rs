@@ -32,6 +32,11 @@ pub use commit::{commit_projection, CommitProjectionOptions, ProjectionSource};
 // capability that populates refs/holo/source/... for the *_fetching entries.
 pub use fetch::{FetchKind, GitCliFetcher, SourceFetcher};
 
+// Warm-context variants: run against a caller-supplied [`holo_tree::Context`]
+// so embedding hosts can hold a repository handle + `TreeCache` across calls
+// (specs/api/projector-napi.md § ProjectionSession).
+pub use projection::{composite_branch_in, project_branch_in, project_plan_in};
+
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /// Project a holobranch by reading `.holo/` config from a git tree.

@@ -30,6 +30,28 @@ const composed = projectPlan('/repo/.git',
     [{ source: 'base' }]);
 ```
 
+The top-level functions are one-shot (open repo, project, drop). Hosts making
+repeat projections — watch cycles, servers, embedders — hold a
+**`ProjectionSession`**: a warm context (persistent repository handle +
+tree cache) that only ever caches content-addressed state, re-resolving refs
+on every call. It also exposes `commitProjection` — create a projection
+commit and advance a ref per `specs/behaviors/projection-commits.md`, with a
+compare-and-swap advance that surfaces concurrent writers as `REF_CONFLICT`:
+
+```js
+const { ProjectionSession } = require('@hologit/holo-projector');
+
+const session = new ProjectionSession('/repo/.git');
+const tree = session.projectBranch(rootTreeOrCommitHash, 'docs-site'); // warm across calls
+const commit = session.commitProjection({
+    commitRef: 'holo/docs-site',
+    holobranch: 'docs-site',
+    tree,
+    sourceCommit: rootCommitHash,
+    sourceDescription: 'v1.2.3-4-gdeadbee', // host-computed `git describe`
+});
+```
+
 Errors carry a stable `code` property (`SOURCE_RESOLUTION`,
 `LENSED_SUBPROJECTION`, `CONFIG`, …, plus the holo-tree codes and `PANIC`);
 match on codes, never message prose. Panics are contained at the FFI boundary
