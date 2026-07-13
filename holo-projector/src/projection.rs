@@ -5,39 +5,165 @@ use gix::ObjectId;
 use crate::branch;
 use crate::config::{self, BranchConfig, BranchConfigFile, MappingConfig, WorkspaceConfigFile};
 use crate::error::Result;
-use holo_tree::{Child, MutableTree};
+use crate::fetch::SourceFetcher;
+use holo_tree::{Context, MutableTree, TreeCache};
 
 /// Project a holobranch by reading `.holo/` config from a git tree.
 ///
 /// Returns the hash of the composed output tree.
+///
+/// Creates a fresh [`TreeCache`] for the run; recursive sub-projections share
+/// it through the [`Context`]. Use [`project_branch_in`] to supply your own
+/// context (e.g. to keep the cache warm across several projections).
 pub fn project_branch(
     repo: &gix::Repository,
     root_tree_id: ObjectId,
     branch_name: &str,
 ) -> Result<ObjectId> {
+    let cache = TreeCache::new();
+    let ctx = Context::new(repo, &cache);
+    project_branch_in(&ctx, root_tree_id, branch_name)
+}
+
+/// [`project_branch`] against a caller-supplied [`Context`], so an embedding
+/// consumer owns the cache and can reuse it across projections.
+pub fn project_branch_in(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, true, None)
+}
+
+/// [`project_branch_in`] with remote source fetching enabled: sources that
+/// don't resolve locally are fetched into `refs/holo/source/...` through
+/// `fetcher` and resolution retried (`specs/behaviors/source-resolution.md`).
+/// Recursive sub-projections inherit the fetcher.
+pub fn project_branch_fetching_in(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, true, Some(fetcher))
+}
+
+/// Compose a holobranch and return the **pre-lens tree**: the extends chain
+/// and all mappings composed, `.holo/{branches,sources}` stripped, but the
+/// final `.holo` strip **skipped** so `.holo/config.toml` and `.holo/lenses`
+/// survive for a host-driven lens phase (`specs/api/projector-napi.md`).
+///
+/// This is the hybrid CLI's seam: it must be hash-identical to the JS
+/// engine's post-composite state. Recursive sub-projections still run the
+/// full pipeline ([`project_branch_in`]) — only the top level skips the
+/// final strip, because only the top level gets lensed by the caller.
+pub fn composite_branch(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+) -> Result<ObjectId> {
+    let cache = TreeCache::new();
+    let ctx = Context::new(repo, &cache);
+    composite_branch_in(&ctx, root_tree_id, branch_name)
+}
+
+/// [`composite_branch`] against a caller-supplied [`Context`].
+pub fn composite_branch_in(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, false, None)
+}
+
+/// [`composite_branch_in`] with remote source fetching enabled (see
+/// [`project_branch_fetching_in`]).
+pub fn composite_branch_fetching_in(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    compose_branch(ctx, root_tree_id, branch_name, false, Some(fetcher))
+}
+
+fn compose_branch(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    final_strip: bool,
+    fetcher: Option<&dyn SourceFetcher>,
+) -> Result<ObjectId> {
+    let mut output = compose_branch_tree(
+        ctx,
+        root_tree_id,
+        branch_name,
+        &mut |c, tree_id, bn, default_lens| {
+            composition_only_project(c, tree_id, bn, default_lens, fetcher)
+        },
+        fetcher,
+    )?;
+
+    if final_strip {
+        strip_bare_holo(ctx, &mut output)?;
+    }
+
+    Ok(output.write(ctx)?)
+}
+
+/// The composition-only recursive-projection callback: project the
+/// sub-branch through the pure pipeline (inheriting the fetcher), then
+/// refuse when its lensing would have altered output
+/// (`specs/behaviors/composition.md` § Sub-projection lensing). A lensing
+/// engine (`lens::project_branch_lensed`) supplies a callback that lenses
+/// natively instead of refusing.
+fn composition_only_project(
+    ctx: &Context,
+    tree_id: ObjectId,
+    branch_name: &str,
+    default_lens: Option<bool>,
+    fetcher: Option<&dyn SourceFetcher>,
+) -> Result<ObjectId> {
+    let projected = compose_branch(ctx, tree_id, branch_name, true, fetcher)?;
+    crate::source::refuse_lensed_subprojection(ctx, tree_id, branch_name, default_lens, projected)?;
+    Ok(projected)
+}
+
+/// Composite a holobranch (extends chain + mappings) and strip
+/// `.holo/{branches,sources}` — the shared pre-lens portion of the pipeline.
+/// The caller decides what happens next: the pure pipeline applies the final
+/// `.holo` strip and writes; the lensing pipeline runs the lens phase first.
+pub(crate) fn compose_branch_tree(
+    ctx: &Context,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    project_fn: &mut crate::ProjectFn<'_>,
+    fetcher: Option<&dyn SourceFetcher>,
+) -> Result<MutableTree> {
     let mut ws_tree = MutableTree::new(root_tree_id);
 
-    let ws_name = read_workspace_name(repo, &mut ws_tree)?;
+    let ws_name = read_workspace_name(ctx, &mut ws_tree)?;
 
     let mut output = MutableTree::empty();
 
     // Resolve extends chain (base first)
-    let chain = resolve_extends_chain(repo, &mut ws_tree, branch_name)?;
+    let chain = resolve_extends_chain(ctx, &mut ws_tree, branch_name)?;
 
     for name in &chain {
         branch::composite(
-            repo,
+            ctx,
             &mut ws_tree,
             name,
             &ws_name,
             &mut output,
-            &mut |r, tree_id, bn| project_branch(r, tree_id, bn),
+            project_fn,
+            fetcher,
         )?;
     }
 
-    strip_metadata(repo, &mut output)?;
+    strip_branches_sources(ctx, &mut output)?;
 
-    Ok(output.write(repo)?)
+    Ok(output)
 }
 
 /// Compose git trees from structured source/mapping definitions.
@@ -49,28 +175,28 @@ pub fn project_plan(
     sources: &[crate::PlanSource],
     mappings: &[crate::PlanMapping],
 ) -> Result<ObjectId> {
+    let cache = TreeCache::new();
+    let ctx = Context::new(repo, &cache);
+    project_plan_in(&ctx, sources, mappings)
+}
+
+/// [`project_plan`] against a caller-supplied [`Context`].
+pub fn project_plan_in(
+    ctx: &Context,
+    sources: &[crate::PlanSource],
+    mappings: &[crate::PlanMapping],
+) -> Result<ObjectId> {
     // Build a minimal workspace tree with just a config blob
     // so that self-source and recursive projections work.
     let ws_name = "plan";
     let mut ws_tree = MutableTree::empty();
     // Write .holo/config.toml so recursive projections can read it
-    let config_blob = repo
+    let config_blob = ctx
+        .repo
         .write_blob(format!("[holospace]\nname = \"{ws_name}\"\n"))
         .map_err(|e| holo_tree::Error::Git(e.to_string()))?;
-    {
-        let holo = ws_tree.get_or_create_subtree(repo, ".holo")?;
-        holo.ensure_children(repo)?;
-        holo.children.as_mut().unwrap().insert(
-            "config.toml".to_string(),
-            Child::Blob {
-                mode: 0o100644,
-                hash: config_blob.detach(),
-            },
-        );
-        holo.dirty = true;
-    }
-    ws_tree.dirty = true;
-    ws_tree.write(repo)?;
+    ws_tree.write_child_hash(ctx, ".holo/config.toml", config_blob.detach(), 0o100644)?;
+    ws_tree.write(ctx)?;
 
     // Write source config blobs into the workspace tree so that
     // source::resolve can read them via read_source_config
@@ -86,22 +212,13 @@ pub fn project_plan(
             toml_content.push_str(&format!("\n[holosource.project]\nholobranch = \"{hb}\"\n"));
         }
 
-        let blob_id = repo
-            .write_blob(&toml_content)
-            .map_err(|e| holo_tree::Error::Git(e.to_string()))?;
-
-        let sources_tree = ws_tree.get_or_create_subtree(repo, ".holo/sources")?;
-        sources_tree.children.as_mut().unwrap().insert(
-            format!("{}.toml", src.name),
-            Child::Blob {
-                mode: 0o100644,
-                hash: blob_id.detach(),
-            },
-        );
-        sources_tree.dirty = true;
+        ws_tree.write_child(
+            ctx,
+            &format!(".holo/sources/{}.toml", src.name),
+            &toml_content,
+        )?;
     }
-    ws_tree.dirty = true;
-    ws_tree.write(repo)?;
+    ws_tree.write(ctx)?;
 
     // Convert PlanMappings to MappingConfigs
     let mapping_configs: Vec<MappingConfig> = mappings
@@ -121,36 +238,40 @@ pub fn project_plan(
     let mut output = MutableTree::empty();
 
     branch::composite_plan(
-        repo,
+        ctx,
         &mapping_configs,
         ws_name,
         &mut ws_tree,
         &mut output,
-        &mut |r, tree_id, bn| project_branch(r, tree_id, bn),
+        &mut |c, tree_id, bn, default_lens| {
+            composition_only_project(c, tree_id, bn, default_lens, None)
+        },
+        None,
     )?;
 
-    strip_metadata(repo, &mut output)?;
+    strip_branches_sources(ctx, &mut output)?;
+    strip_bare_holo(ctx, &mut output)?;
 
-    Ok(output.write(repo)?)
+    Ok(output.write(ctx)?)
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-fn read_workspace_name(repo: &gix::Repository, tree: &mut MutableTree) -> Result<String> {
+fn read_workspace_name(ctx: &Context, tree: &mut MutableTree) -> Result<String> {
     let ws_config: Option<WorkspaceConfigFile> =
-        config::read_toml(repo, tree, ".holo/config.toml")?;
+        config::read_toml(ctx, tree, ".holo/config.toml")?;
     Ok(ws_config
         .and_then(|c| c.holospace.name)
         .unwrap_or_default())
 }
 
 fn read_branch_config(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     name: &str,
 ) -> Result<BranchConfig> {
     let path = format!(".holo/branches/{name}.toml");
-    match config::read_toml::<BranchConfigFile>(repo, tree, &path)? {
+    match config::read_toml::<BranchConfigFile>(ctx, tree, &path)? {
         Some(f) => Ok(f.holobranch),
         None => Ok(BranchConfig::default()),
     }
@@ -158,7 +279,7 @@ fn read_branch_config(
 
 /// Walk the `extend` chain and return branch names in base-first order.
 fn resolve_extends_chain(
-    repo: &gix::Repository,
+    ctx: &Context,
     tree: &mut MutableTree,
     start: &str,
 ) -> Result<Vec<String>> {
@@ -166,7 +287,7 @@ fn resolve_extends_chain(
     let mut current = start.to_string();
 
     loop {
-        let config = read_branch_config(repo, tree, &current)?;
+        let config = read_branch_config(ctx, tree, &current)?;
         match config.extend {
             Some(ref ext) => {
                 stack.push(ext.clone());
@@ -180,23 +301,29 @@ fn resolve_extends_chain(
     Ok(stack)
 }
 
-/// Strip `.holo/{branches,sources}` from output, then strip `.holo`
-/// entirely if only `config.toml` remains.
-fn strip_metadata(repo: &gix::Repository, output: &mut MutableTree) -> Result<()> {
-    if let Some(holo) = output.get_subtree(repo, ".holo")? {
-        holo.delete_child(repo, "branches")?;
-        holo.delete_child(repo, "sources")?;
+/// Strip `.holo/{branches,sources}` from output (the post-composite state
+/// shared by both the full pipeline and the pre-lens seam).
+fn strip_branches_sources(ctx: &Context, output: &mut MutableTree) -> Result<()> {
+    if let Some(holo) = output.get_subtree(ctx, ".holo")? {
+        holo.delete_child(ctx, "branches")?;
+        holo.delete_child(ctx, "sources")?;
     }
 
-    // Strip .holo if only config.toml remains
-    if let Some(holo) = output.get_subtree(repo, ".holo")? {
-        holo.ensure_children(repo)?;
-        let children = holo.children.as_ref().unwrap();
-        let empty = children
+    Ok(())
+}
+
+/// Strip `.holo` entirely if only `config.toml` remains (the final metadata
+/// strip, applied after any lens phase would have run).
+pub(crate) fn strip_bare_holo(ctx: &Context, output: &mut MutableTree) -> Result<()> {
+    if let Some(holo) = output.get_subtree(ctx, ".holo")? {
+        holo.ensure_children(ctx)?;
+        let empty = holo
+            .children
             .iter()
+            .flatten()
             .all(|(name, _)| name == "config.toml");
         if empty {
-            output.delete_child(repo, ".holo")?;
+            output.delete_child(ctx, ".holo")?;
         }
     }
 

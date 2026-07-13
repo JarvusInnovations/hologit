@@ -8,18 +8,51 @@
 //!
 //! - [`project_branch`] — TOML-driven: reads `.holo/` config from a git tree
 //! - [`project_plan`] — Programmatic: accepts structured source/mapping definitions
+//! - [`commit_projection`] — Edge capability: commit a composed tree and advance a ref
+//! - [`lens::project_branch_lensed`] — Edge capability: the full pipeline
+//!   (composite → lens → strip) with native container-lens execution
 
 pub mod branch;
+pub mod commit;
 pub mod config;
 pub mod error;
+pub mod fetch;
+pub mod lens;
 pub mod projection;
 pub mod source;
 
 use error::Result;
 use gix::ObjectId;
 
+/// Recursive-projection callback threaded through composition:
+/// `(ctx, workspace_tree, branch_name, default_lens)` → output tree hash.
+/// `default_lens` is the source's `project.lens`, feeding the sub-branch's
+/// effective lens flag (`specs/behaviors/composition.md` § Sub-projection
+/// lensing); the composition-only callback refuses lensed sub-projections,
+/// the lensing engine's callback lenses them natively.
+pub type ProjectFn<'e> = dyn FnMut(
+        &holo_tree::Context,
+        ObjectId,
+        &str,
+        Option<bool>,
+    ) -> Result<ObjectId>
+    + 'e;
+
 // Re-export holo-tree for consumers that need the tree primitives
 pub use holo_tree;
+
+// Projection-commit creation (specs/behaviors/projection-commits.md):
+// the side-effecting edge capability layered on pure composition.
+pub use commit::{commit_projection, CommitProjectionOptions, ProjectionSource};
+
+// Remote source fetching (specs/behaviors/source-resolution.md): the edge
+// capability that populates refs/holo/source/... for the *_fetching entries.
+pub use fetch::{FetchKind, GitCliFetcher, SourceFetcher};
+
+// Warm-context variants: run against a caller-supplied [`holo_tree::Context`]
+// so embedding hosts can hold a repository handle + `TreeCache` across calls
+// (specs/api/projector-napi.md § ProjectionSession).
+pub use projection::{composite_branch_in, project_branch_in, project_plan_in};
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -30,6 +63,45 @@ pub fn project_branch(
     branch_name: &str,
 ) -> Result<ObjectId> {
     projection::project_branch(repo, root_tree_id, branch_name)
+}
+
+/// [`project_branch`] with remote source fetching enabled: sources that
+/// don't resolve locally are fetched into `refs/holo/source/...` through
+/// `fetcher` and resolution retried (`specs/behaviors/source-resolution.md`).
+pub fn project_branch_fetching(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    let cache = holo_tree::TreeCache::new();
+    let ctx = holo_tree::Context::new(repo, &cache);
+    projection::project_branch_fetching_in(&ctx, root_tree_id, branch_name, fetcher)
+}
+
+/// [`composite_branch`] with remote source fetching enabled (see
+/// [`project_branch_fetching`]).
+pub fn composite_branch_fetching(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+    fetcher: &dyn SourceFetcher,
+) -> Result<ObjectId> {
+    let cache = holo_tree::TreeCache::new();
+    let ctx = holo_tree::Context::new(repo, &cache);
+    projection::composite_branch_fetching_in(&ctx, root_tree_id, branch_name, fetcher)
+}
+
+/// Compose a holobranch to its **pre-lens tree**: mappings composed and
+/// `.holo/{branches,sources}` stripped, but the final `.holo` strip skipped
+/// so a host-driven lens phase can run on the result. This is the hybrid
+/// CLI's composition seam (`specs/behaviors/engine-selection.md`).
+pub fn composite_branch(
+    repo: &gix::Repository,
+    root_tree_id: ObjectId,
+    branch_name: &str,
+) -> Result<ObjectId> {
+    projection::composite_branch(repo, root_tree_id, branch_name)
 }
 
 /// Compose git trees from structured source/mapping definitions.

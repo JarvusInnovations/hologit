@@ -14,10 +14,24 @@
 //!
 //! # Modules
 //!
-//! - [`tree`] — MutableTree, Child, merge, write, cache
+//! - [`tree`] — MutableTree, Child, merge, write, TreeCache/Context
 //! - [`glob`] — Minimatch-compatible glob matching
 //! - [`toml`] — Generic TOML-from-git-blob reader
 //! - [`repo`] — Ref resolution, commit creation, ref updates
+
+// Panic policy (specs/api/errors.md): no panicking constructs reachable from
+// public entry points — violated invariants degrade to Error::Internal.
+// Unit-test modules are exempt (tests may unwrap).
+#![cfg_attr(
+    not(test),
+    warn(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::unreachable
+    )
+)]
 
 pub mod error;
 pub mod glob;
@@ -28,9 +42,10 @@ pub mod tree;
 // Re-export the most-used types at crate root
 pub use error::{Error, Result};
 pub use gix::ObjectId;
-pub use tree::{BlobInfo, Child, MergeMode, MergeOptions, MutableTree};
+pub use tree::{BlobInfo, Child, Context, MergeMode, MergeOptions, MutableTree, TreeCache};
 
-/// Reset all module-level caches and stats counters.
+/// Reset all stats counters. Tree caches are consumer-owned ([`TreeCache`]) —
+/// drop or clear them directly.
 pub fn reset() {
     tree::reset();
 }

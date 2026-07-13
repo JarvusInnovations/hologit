@@ -17,34 +17,90 @@
 //!   hash handling — it stores/compares hashes as hex strings everywhere).
 //! - **Blob content** crosses as `Buffer` (binary-safe; records are TOML/text
 //!   but attachments are arbitrary bytes).
+//! - **Errors** cross as JS `Error`s whose `code` property carries the stable
+//!   code from `specs/api/errors.md` (`holo_tree::Error::code()`, plus the
+//!   binding-level `INVALID_ARGUMENT`/`GIT`/`PANIC`). Consumers match on
+//!   `err.code`, never on message prose.
+//! - **Panics never cross.** Every export is wrapped in [`contained`] (and
+//!   `#[napi(catch_unwind)]` as a backstop for marshalling code), so a Rust
+//!   panic surfaces as a catchable JS error with code `PANIC` instead of
+//!   unwinding through the `extern "C"` trampoline — which aborts the whole
+//!   host process (`fatal runtime error: failed to initiate panic`, gitsheets
+//!   finding #6).
 //!
 //! This binding is a deliberately thin pass-through. Per the spike's governing
 //! principle (see `plans/holo-tree-napi-spike.md` in gitsheets), rough edges in
-//! holo-tree's API are recorded as `Phase-C finding` notes and fixed upstream —
-//! not papered over with cleverness here.
+//! holo-tree's API are fixed upstream — not papered over with cleverness here.
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
 use holo_tree::repo as ht_repo;
 use holo_tree::tree::empty_tree_id;
-use holo_tree::{MutableTree, ObjectId};
+use holo_tree::{Context, MutableTree, ObjectId, TreeCache};
 
-// ── helpers ─────────────────────────────────────────────────────────────────
+// ── error plumbing ──────────────────────────────────────────────────────────
 
-/// Map a holo-tree error into a JS exception.
+/// Stable error code carried to JS as the thrown error's `code` property.
 ///
-/// Phase-C finding: `holo_tree::Error` collapses to a flat string here. gitsheets
-/// needs to translate substrate failures into its typed error classes, which a
-/// stringified `Display` makes lossy — candidate upstream improvement is a stable
-/// error code / structured variant that survives FFI.
-fn ht_err(e: holo_tree::Error) -> napi::Error {
-    napi::Error::from_reason(e.to_string())
+/// napi sets a thrown error's `code` from its status string; using the
+/// holo-tree code as the status is what lets consumers branch on cause
+/// (`err.code === 'REF_CONFLICT'`) instead of parsing prose — the fix for
+/// gitsheets finding #4. Codes are specced in `specs/api/errors.md`.
+#[derive(Debug, Clone, Copy)]
+pub struct ErrorCode(pub &'static str);
+
+impl AsRef<str> for ErrorCode {
+    fn as_ref(&self) -> &str {
+        self.0
+    }
 }
 
-fn parse_oid(hex: &str) -> napi::Result<ObjectId> {
-    ObjectId::from_hex(hex.as_bytes())
-        .map_err(|e| napi::Error::from_reason(format!("invalid object id '{hex}': {e}")))
+/// A `Result` whose error carries a stable holo-tree error code.
+type CodedResult<T> = std::result::Result<T, napi::Error<ErrorCode>>;
+
+/// Map a holo-tree error into a JS exception carrying its stable code.
+fn ht_err(e: holo_tree::Error) -> napi::Error<ErrorCode> {
+    napi::Error::new(ErrorCode(e.code()), e.to_string())
+}
+
+/// A binding-level caller error (bad hex id, unknown merge mode, …).
+fn invalid_arg(message: impl ToString) -> napi::Error<ErrorCode> {
+    napi::Error::new(ErrorCode("INVALID_ARGUMENT"), message.to_string())
+}
+
+/// A binding-level git failure that holo-tree doesn't classify further.
+fn git_err(message: impl ToString) -> napi::Error<ErrorCode> {
+    napi::Error::new(ErrorCode("GIT"), message.to_string())
+}
+
+/// Run `f`, converting any Rust panic into a catchable JS error with code
+/// `PANIC` instead of letting it unwind across the FFI boundary.
+///
+/// Per `specs/api/errors.md` § Panic policy: a panic that escapes the binding
+/// aborts the host process (Rust cannot unwind through the generated
+/// `extern "C"` trampoline), which is exactly how gitsheets finding #6 took
+/// down a whole Node process. `AssertUnwindSafe` is sound here because after a
+/// `PANIC` error the involved objects are contractually in an unspecified
+/// (memory-safe) state and must be discarded by the consumer.
+fn contained<T>(f: impl FnOnce() -> CodedResult<T>) -> CodedResult<T> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|payload| {
+        let message = if let Some(s) = payload.downcast_ref::<String>() {
+            s.clone()
+        } else if let Some(s) = payload.downcast_ref::<&str>() {
+            (*s).to_string()
+        } else {
+            "unknown panic payload".to_string()
+        };
+        Err(napi::Error::new(
+            ErrorCode("PANIC"),
+            format!("panic in holo-tree binding (this is a bug — please report): {message}"),
+        ))
+    })
+}
+
+fn parse_oid(hex: &str) -> CodedResult<ObjectId> {
+    ObjectId::from_hex(hex.as_bytes()).map_err(|e| invalid_arg(format!("invalid object id '{hex}': {e}")))
 }
 
 fn oid_hex(oid: ObjectId) -> String {
@@ -52,9 +108,88 @@ fn oid_hex(oid: ObjectId) -> String {
 }
 
 /// Git's well-known empty-tree hash (`4b825dc6…`).
-#[napi]
+#[napi(catch_unwind)]
 pub fn empty_tree_hash() -> String {
     oid_hex(empty_tree_id())
+}
+
+/// The compile profile of the loaded binding: `"release"` or `"debug"`.
+///
+/// The runtime guard for the release-build requirement (#464 item 4): a debug
+/// build of this binding measures *slower* than the JS + `git`-subprocess path
+/// it replaces (~2.4x on the reference workload), while a release build is
+/// ~4–5x faster. The bundled benchmark refuses to run against a debug build;
+/// consumers embedding a from-source build can use this to assert the same.
+#[napi(catch_unwind)]
+pub fn build_profile() -> String {
+    if cfg!(debug_assertions) {
+        "debug".to_string()
+    } else {
+        "release".to_string()
+    }
+}
+
+// ── per-thread repo derivation (memoized) ───────────────────────────────────
+
+/// gix object cache size applied to every derived thread-local repository.
+///
+/// gix leaves the object cache at size 0 unless set (#464 item 2); read-heavy
+/// paths (repeated `readBlob`, deep navigation) then decode the same objects
+/// redundantly. 16 MiB follows gix's own sizing guidance (~10 MB per 10k
+/// objects of typical source-repo shape). Memoizing the derived repo (below)
+/// is what makes the cache effective at all — a per-call derivation would
+/// start cold every time.
+const OBJECT_CACHE_BYTES: usize = 16 * 1024 * 1024;
+
+/// A `gix::Repository` derived on — and only ever *used* on — one thread.
+struct ThreadLocalRepo {
+    thread: std::thread::ThreadId,
+    repo: gix::Repository,
+}
+
+// The memoized handle may be *moved* between threads with its owning object
+// (napi may finalize on another thread), which requires `gix::Repository:
+// Send`. Usage stays confined to the recorded thread via `local_repo`.
+const _: () = {
+    const fn assert_send<T: Send>() {}
+    assert_send::<gix::Repository>();
+};
+
+fn derive_local(shared: &gix::ThreadSafeRepository) -> ThreadLocalRepo {
+    let mut repo = shared.to_thread_local();
+    repo.object_cache_size_if_unset(OBJECT_CACHE_BYTES);
+    ThreadLocalRepo {
+        thread: std::thread::current().id(),
+        repo,
+    }
+}
+
+/// Reuse the memoized thread-local `gix::Repository`, re-deriving if this call
+/// landed on a different thread than the memo (#464 item 1 — previously every
+/// call paid a fresh `to_thread_local()`).
+///
+/// Sound per `specs/api/errors.md` § Thread-safety expectations: the memo is
+/// keyed by thread id, so a handle is only ever used on the thread it was
+/// derived on, and a thread switch costs at most warmth (a re-derivation and a
+/// cold object cache) — never a behavioral difference.
+fn local_repo<'a>(
+    slot: &'a mut Option<ThreadLocalRepo>,
+    shared: &gix::ThreadSafeRepository,
+) -> &'a gix::Repository {
+    let tid = std::thread::current().id();
+    if !matches!(slot, Some(memo) if memo.thread == tid) {
+        *slot = None; // discard a handle derived on another thread
+    }
+    &slot.get_or_insert_with(|| derive_local(shared)).repo
+}
+
+/// Internal self-test hook: deliberately panics inside the binding so the
+/// test suite can prove that a panic surfaces as a catchable JS error with
+/// code `PANIC` rather than aborting the host process (specs/api/errors.md
+/// § Panic policy). Never call this outside tests.
+#[napi(js_name = "__triggerPanicForTest", catch_unwind)]
+pub fn trigger_panic_for_test() -> Result<(), ErrorCode> {
+    contained(|| panic!("deliberate panic-containment self-test"))
 }
 
 /// A commit identity (author or committer). `timeSeconds`/`offsetMinutes` are
@@ -83,7 +218,7 @@ fn format_git_time(seconds: i64, offset_minutes: i32) -> String {
     format!("{seconds} {sign}{:02}{:02}", abs / 60, abs % 60)
 }
 
-fn to_gix_signature(sig: Signature) -> napi::Result<gix::actor::Signature> {
+fn to_gix_signature(sig: Signature) -> CodedResult<gix::actor::Signature> {
     let seconds = sig.time_seconds.unwrap_or_else(now_secs);
     let time = format_git_time(seconds, sig.offset_minutes.unwrap_or(0));
     gix::actor::SignatureRef {
@@ -92,7 +227,7 @@ fn to_gix_signature(sig: Signature) -> napi::Result<gix::actor::Signature> {
         time: &time,
     }
     .to_owned()
-    .map_err(|e| napi::Error::from_reason(format!("invalid signature time: {e}")))
+    .map_err(|e| invalid_arg(format!("invalid signature time: {e}")))
 }
 
 // ── Repo ────────────────────────────────────────────────────────────────────
@@ -100,44 +235,52 @@ fn to_gix_signature(sig: Signature) -> napi::Result<gix::actor::Signature> {
 /// A handle to a git repository, backed by gix.
 ///
 /// Stored as a `ThreadSafeRepository` so the handle is `Send + Sync` and can be
-/// cheaply cloned into each `Tree`; every call derives a thread-local
-/// `gix::Repository` via `to_thread_local()`.
+/// cheaply cloned into each `Tree`; calls use a memoized thread-local
+/// `gix::Repository` (see [`local_repo`]), re-derived only when a call lands
+/// on a different thread.
 #[napi]
 pub struct Repo {
     inner: gix::ThreadSafeRepository,
+    local: Option<ThreadLocalRepo>,
 }
 
 #[napi]
 impl Repo {
     /// Open a repository at `gitDir` (a `.git` directory, or any path gix can
     /// discover a repo from).
-    #[napi(factory)]
-    pub fn open(git_dir: String) -> napi::Result<Repo> {
-        let inner = gix::open(&git_dir)
-            .map_err(|e| {
-                napi::Error::from_reason(format!("failed to open repo at '{git_dir}': {e}"))
-            })?
-            .into_sync();
-        Ok(Repo { inner })
+    #[napi(factory, catch_unwind)]
+    pub fn open(git_dir: String) -> Result<Repo, ErrorCode> {
+        contained(|| {
+            let inner = gix::open(&git_dir)
+                .map_err(|e| git_err(format!("failed to open repo at '{git_dir}': {e}")))?
+                .into_sync();
+            Ok(Repo { inner, local: None })
+        })
     }
 
     /// Resolve a ref (branch, tag, or commit hash) to its tree and return a
     /// mutable, in-memory view of it.
-    #[napi]
-    pub fn create_tree_from_ref(&self, git_ref: String) -> napi::Result<Tree> {
-        let local = self.inner.to_thread_local();
-        let inner = ht_repo::create_tree_from_ref(&local, &git_ref).map_err(ht_err)?;
-        Ok(Tree {
-            repo: self.inner.clone(),
-            inner,
+    #[napi(catch_unwind)]
+    pub fn create_tree_from_ref(&mut self, git_ref: String) -> Result<Tree, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.inner);
+            let inner = ht_repo::create_tree_from_ref(local, &git_ref).map_err(ht_err)?;
+            Ok(Tree {
+                repo: self.inner.clone(),
+                cache: TreeCache::new(),
+                local: None,
+                inner,
+            })
         })
     }
 
     /// Create a fresh empty, mutable in-memory tree rooted at this repo.
-    #[napi]
+    #[napi(catch_unwind)]
     pub fn create_tree(&self) -> Tree {
         Tree {
             repo: self.inner.clone(),
+            cache: TreeCache::new(),
+            local: None,
             inner: MutableTree::empty(),
         }
     }
@@ -145,26 +288,29 @@ impl Repo {
     /// Write a commit object pointing at `treeHash` with `parents`. `author`
     /// and `committer` are optional; each falls back to the repo's configured
     /// identity, then a "holo-tree" default. Returns the new commit hash.
-    #[napi]
+    #[napi(catch_unwind)]
     pub fn commit_tree(
-        &self,
+        &mut self,
         tree_hash: String,
         parents: Vec<String>,
         message: String,
         author: Option<Signature>,
         committer: Option<Signature>,
-    ) -> napi::Result<String> {
-        let local = self.inner.to_thread_local();
-        let tree = parse_oid(&tree_hash)?;
-        let parent_oids = parents
-            .iter()
-            .map(|p| parse_oid(p))
-            .collect::<napi::Result<Vec<_>>>()?;
-        let author = author.map(to_gix_signature).transpose()?;
-        let committer = committer.map(to_gix_signature).transpose()?;
-        let commit = ht_repo::commit_tree(&local, tree, &parent_oids, &message, author, committer)
-            .map_err(ht_err)?;
-        Ok(oid_hex(commit))
+    ) -> Result<String, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.inner);
+            let tree = parse_oid(&tree_hash)?;
+            let parent_oids = parents
+                .iter()
+                .map(|p| parse_oid(p))
+                .collect::<CodedResult<Vec<_>>>()?;
+            let author = author.map(to_gix_signature).transpose()?;
+            let committer = committer.map(to_gix_signature).transpose()?;
+            let commit =
+                ht_repo::commit_tree(local, tree, &parent_oids, &message, author, committer)
+                    .map_err(ht_err)?;
+            Ok(oid_hex(commit))
+        })
     }
 
     /// Point a ref at an object hash.
@@ -172,42 +318,49 @@ impl Repo {
     /// When `expectedOldHash` is provided this is a **compare-and-swap**: the
     /// update only succeeds if the ref currently resolves to exactly that hash,
     /// so a concurrent writer who moved the ref makes the swap fail rather than
-    /// silently clobbering their commit. Omit it to force the ref (the prior
-    /// unconditional behavior).
-    #[napi]
+    /// silently clobbering their commit. A lost swap throws with code
+    /// `REF_CONFLICT` — the matchable optimistic-concurrency signal. Omit
+    /// `expectedOldHash` to force the ref (the prior unconditional behavior).
+    #[napi(catch_unwind)]
     pub fn update_ref(
-        &self,
+        &mut self,
         refname: String,
         hash: String,
         expected_old_hash: Option<String>,
-    ) -> napi::Result<()> {
-        let local = self.inner.to_thread_local();
-        let oid = parse_oid(&hash)?;
-        let expected = expected_old_hash.as_deref().map(parse_oid).transpose()?;
-        ht_repo::update_ref(&local, &refname, oid, expected).map_err(ht_err)
+    ) -> Result<(), ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.inner);
+            let oid = parse_oid(&hash)?;
+            let expected = expected_old_hash.as_deref().map(parse_oid).transpose()?;
+            ht_repo::update_ref(local, &refname, oid, expected).map_err(ht_err)
+        })
     }
 
     /// Resolve a ref / rev-spec (branch, tag, `HEAD`, hash, …) to its commit
     /// hash, peeling annotated tags. Returns `null` when the ref does not
     /// resolve — the natural "does this ref exist?" probe before a CAS
     /// `updateRef`.
-    #[napi]
-    pub fn resolve_ref(&self, git_ref: String) -> napi::Result<Option<String>> {
-        let local = self.inner.to_thread_local();
-        let oid = ht_repo::resolve_ref(&local, &git_ref).map_err(ht_err)?;
-        Ok(oid.map(oid_hex))
+    #[napi(catch_unwind)]
+    pub fn resolve_ref(&mut self, git_ref: String) -> Result<Option<String>, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.inner);
+            let oid = ht_repo::resolve_ref(local, &git_ref).map_err(ht_err)?;
+            Ok(oid.map(oid_hex))
+        })
     }
 
     /// Hash raw bytes as a loose blob in the ODB and return its hash, without
     /// inserting it into any tree. Binary-safe.
-    #[napi]
-    pub fn write_blob(&self, content: Buffer) -> napi::Result<String> {
-        let local = self.inner.to_thread_local();
-        let oid = local
-            .write_blob(content.as_ref())
-            .map_err(|e| napi::Error::from_reason(e.to_string()))?
-            .detach();
-        Ok(oid_hex(oid))
+    #[napi(catch_unwind)]
+    pub fn write_blob(&mut self, content: Buffer) -> Result<String, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.inner);
+            let oid = local
+                .write_blob(content.as_ref())
+                .map_err(git_err)?
+                .detach();
+            Ok(oid_hex(oid))
+        })
     }
 }
 
@@ -271,16 +424,16 @@ fn classify(child: &holo_tree::Child) -> (&'static str, String, u32) {
 /// Holds its own clone of the repo handle so JS callers don't thread a repo
 /// argument through every call.
 ///
-/// Phase-C finding #1: holo-tree's `MutableTree` takes `&gix::Repository` on
-/// nearly every method and keeps a *thread-local* tree cache. We smooth the
-/// first half here (the handle lives on the `Tree`) but NOT the second: each
-/// call does `to_thread_local()`, and whether holo-tree's thread-local cache
-/// stays warm across libuv-dispatched calls is the open ergonomics question to
-/// resolve upstream (e.g. a repo-bound tree handle, or an explicit session/
-/// cache object the consumer owns).
+/// Owns its `TreeCache` (Phase-C finding #5): the cache travels with the
+/// `Tree` object rather than living in thread-implicit state, so whichever
+/// thread the JS engine dispatches a call on sees the same cache — see
+/// `specs/api/errors.md` § Thread-safety expectations. Likewise owns its
+/// memoized thread-local repo derivation (see [`local_repo`]).
 #[napi]
 pub struct Tree {
     repo: gix::ThreadSafeRepository,
+    cache: TreeCache,
+    local: Option<ThreadLocalRepo>,
     inner: MutableTree,
 }
 
@@ -288,25 +441,31 @@ pub struct Tree {
 impl Tree {
     /// Hash `content` (UTF-8 text) as a blob and insert it at `path`, creating
     /// intermediate trees as needed. Returns the blob hash.
-    #[napi]
-    pub fn write_child(&mut self, path: String, content: String) -> napi::Result<String> {
-        let local = self.repo.to_thread_local();
-        let oid = self
-            .inner
-            .write_child(&local, &path, &content)
-            .map_err(ht_err)?;
-        Ok(oid_hex(oid))
+    #[napi(catch_unwind)]
+    pub fn write_child(&mut self, path: String, content: String) -> Result<String, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let oid = self
+                .inner
+                .write_child(&ctx, &path, &content)
+                .map_err(ht_err)?;
+            Ok(oid_hex(oid))
+        })
     }
 
     /// Hash raw bytes as a blob and insert at `path`. Binary-safe.
-    #[napi]
-    pub fn write_child_bytes(&mut self, path: String, content: Buffer) -> napi::Result<String> {
-        let local = self.repo.to_thread_local();
-        let oid = self
-            .inner
-            .write_child_bytes(&local, &path, content.as_ref())
-            .map_err(ht_err)?;
-        Ok(oid_hex(oid))
+    #[napi(catch_unwind)]
+    pub fn write_child_bytes(&mut self, path: String, content: Buffer) -> Result<String, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let oid = self
+                .inner
+                .write_child_bytes(&ctx, &path, content.as_ref())
+                .map_err(ht_err)?;
+            Ok(oid_hex(oid))
+        })
     }
 
     /// Place an already-written blob at `path` by its `hash`, without reading its
@@ -315,142 +474,168 @@ impl Tree {
     /// lookup, so a large attachment isn't read back and re-hashed. `mode` is the
     /// git filemode: `0o100644` regular, `0o100755` executable, `0o120000`
     /// symlink. Returns the placed hash.
-    #[napi]
+    #[napi(catch_unwind)]
     pub fn write_child_hash(
         &mut self,
         path: String,
         hash: String,
         mode: u32,
-    ) -> napi::Result<String> {
-        let local = self.repo.to_thread_local();
-        let oid = parse_oid(&hash)?;
-        let mode = u16::try_from(mode)
-            .map_err(|_| napi::Error::from_reason(format!("invalid blob mode {mode:o}")))?;
-        self.inner
-            .write_child_hash(&local, &path, oid, mode)
-            .map_err(ht_err)?;
-        Ok(oid_hex(oid))
+    ) -> Result<String, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let oid = parse_oid(&hash)?;
+            let mode =
+                u16::try_from(mode).map_err(|_| invalid_arg(format!("invalid blob mode {mode:o}")))?;
+            self.inner
+                .write_child_hash(&ctx, &path, oid, mode)
+                .map_err(ht_err)?;
+            Ok(oid_hex(oid))
+        })
     }
 
     /// Read a blob's bytes at `path`, or `null` if no blob exists there.
-    #[napi]
-    pub fn read_blob(&mut self, path: String) -> napi::Result<Option<Buffer>> {
-        let local = self.repo.to_thread_local();
-        let bytes = self.inner.read_blob(&local, &path).map_err(ht_err)?;
-        Ok(bytes.map(Buffer::from))
+    #[napi(catch_unwind)]
+    pub fn read_blob(&mut self, path: String) -> Result<Option<Buffer>, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let bytes = self.inner.read_blob(&ctx, &path).map_err(ht_err)?;
+            Ok(bytes.map(Buffer::from))
+        })
     }
 
     /// Read-only: look up the child at a deep `path` and report its type,
     /// hash, and mode, or `null` if nothing exists there.
-    #[napi]
-    pub fn get_child(&mut self, path: String) -> napi::Result<Option<ChildInfo>> {
-        let local = self.repo.to_thread_local();
-        let info = self
-            .inner
-            .get_child(&local, &path)
-            .map_err(ht_err)?
-            .map(|child| {
-                let (ty, hash, mode) = classify(child);
-                ChildInfo {
-                    r#type: ty.to_string(),
-                    hash,
-                    mode,
-                }
-            });
-        Ok(info)
+    #[napi(catch_unwind)]
+    pub fn get_child(&mut self, path: String) -> Result<Option<ChildInfo>, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let info = self
+                .inner
+                .get_child(&ctx, &path)
+                .map_err(ht_err)?
+                .map(|child| {
+                    let (ty, hash, mode) = classify(child);
+                    ChildInfo {
+                        r#type: ty.to_string(),
+                        hash,
+                        mode,
+                    }
+                });
+            Ok(info)
+        })
     }
 
     /// Read-only: list the direct children of the subtree at `path` (use `"."`
     /// for the root). Returns an empty array if `path` is missing or not a tree.
-    #[napi]
-    pub fn get_children(&mut self, path: String) -> napi::Result<Vec<NamedChildInfo>> {
-        let local = self.repo.to_thread_local();
-        let subtree = match self.inner.get_subtree(&local, &path).map_err(ht_err)? {
-            Some(t) => t,
-            None => return Ok(vec![]),
-        };
-        subtree.ensure_children(&local).map_err(ht_err)?;
-        let mut out = Vec::new();
-        for (name, child) in subtree.children.as_ref().unwrap().iter() {
-            let (ty, hash, mode) = classify(child);
-            out.push(NamedChildInfo {
-                name: name.clone(),
-                r#type: ty.to_string(),
-                hash,
-                mode,
-            });
-        }
-        Ok(out)
+    #[napi(catch_unwind)]
+    pub fn get_children(&mut self, path: String) -> Result<Vec<NamedChildInfo>, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let subtree = match self.inner.get_subtree(&ctx, &path).map_err(ht_err)? {
+                Some(t) => t,
+                None => return Ok(vec![]),
+            };
+            subtree.ensure_children(&ctx).map_err(ht_err)?;
+            let mut out = Vec::new();
+            for (name, child) in subtree.children.iter().flatten() {
+                let (ty, hash, mode) = classify(child);
+                out.push(NamedChildInfo {
+                    name: name.clone(),
+                    r#type: ty.to_string(),
+                    hash,
+                    mode,
+                });
+            }
+            Ok(out)
+        })
     }
 
     /// Read-only: recursively collect every blob under the subtree at `path`
     /// (defaults to the whole tree) into a flat list. Each `path` is relative
     /// to the navigated subtree. Returns an empty array if `path` is missing.
-    #[napi]
-    pub fn get_blob_map(&mut self, path: Option<String>) -> napi::Result<Vec<BlobEntry>> {
-        let local = self.repo.to_thread_local();
-        let path = path.unwrap_or_else(|| ".".to_string());
-        let map = match self.inner.get_subtree(&local, &path).map_err(ht_err)? {
-            Some(subtree) => subtree.get_blob_map(&local).map_err(ht_err)?,
-            None => return Ok(vec![]),
-        };
-        let out = map
-            .into_iter()
-            .map(|(p, info)| BlobEntry {
-                path: p,
-                hash: oid_hex(info.hash),
-                mode: u32::from(info.mode),
-            })
-            .collect();
-        Ok(out)
+    #[napi(catch_unwind)]
+    pub fn get_blob_map(&mut self, path: Option<String>) -> Result<Vec<BlobEntry>, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let path = path.unwrap_or_else(|| ".".to_string());
+            let map = match self.inner.get_subtree(&ctx, &path).map_err(ht_err)? {
+                Some(subtree) => subtree.get_blob_map(&ctx).map_err(ht_err)?,
+                None => return Ok(vec![]),
+            };
+            let out = map
+                .into_iter()
+                .map(|(p, info)| BlobEntry {
+                    path: p,
+                    hash: oid_hex(info.hash),
+                    mode: u32::from(info.mode),
+                })
+                .collect();
+            Ok(out)
+        })
     }
 
     /// Delete a child at a deep `path`. Returns whether it existed.
-    #[napi]
-    pub fn delete_child_deep(&mut self, path: String) -> napi::Result<bool> {
-        let local = self.repo.to_thread_local();
-        self.inner
-            .delete_child_deep(&local, &path)
-            .map_err(ht_err)
+    #[napi(catch_unwind)]
+    pub fn delete_child_deep(&mut self, path: String) -> Result<bool, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            self.inner.delete_child_deep(&ctx, &path).map_err(ht_err)
+        })
     }
 
     /// Clear all children under a deep `path` in O(1) — replace the subtree
     /// there with the empty tree (and dirty its ancestors) without loading the
     /// cleared subtree's contents. `path == "."` clears the whole tree. Used to
     /// wipe a directory before a full rewrite.
-    #[napi]
-    pub fn clear_children(&mut self, path: String) -> napi::Result<()> {
-        let local = self.repo.to_thread_local();
-        self.inner.clear_children(&local, &path).map_err(ht_err)
+    #[napi(catch_unwind)]
+    pub fn clear_children(&mut self, path: String) -> Result<(), ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            self.inner.clear_children(&ctx, &path).map_err(ht_err)
+        })
     }
 
     /// Merge another tree into this one in place, per `options.mode`
     /// (`overlay`/`replace`/`underlay`) and optional `options.files` globs.
     /// `other` must be a *different* `Tree` instance.
-    #[napi]
-    pub fn merge(&mut self, other: &mut Tree, options: MergeOpts) -> napi::Result<()> {
-        let local = self.repo.to_thread_local();
-        let mode = match options.mode.as_str() {
-            "overlay" => holo_tree::MergeMode::Overlay,
-            "replace" => holo_tree::MergeMode::Replace,
-            "underlay" => holo_tree::MergeMode::Underlay,
-            other => {
-                return Err(napi::Error::from_reason(format!(
-                    "invalid merge mode '{other}', expected 'overlay', 'replace', or 'underlay'"
-                )))
-            }
-        };
-        let opts = holo_tree::MergeOptions::new(options.files.as_deref(), mode).map_err(ht_err)?;
-        self.inner
-            .merge(&local, &mut other.inner, &opts, ".")
-            .map_err(ht_err)
+    #[napi(catch_unwind)]
+    pub fn merge(&mut self, other: &mut Tree, options: MergeOpts) -> Result<(), ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let mode = match options.mode.as_str() {
+                "overlay" => holo_tree::MergeMode::Overlay,
+                "replace" => holo_tree::MergeMode::Replace,
+                "underlay" => holo_tree::MergeMode::Underlay,
+                other_mode => {
+                    return Err(invalid_arg(format!(
+                        "invalid merge mode '{other_mode}', expected 'overlay', 'replace', or 'underlay'"
+                    )))
+                }
+            };
+            let opts =
+                holo_tree::MergeOptions::new(options.files.as_deref(), mode).map_err(ht_err)?;
+            self.inner
+                .merge(&ctx, &mut other.inner, &opts, ".")
+                .map_err(ht_err)
+        })
     }
 
     /// Flush dirty subtrees to the ODB and return the resulting tree hash.
-    #[napi]
-    pub fn write(&mut self) -> napi::Result<String> {
-        let local = self.repo.to_thread_local();
-        let oid = self.inner.write(&local).map_err(ht_err)?;
-        Ok(oid_hex(oid))
+    #[napi(catch_unwind)]
+    pub fn write(&mut self) -> Result<String, ErrorCode> {
+        contained(|| {
+            let local = local_repo(&mut self.local, &self.repo);
+            let ctx = Context::new(local, &self.cache);
+            let oid = self.inner.write(&ctx).map_err(ht_err)?;
+            Ok(oid_hex(oid))
+        })
     }
 }

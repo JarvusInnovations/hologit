@@ -45,6 +45,12 @@ test('emptyTreeHash matches git’s well-known empty tree', () => {
   assert.equal(emptyTreeHash(), '4b825dc642cb6eb9a060e54bf8d69288fbee4904');
 });
 
+test('buildProfile reports the compile profile', () => {
+  // The value depends on how the addon was built; the contract is that it is
+  // exactly one of the two profile strings (README § Performance).
+  assert.ok(['release', 'debug'].includes(binding.buildProfile()));
+});
+
 test('upsert→commit round-trips and advances the ref', () => {
   const dir = scratchRepo();
   try {

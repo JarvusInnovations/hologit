@@ -6,6 +6,23 @@
 /** Git's well-known empty-tree hash (`4b825dc6…`). */
 export declare function emptyTreeHash(): string
 /**
+ * The compile profile of the loaded binding: `"release"` or `"debug"`.
+ *
+ * The runtime guard for the release-build requirement (#464 item 4): a debug
+ * build of this binding measures *slower* than the JS + `git`-subprocess path
+ * it replaces (~2.4x on the reference workload), while a release build is
+ * ~4–5x faster. The bundled benchmark refuses to run against a debug build;
+ * consumers embedding a from-source build can use this to assert the same.
+ */
+export declare function buildProfile(): string
+/**
+ * Internal self-test hook: deliberately panics inside the binding so the
+ * test suite can prove that a panic surfaces as a catchable JS error with
+ * code `PANIC` rather than aborting the host process (specs/api/errors.md
+ * § Panic policy). Never call this outside tests.
+ */
+export declare function __triggerPanicForTest(): void
+/**
  * A commit identity (author or committer). `timeSeconds`/`offsetMinutes` are
  * optional; when omitted the current wall-clock time at UTC is used. Pass them
  * explicitly to reproduce a specific commit (e.g. match `git commit-tree`
@@ -56,8 +73,9 @@ export interface MergeOpts {
  * A handle to a git repository, backed by gix.
  *
  * Stored as a `ThreadSafeRepository` so the handle is `Send + Sync` and can be
- * cheaply cloned into each `Tree`; every call derives a thread-local
- * `gix::Repository` via `to_thread_local()`.
+ * cheaply cloned into each `Tree`; calls use a memoized thread-local
+ * `gix::Repository` (see [`local_repo`]), re-derived only when a call lands
+ * on a different thread.
  */
 export declare class Repo {
   /**
@@ -84,8 +102,9 @@ export declare class Repo {
    * When `expectedOldHash` is provided this is a **compare-and-swap**: the
    * update only succeeds if the ref currently resolves to exactly that hash,
    * so a concurrent writer who moved the ref makes the swap fail rather than
-   * silently clobbering their commit. Omit it to force the ref (the prior
-   * unconditional behavior).
+   * silently clobbering their commit. A lost swap throws with code
+   * `REF_CONFLICT` — the matchable optimistic-concurrency signal. Omit
+   * `expectedOldHash` to force the ref (the prior unconditional behavior).
    */
   updateRef(refname: string, hash: string, expectedOldHash?: string | undefined | null): void
   /**
@@ -107,13 +126,11 @@ export declare class Repo {
  * Holds its own clone of the repo handle so JS callers don't thread a repo
  * argument through every call.
  *
- * Phase-C finding #1: holo-tree's `MutableTree` takes `&gix::Repository` on
- * nearly every method and keeps a *thread-local* tree cache. We smooth the
- * first half here (the handle lives on the `Tree`) but NOT the second: each
- * call does `to_thread_local()`, and whether holo-tree's thread-local cache
- * stays warm across libuv-dispatched calls is the open ergonomics question to
- * resolve upstream (e.g. a repo-bound tree handle, or an explicit session/
- * cache object the consumer owns).
+ * Owns its `TreeCache` (Phase-C finding #5): the cache travels with the
+ * `Tree` object rather than living in thread-implicit state, so whichever
+ * thread the JS engine dispatches a call on sees the same cache — see
+ * `specs/api/errors.md` § Thread-safety expectations. Likewise owns its
+ * memoized thread-local repo derivation (see [`local_repo`]).
  */
 export declare class Tree {
   /**

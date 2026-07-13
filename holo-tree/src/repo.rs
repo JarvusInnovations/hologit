@@ -178,8 +178,11 @@ pub fn resolve_ref(repo: &gix::Repository, git_ref: &str) -> Result<Option<Objec
 /// only succeeds if the ref currently resolves to exactly that object
 /// (`PreviousValue::MustExistAndMatch`), so a concurrent writer that moved the
 /// ref out from under the caller makes the swap fail loudly rather than clobber
-/// their commit. When `None`, the ref is set unconditionally
-/// (`PreviousValue::Any`), matching the original force behavior.
+/// their commit. A lost swap surfaces as [`Error::RefConflict`] (code
+/// `REF_CONFLICT`) — the matchable optimistic-concurrency signal — whether the
+/// ref moved, disappeared, or unexpectedly exists. When `expected_old` is
+/// `None`, the ref is set unconditionally (`PreviousValue::Any`), matching the
+/// original force behavior.
 ///
 /// The reflog identity is derived from the **committer of the commit the ref now
 /// points at**, falling back to a stable `holo-tree` default for non-commit
@@ -241,8 +244,28 @@ pub fn update_ref(
     };
 
     repo.edit_references_as(Some(edit), Some(committer))
-        .map_err(|e| Error::Git(e.to_string()))?;
+        .map_err(|e| classify_ref_edit_error(&qualified, e))?;
     Ok(())
+}
+
+/// Map a gix ref-edit failure onto the error contract: expected-old-value
+/// mismatches become `REF_CONFLICT` (the optimistic-concurrency signal a CAS
+/// caller retries on); everything else stays in the residual `GIT` class.
+fn classify_ref_edit_error(refname: &str, e: gix::reference::edit::Error) -> Error {
+    use gix::refs::file::transaction::prepare::Error as PrepareError;
+
+    match &e {
+        gix::reference::edit::Error::FileTransactionPrepare(
+            prepare @ (PrepareError::ReferenceOutOfDate { .. }
+            | PrepareError::MustExist { .. }
+            | PrepareError::MustNotExist { .. }
+            | PrepareError::DeleteReferenceMustExist { .. }),
+        ) => Error::RefConflict {
+            refname: refname.to_string(),
+            message: prepare.to_string(),
+        },
+        _ => Error::Git(e.to_string()),
+    }
 }
 
 /// Map a bare branch name to a fully-qualified ref, matching `git update-ref`'s
@@ -260,20 +283,21 @@ fn qualify_ref(refname: &str) -> std::borrow::Cow<'_, str> {
 }
 
 /// Fallback signature when git config has no author/committer.
+///
+/// Built directly from parts — no parsing, nothing to `.expect()` — per the
+/// panic policy's "provably-infallible exceptions are eliminated, not excused"
+/// (`specs/api/errors.md`). A clock before the UNIX epoch degrades to 0 rather
+/// than panicking.
 fn default_signature() -> gix::actor::Signature {
-    gix::actor::SignatureRef {
+    let seconds = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    gix::actor::Signature {
         name: "holo-tree".into(),
         email: "holo-tree@localhost".into(),
-        time: &format!(
-            "{} +0000",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        ),
+        time: gix::date::Time { seconds, offset: 0 },
     }
-    .to_owned()
-    .expect("valid fallback signature")
 }
 
 #[cfg(test)]

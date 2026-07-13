@@ -41,10 +41,11 @@
   },
   "scripts": {
     "artifacts": "napi artifacts",
+    "bench": "node bench/holo-tree-bench.mjs",
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
     "prepublishOnly": "napi prepublish -t npm --skip-gh-release",
-    "test": "node --test test/",
+    "test": "node --test test/errors.mjs test/ops.mjs test/smoke.mjs",
     "version": "napi version"
   },
   "devDependencies": {

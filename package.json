@@ -52,6 +52,8 @@
   },
   "scripts": {
     "test": "jest",
-    "bench": "node test/benchmark/projection.bench.js"
+    "bench": "node test/benchmark/projection.bench.js",
+    "build:projector-addon": "npm --prefix holo-projector-napi install && npm --prefix holo-projector-napi run build",
+    "build:projector-addon:debug": "npm --prefix holo-projector-napi install && npm --prefix holo-projector-napi run build:debug"
   }
 }
