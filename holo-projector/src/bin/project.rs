@@ -27,6 +27,21 @@ struct Cli {
     /// `git fetch`) instead of erroring on them
     #[arg(long)]
     fetch: bool,
+
+    /// Run the full pipeline including lens execution (composite → lens →
+    /// strip). Without this flag the engine is composition-only and refuses
+    /// lensed sub-projections.
+    #[arg(long)]
+    lens: bool,
+
+    /// Container engine CLI for lens execution (autodetects docker, then
+    /// podman, when omitted)
+    #[arg(long)]
+    runtime: Option<String>,
+
+    /// Re-execute lenses even when a cached result exists
+    #[arg(long)]
+    refresh: bool,
 }
 
 fn main() -> Result<()> {
@@ -47,13 +62,37 @@ fn main() -> Result<()> {
     let root_tree_id = commit.tree_id().context("commit has no tree")?;
     let t_resolve = start.elapsed();
 
-    let output_hash = if cli.fetch {
-        let fetcher = holo_projector::GitCliFetcher::new(&repo);
-        holo_projector::project_branch_fetching(&repo, root_tree_id.detach(), &cli.branch, &fetcher)
+    let fetcher = cli
+        .fetch
+        .then(|| holo_projector::GitCliFetcher::new(&repo));
+
+    let output_hash = if cli.lens {
+        use holo_projector::lens::{ContainerCli, CurlRegistry, LensEngine};
+        let runtime = match &cli.runtime {
+            Some(program) => ContainerCli::new(program.clone()),
+            None => ContainerCli::detect().map_err(|e| anyhow::anyhow!("{e}"))?,
+        };
+        let registry = CurlRegistry;
+        let mut engine = LensEngine::new(&runtime, &registry);
+        engine.refresh = cli.refresh;
+        engine.fetcher = fetcher
+            .as_ref()
+            .map(|f| f as &dyn holo_projector::SourceFetcher);
+        holo_projector::lens::project_branch_lensed(
+            &repo,
+            root_tree_id.detach(),
+            &cli.branch,
+            &engine,
+            None,
+        )
+        .map_err(|e| anyhow::anyhow!("{e}"))?
+    } else if let Some(ref fetcher) = fetcher {
+        holo_projector::project_branch_fetching(&repo, root_tree_id.detach(), &cli.branch, fetcher)
+            .map_err(|e| anyhow::anyhow!("{e}"))?
     } else {
         holo_projector::project_branch(&repo, root_tree_id.detach(), &cli.branch)
-    }
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
+            .map_err(|e| anyhow::anyhow!("{e}"))?
+    };
     let t_project = start.elapsed();
 
     println!("{output_hash}");

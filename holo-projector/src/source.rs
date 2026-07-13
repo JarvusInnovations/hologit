@@ -31,7 +31,7 @@ pub fn resolve(
     workspace_tree: &mut MutableTree,
     source_name: &str,
     workspace_name: &str,
-    project_fn: &mut dyn FnMut(&Context, ObjectId, &str) -> Result<ObjectId>,
+    project_fn: &mut crate::ProjectFn<'_>,
     fetcher: Option<&dyn SourceFetcher>,
 ) -> Result<ObjectId> {
     let (base_name, mapping_holobranch) = match source_name.split_once("=>") {
@@ -43,9 +43,7 @@ pub fn resolve(
     if base_name == workspace_name {
         let mut head = workspace_tree.hash;
         if let Some(hb) = mapping_holobranch {
-            let projected = project_fn(ctx, head, hb)?;
-            refuse_lensed_subprojection(ctx, head, hb, None, projected)?;
-            head = projected;
+            head = project_fn(ctx, head, hb, None)?;
         }
         return Ok(head);
     }
@@ -59,18 +57,15 @@ pub fn resolve(
     // Peel to tree
     let mut head = commit_to_tree(ctx.repo, commit)?;
 
-    // Apply source.project.holobranch
+    // Apply source.project.holobranch (the source's `project.lens` rides
+    // along as the default for the sub-branch's effective lens flag)
     if let Some(ref project) = source_config.project {
-        let projected = project_fn(ctx, head, &project.holobranch)?;
-        refuse_lensed_subprojection(ctx, head, &project.holobranch, project.lens, projected)?;
-        head = projected;
+        head = project_fn(ctx, head, &project.holobranch, project.lens)?;
     }
 
     // Apply mapping holobranch (=>syntax)
     if let Some(hb) = mapping_holobranch {
-        let projected = project_fn(ctx, head, hb)?;
-        refuse_lensed_subprojection(ctx, head, hb, None, projected)?;
-        head = projected;
+        head = project_fn(ctx, head, hb, None)?;
     }
 
     Ok(head)
@@ -83,15 +78,19 @@ pub fn resolve(
 ///
 /// The legacy engine lenses a sub-projection when its **effective lens
 /// flag** is true: the sub-branch config's `lens` when boolean, else the
-/// source's `project.lens` when boolean (`default_lens`), else `true`. This
-/// engine is composition-only, so when the flag is true *and* any lens
-/// actually exists — external configs under
+/// source's `project.lens` when boolean (`default_lens`), else `true`. The
+/// composition-only entry points must therefore refuse when the flag is true
+/// *and* any lens actually exists — external configs under
 /// `.holo/branches/<branch>.lenses/*.toml` in the sub-workspace, or internal
-/// configs at `.holo/lenses/*.toml` in the composited output — silently
-/// skipping the lens phase would produce a wrong hash. Refusing with a
-/// matchable error (`LENSED_SUBPROJECTION`) lets a host fall back to an
-/// engine that lenses.
-fn refuse_lensed_subprojection(
+/// configs at `.holo/lenses/*.toml` in the composited output — because
+/// silently skipping the lens phase would produce a wrong hash. Refusing
+/// with a matchable error (`LENSED_SUBPROJECTION`) lets a host fall back to
+/// an engine that lenses.
+///
+/// Called from the composition-only projection callback
+/// (`projection::composition_only_project`); the lensing pipeline
+/// (`lens::project_branch_lensed`) lenses sub-projections natively instead.
+pub(crate) fn refuse_lensed_subprojection(
     ctx: &Context,
     workspace_tree_id: ObjectId,
     branch_name: &str,
