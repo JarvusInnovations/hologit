@@ -12,15 +12,16 @@ The project is mid-migration from a Node.js engine to a Rust core. Both engines 
 | `holo-tree/` | Rust | Shared mutable git-tree primitives over gix: merge (overlay/replace/underlay), glob, blob/commit/ref ops, tree cache. Consumed by holo-projector and, as a Cargo git-tag dependency, by gitsheets-core. |
 | `holo-projector/` | Rust | The projection engine: `.holo/` config parsing, source resolution, mapping toposort, recursive sub-projection, composition. Pure — no network, containers, or ref writes. Benchmark CLI behind the `cli` feature. |
 | `holo-tree-napi/` | Rust (napi-rs) | Node binding over holo-tree only (tree/ref/blob CRUD), published to npm as `@hologit/holo-tree` — a supported standalone primitive for Node consumers (see Embedding consumers). Does **not** expose projection. |
+| `holo-projector-napi/` | Rust (napi-rs) | Node binding over holo-projector (composition entry points + `ProjectionSession`; see [api/projector-napi.md](api/projector-napi.md)), published to npm as `@hologit/holo-projector`. The hybrid CLI loads it from the in-repo build with graceful pure-JS degradation. |
 
-The three Rust crates form a Cargo workspace at the repo root.
+The four Rust crates form a Cargo workspace at the repo root.
 
 ## Migration strategy
 
 The migration proceeds capability-by-capability, pure core outward (see [principles.md — composition is pure](principles.md#composition-is-pure-side-effects-live-at-the-edges)):
 
 1. **Done:** tree primitives (holo-tree) and pure composition (holo-projector), validated hash-identical and ~130x faster warm on the reference projections.
-2. **Done:** wire the Rust projector into the Node CLI via the `holo-projector-napi` binding (#434). The interim CLI is a **hybrid**: JS handles side effects (fetching, lensing, commits, watch), delegating pure composition to Rust per `specs/behaviors/engine-selection.md`. The binding is not yet published — the CLI loads it from the in-repo build with graceful pure-JS degradation.
+2. **Done:** wire the Rust projector into the Node CLI via the `holo-projector-napi` binding (#434). The interim CLI is a **hybrid**: JS handles side effects (fetching, lensing, commits, watch), delegating pure composition to Rust per `specs/behaviors/engine-selection.md`. The binding publishes on its own `holo-projector-v*` track (see Release tracks), but the CLI loads it from the in-repo build with graceful pure-JS degradation.
 3. **Then:** port the side-effecting edges — projection commits (#438), remote fetching (#436), lens execution (#435), watch mode (#437) — each spec-first, since these are the areas where desired state may deliberately diverge from current JS behavior (notably the lens runtime).
 4. **End state:** the JS engine retires; the CLI becomes a thin shell over the Rust engine.
 
@@ -40,10 +41,13 @@ Both modes implement the same contract:
 
 ## Release tracks
 
-Two independent npm packages ship from this repo on prefix-namespaced git-tag tracks:
+Three independent npm packages ship from this repo on prefix-namespaced git-tag tracks:
 
 - **`hologit`** (Node CLI/library) — `v*` tags via the develop→master Release-PR flow.
-- **`@hologit/holo-tree`** (napi binding) — `holo-tree-v*` tags. One tag serves **both** consumption modes: it triggers the npm publish (platform prebuilds + trusted publishing) *and* is the Cargo git-dependency pin Rust consumers reference. Never tag the binding with a bare `v*`.
+- **`@hologit/holo-tree`** (napi binding) — `holo-tree-v*` tags. One tag serves **both** consumption modes: it triggers the npm publish (platform prebuilds + trusted publishing) *and* is the Cargo git-dependency pin Rust consumers reference.
+- **`@hologit/holo-projector`** (napi binding) — `holo-projector-v*` tags, same pipeline shape as holo-tree (platform prebuilds + trusted publishing) and the same version independence.
+
+Never tag a binding with a bare `v*` — it collides with the `hologit` JS release namespace (`publish-npm.yml`'s trigger).
 
 The `actions/projector/v1` ref publishes the GitHub Action consumers use to project holobranches in CI.
 

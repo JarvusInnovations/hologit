@@ -6,8 +6,10 @@ error contract they extend from `specs/api/errors.md`.
 
 ## Applies to
 
-- The `holo-projector-napi` crate (npm name `@hologit/holo-projector`;
-  publication is deferred — the CLI loads it from the in-repo build).
+- The `holo-projector-napi` crate, published to npm as
+  `@hologit/holo-projector` on the `holo-projector-v*` tag track
+  (`specs/architecture.md` § Release tracks). The CLI loads it from the
+  in-repo build, not the published package.
 - `lib/RustEngine.js`, the only in-repo consumer.
 
 ## Surface
@@ -84,6 +86,12 @@ Codes added by `holo_projector::Error` (surfaced via `Error::code()`):
 | `SOURCE_FETCH` | `Error::SourceFetch` | A remote source fetch failed (network, auth, unknown remote ref, non-zero git exit). Distinct from `SOURCE_RESOLUTION` per `specs/behaviors/source-resolution.md` § Errors. |
 | `CIRCULAR_DEPENDENCY` | `Error::CircularDependency` | Mapping `before`/`after` constraints form a cycle. |
 | `LENSED_SUBPROJECTION` | `Error::LensedSubprojection` | A recursive sub-projection would lens under the oracle's semantics (see `specs/behaviors/composition.md` § Sub-projection lensing). The composition-only engine refuses rather than silently skipping the lens. |
+| `LENS_CONFIG` | `Error::LensConfig` | A lens's `.holo/lenses/*.toml` spec is malformed or semantically invalid. |
+| `LENS_IDENTITY` | `Error::LensIdentity` | The lens container identity could not be resolved (`specs/behaviors/lensing.md` § Container identity resolution). |
+| `LENS_PROTOCOL` | `Error::LensProtocol` | The lens image cannot run on this engine — e.g. a v1-protocol image, or a `package`-only (Habitat) lens (`specs/behaviors/lensing.md`). The dispatcher-fallback signal. |
+| `LENS_FAILED` | `Error::LensFailed` | The lens job ran and failed; carries the inner transform's real exit code, the failing phase (`setup`/`transform`/`commit`), and the captured log per the error-commit contract (`specs/behaviors/lensing.md`). |
+| `LENS_TRANSPORT` | `Error::LensTransport` | The lens job's result never arrived — container/exec plumbing failure, distinct from the lens tool itself failing. |
+| `LENS_TIMEOUT` | `Error::LensTimeout` | The lens job exceeded its deadline and was cancelled. |
 | `PROJECTION` | `Error::Other` | Residual projection failure not classified above. |
 
 `Error::Tree` forwards the underlying `holo_tree::Error` code unchanged
@@ -93,10 +101,11 @@ matching the holo-tree binding.
 
 ## Notes
 
-- **Packaging**: mirrors `holo-tree-napi` conventions (napi-rs v2, committed
-  generated `index.js`/`index.d.ts`, platform triples declared) but ships no
-  platform packages yet — publication is a follow-up. When it happens, the
-  release tag track is prefix-namespaced (`holo-projector-v*`); a bare `v*`
+- **Packaging**: mirrors `holo-tree-napi` conventions — napi-rs v2, committed
+  generated `index.js`/`index.d.ts`, per-platform prebuilds shipped as
+  `optionalDependencies` (`npm/<triple>/` packages for the same six triples),
+  npm trusted publishing (OIDC) from `.github/workflows/holo-projector-napi.yml`.
+  The release tag track is prefix-namespaced (`holo-projector-v*`); a bare `v*`
   tag is never acceptable (it collides with the `hologit` release namespace).
 - The one-shot exports open the repository per call; callers batch work per
   projection, and tree caching lives inside the engine for the duration of a
