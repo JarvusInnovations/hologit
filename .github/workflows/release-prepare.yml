@@ -18,3 +18,7 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         release-branch: master
+        # hologit shares one git tag space across three release tracks (v* for the
+        # JS package, holo-tree-v*, holo-projector-v*). Restrict the JS Release PR's
+        # version computation to the v* track so a binding tag can't poison the title.
+        release-tag-match: 'v[0-9]*'
