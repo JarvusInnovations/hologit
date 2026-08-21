@@ -1,8 +1,9 @@
 ---
-status: planned
+status: done
 depends: []
 specs: []
 issues: [511]
+pr: 512
 ---
 
 # Plan: surface real lens failures on the v1 container transport
@@ -44,10 +45,10 @@ No specs — legacy-path bugfix (see Scope). Tracked by issue #511.
 
 - [ ] A v1 lens whose build command exits non-zero surfaces `lens job failed`
       with the container's output tail (manual repro per #511's environment —
-      requires docker + a v1 lens image)
-- [ ] A successful v1 lens run is byte-identical in behavior (guard compares
+      requires docker + a v1 lens image; see Notes)
+- [x] A successful v1 lens run is byte-identical in behavior (guard compares
       then falls through to the unchanged happy path)
-- [ ] Existing CI suites pass unchanged (test, test-cli, test-action, test-rust)
+- [x] Existing CI suites pass unchanged (test, test-cli, test-action, test-rust)
 
 ## Risks / unknowns
 
@@ -58,8 +59,20 @@ No specs — legacy-path bugfix (see Scope). Tracked by issue #511.
 
 ## Notes
 
-(populated at closeout)
+- The failure branch is validated by code review against #511's confirmed repro
+  mechanism (the issue author verified the fetched ref is a zero-parent commit
+  on failure), not by an automated or local docker repro — CI has no
+  docker-lens fixture and the v1 images are large pulls. The guard is
+  deliberately upstream of the existing `^` check so the success path executes
+  identically (one extra `rev-parse` of a ref that was already being resolved
+  with `^`).
+- The container-output tail comes from buffering the same `$onStderr` lines the
+  push already relayed — no new plumbing, no change to what's streamed live.
+- Closeout landed in a follow-up commit (this one) rather than on the PR
+  branch — the PR merged before the closeout ritual ran; process slip, recorded
+  here for honesty.
 
 ## Follow-ups
 
-(populated at closeout)
+- None — the durable fix for this path remains its retirement via #502
+  (hybrid dispatcher adopts native Rust lens execution).
