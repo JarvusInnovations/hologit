@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1110,41 +1110,41 @@
 <span class="w">  </span><span class="nx">BlobObject</span><span class="p">,</span><span class="w">   </span><span class="c1">// In-memory git blob representation</span>
 <span class="w">  </span><span class="nx">SpecObject</span><span class="p">,</span><span class="w">   </span><span class="c1">// Content-addressable spec for caching</span>
 <span class="w">  </span><span class="nx">Studio</span><span class="p">,</span><span class="w">       </span><span class="c1">// Docker execution environment manager</span>
-<span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="two-modes-of-use">Two Modes of Use<a class="headerlink" href="#two-modes-of-use" title="Permanent link"> ¶</a></h2>
 <h3 id="toml-driven-traditional">TOML-driven (traditional)<a class="headerlink" href="#toml-driven-traditional" title="Permanent link"> ¶</a></h3>
 <p>Hologit reads <code>.holo/sources/*.toml</code>, <code>.holo/branches/*/*.toml</code>, and <code>.holo/lenses/*/*.toml</code> from a git tree to define the composition. This is how the <code>git holo project</code> CLI works.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="p">,</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="p">,</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Repo</span><span class="p">.</span><span class="nx">getFromEnvironment</span><span class="p">();</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">getWorkspace</span><span class="p">();</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">workspace</span><span class="p">.</span><span class="nx">getBranch</span><span class="p">(</span><span class="s1">&#39;my-holobranch&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">workspace</span><span class="p">.</span><span class="nx">getBranch</span><span class="p">(</span><span class="s1">'my-holobranch'</span><span class="p">);</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">treeHash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Projection</span><span class="p">.</span><span class="nx">projectBranch</span><span class="p">(</span><span class="nx">branch</span><span class="p">);</span>
 </code></pre></div>
 <h3 id="programmatic-no-toml-required">Programmatic (no TOML required)<a class="headerlink" href="#programmatic-no-toml-required" title="Permanent link"> ¶</a></h3>
 <p>Sources, branches, and mappings are constructed in memory using the <strong>phantom config</strong> mechanism. The source repositories don&rsquo;t need any <code>.holo/</code> directory.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="p">,</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">,</span><span class="w"> </span><span class="nx">Branch</span><span class="p">,</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="p">,</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">,</span><span class="w"> </span><span class="nx">Branch</span><span class="p">,</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
 
-<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/.git&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">'/path/to/.git'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'HEAD'</span><span class="w"> </span><span class="p">});</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">rootTree</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">createTree</span><span class="p">();</span>
-<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">&#39;.holo/config.toml&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[holospace]\nname = &quot;my-project&quot;\n&#39;</span><span class="p">);</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">'.holo/config.toml'</span><span class="p">,</span><span class="w"> </span><span class="s1">'[holospace]\nname = "my-project"\n'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">root</span><span class="o">:</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">,</span>
 <span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="s1">&#39;base&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/base-repo&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;overlay&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/overlay-repo&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="s1">'base'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'/path/to/base-repo'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'refs/heads/main'</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">'overlay'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'/path/to/overlay-repo'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'refs/heads/main'</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">});</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Branch</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">workspace</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;composed&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'composed'</span><span class="p">,</span>
 <span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span>
 <span class="w">  </span><span class="nx">mappings</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="s1">&#39;_base&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;base&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;_overlay&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;overlay&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">],</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;base&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="s1">'_base'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">'base'</span><span class="p">,</span><span class="w"> </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**'</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">'_overlay'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">'overlay'</span><span class="p">,</span><span class="w"> </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**'</span><span class="p">],</span><span class="w"> </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'base'</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">});</span>
 
@@ -1212,7 +1212,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js"></script>
       

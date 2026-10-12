@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -998,7 +998,7 @@
 <p>Of the two, environmental source overrides are the more mature feature and recommended for now.</p>
 <h2 id="method-1-environmental-source-overrides-recommended">Method 1: Environmental Source Overrides (Recommended)<a class="headerlink" href="#method-1-environmental-source-overrides-recommended" title="Permanent link"> ¶</a></h2>
 <p>Environment variables based on the names of sources can be set to override their URL, ref, and optionally holobranch:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span>HOLO_SOURCE_&lt;SOURCE_NAME&gt;<span class="o">=</span><span class="s2">&quot;[url][#ref][=&gt;holobranch]&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span>HOLO_SOURCE_&lt;SOURCE_NAME&gt;<span class="o">=</span><span class="s2">"[url][#ref][=&gt;holobranch]"</span>
 </code></pre></div>
 <ul>
 <li>Source names must be uppercased and all <code>-</code> (hyphen) characters changed to <code>_</code> (underscore).</li>
@@ -1006,19 +1006,19 @@
 <li>The <code>--working</code> option currently has no effect on overridden sources: working tree changes for sources will be ignored. You&rsquo;ll need to commit any changes to use them in downstream builds, but you don&rsquo;t need to push those commits and you can rewrite/amend them continuously.</li>
 </ul>
 <p>For example, give a source name of <code>skeleton-v1</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">&quot;=&gt;emergence-vfs-site&quot;</span><span class="w"> </span><span class="c1"># use existing url+ref, override holobranch</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">&quot;=&gt;&quot;</span><span class="w"> </span><span class="c1"># use existing url+ref, clear holobranch</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">&quot;#refs/heads/develop&quot;</span><span class="w"> </span><span class="c1"># use existing url, change ref, clear holobranch</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">&quot;#refs/heads/develop=&gt;emergence-skeleton&quot;</span><span class="w"> </span><span class="c1"># use existing url, change ref, keep holobranch</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">&quot;/src/skeleton-v1&quot;</span><span class="w"> </span><span class="c1"># change url, clear ref+holobranch</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">&quot;/src/skeleton-v1#refs/heads/develop=&gt;emergence-skeleton&quot;</span><span class="w"> </span><span class="c1"># change url+ref, keep holobranch</span>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">"=&gt;emergence-vfs-site"</span><span class="w"> </span><span class="c1"># use existing url+ref, override holobranch</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">"=&gt;"</span><span class="w"> </span><span class="c1"># use existing url+ref, clear holobranch</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">"#refs/heads/develop"</span><span class="w"> </span><span class="c1"># use existing url, change ref, clear holobranch</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">"#refs/heads/develop=&gt;emergence-skeleton"</span><span class="w"> </span><span class="c1"># use existing url, change ref, keep holobranch</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">"/src/skeleton-v1"</span><span class="w"> </span><span class="c1"># change url, clear ref+holobranch</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">"/src/skeleton-v1#refs/heads/develop=&gt;emergence-skeleton"</span><span class="w"> </span><span class="c1"># change url+ref, keep holobranch</span>
 </code></pre></div>
 <p>Environmental source overrides will be honored at every depth when using subprojections as sources, so while working on a project using <code>skeleton-v2</code> as a source, you could work on <code>skeleton-v2</code> and its source <code>skeleton-v1</code> simultaneously:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V2</span><span class="o">=</span><span class="s2">&quot;/src/skeleton-v2#refs/heads/develop=&gt;emergence-skeleton&quot;</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">&quot;/src/skeleton-v1#refs/heads/develop=&gt;emergence-skeleton&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V2</span><span class="o">=</span><span class="s2">"/src/skeleton-v2#refs/heads/develop=&gt;emergence-skeleton"</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_SOURCE_SKELETON_V1</span><span class="o">=</span><span class="s2">"/src/skeleton-v1#refs/heads/develop=&gt;emergence-skeleton"</span>
 </code></pre></div>
 <p>While working like this, you likely also want to environmentally instruct all hologit commands to always fetch the latest for these sources. This won&rsquo;t add an appreciable delay for local sources, but could slow down working against remote sources that aren&rsquo;t changing anyway:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_FETCH</span><span class="o">=</span><span class="s2">&quot;skeleton-v1:skeleton-v2&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">HOLO_FETCH</span><span class="o">=</span><span class="s2">"skeleton-v1:skeleton-v2"</span>
 </code></pre></div>
 <h2 id="method-2-source-submodule-checkouts-work-in-progress">Method 2: Source Submodule Checkouts (Work in Progress)<a class="headerlink" href="#method-2-source-submodule-checkouts-work-in-progress" title="Permanent link"> ¶</a></h2>
 <p>Check out a named source as a submodule:</p>
@@ -1080,7 +1080,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js"></script>
       

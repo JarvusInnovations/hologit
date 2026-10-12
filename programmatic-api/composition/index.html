@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1195,23 +1195,23 @@
 <p>This guide covers how to compose git trees programmatically using hologit&rsquo;s core classes. No <code>.holo/</code> TOML files are needed in the source repositories.</p>
 <h2 id="creating-a-repo">Creating a Repo<a class="headerlink" href="#creating-a-repo" title="Permanent link"> ¶</a></h2>
 <p>Every hologit operation starts with a <code>Repo</code> instance. The repo provides git object storage — hologit creates tree and blob objects in its object database.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
 
 <span class="c1">// From a working directory</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Repo</span><span class="p">.</span><span class="nx">getFromEnvironment</span><span class="p">();</span>
 
 <span class="c1">// From explicit paths</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span>
-<span class="w">  </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/.git&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">workTree</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/workdir&#39;</span><span class="w">  </span><span class="c1">// optional</span>
+<span class="w">  </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">'/path/to/.git'</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'HEAD'</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">workTree</span><span class="o">:</span><span class="w"> </span><span class="s1">'/path/to/workdir'</span><span class="w">  </span><span class="c1">// optional</span>
 <span class="p">});</span>
 </code></pre></div>
 <p>The repo doesn&rsquo;t need to contain any project files — it&rsquo;s used purely for git object storage. You can point it at a bare repo created just for this purpose:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;child_process&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'child_process'</span><span class="p">);</span>
 
-<span class="nx">execSync</span><span class="p">(</span><span class="s1">&#39;git init --bare /tmp/compose-store&#39;</span><span class="p">);</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/tmp/compose-store&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">execSync</span><span class="p">(</span><span class="s1">'git init --bare /tmp/compose-store'</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">'/tmp/compose-store'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'HEAD'</span><span class="w"> </span><span class="p">});</span>
 </code></pre></div>
 <h2 id="the-phantom-mechanism">The Phantom Mechanism<a class="headerlink" href="#the-phantom-mechanism" title="Permanent link"> ¶</a></h2>
 <p>All hologit configuration objects (<code>Source</code>, <code>Branch</code>, <code>Mapping</code>, <code>Lens</code>) extend <code>Configurable</code>, which supports two config sources:</p>
@@ -1223,17 +1223,17 @@
 <h2 id="constructing-a-workspace">Constructing a Workspace<a class="headerlink" href="#constructing-a-workspace" title="Permanent link"> ¶</a></h2>
 <p>A <code>Workspace</code> is the container for sources and branches. It requires a root tree (which must contain a minimal <code>.holo/config.toml</code>).</p>
 <p>The <code>sources</code> parameter accepts a plain object of <code>{ name: config }</code> entries. Each config object is automatically wrapped in a phantom <code>Source</code> instance:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Workspace</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Workspace</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">rootTree</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">createTree</span><span class="p">();</span>
-<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">&#39;.holo/config.toml&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[holospace]\nname = &quot;my-project&quot;\n&#39;</span><span class="p">);</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">'.holo/config.toml'</span><span class="p">,</span><span class="w"> </span><span class="s1">'[holospace]\nname = "my-project"\n'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">root</span><span class="o">:</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">,</span>
 <span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="s1">&#39;framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://github.com/org/framework&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v2.0.0&#39;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/local/path/to/app&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;theme&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://github.com/org/theme&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="s1">'framework'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'https://github.com/org/framework'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'refs/tags/v2.0.0'</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">'app'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'/local/path/to/app'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'refs/heads/main'</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="s1">'theme'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'https://github.com/org/theme'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'refs/heads/main'</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">});</span>
 </code></pre></div>
@@ -1268,38 +1268,38 @@
 <p>You can also pass pre-constructed <code>Source</code> instances:</p>
 <div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Source</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">workspace</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;...&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;...&#39;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'framework'</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'...'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'...'</span><span class="w"> </span><span class="p">}</span>
 <span class="p">});</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">root</span><span class="o">:</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="nx">source</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">'framework'</span><span class="o">:</span><span class="w"> </span><span class="nx">source</span><span class="w"> </span><span class="p">}</span>
 <span class="p">});</span>
 </code></pre></div>
 <h2 id="constructing-a-branch-with-mappings">Constructing a Branch with Mappings<a class="headerlink" href="#constructing-a-branch-with-mappings" title="Permanent link"> ¶</a></h2>
 <p>A <code>Branch</code> defines how sources are combined. The <code>mappings</code> parameter accepts a plain object of <code>{ key: config }</code> entries:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Branch</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Branch</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Branch</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">workspace</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;composed&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'composed'</span><span class="p">,</span>
 <span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span>
 <span class="w">  </span><span class="nx">mappings</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="s1">&#39;_framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="s1">'_framework'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">'framework'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**'</span><span class="p">]</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;_app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">],</span>
-<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;framework&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="s1">'_app'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">'app'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**'</span><span class="p">],</span>
+<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'framework'</span><span class="p">]</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;_theme&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;theme&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;styles/**&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;assets/**&#39;</span><span class="p">],</span>
-<span class="w">      </span><span class="nx">output</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;framework&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="s1">'_theme'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">'theme'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'styles/**'</span><span class="p">,</span><span class="w"> </span><span class="s1">'assets/**'</span><span class="p">],</span>
+<span class="w">      </span><span class="nx">output</span><span class="o">:</span><span class="w"> </span><span class="s1">'.'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'framework'</span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">});</span>
@@ -1366,11 +1366,11 @@
 <p>Use <code>after: ['*']</code> to ensure a mapping comes last (highest priority).</p>
 <h2 id="projecting">Projecting<a class="headerlink" href="#projecting" title="Permanent link"> ¶</a></h2>
 <p>Once you have a branch, project it to get a composed git tree hash:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">treeHash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Projection</span><span class="p">.</span><span class="nx">projectBranch</span><span class="p">(</span><span class="nx">branch</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nx">lens</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">     </span><span class="c1">// skip lens transformations</span>
-<span class="w">  </span><span class="nx">fetch</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="w">     </span><span class="c1">// don&#39;t fetch remote sources (they must already be available)</span>
+<span class="w">  </span><span class="nx">fetch</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="w">     </span><span class="c1">// don't fetch remote sources (they must already be available)</span>
 <span class="p">});</span>
 </code></pre></div>
 <p>The returned <code>treeHash</code> is a standard git tree object hash. You can use it with any git command:</p>
@@ -1394,31 +1394,31 @@ git<span class="w"> </span>cat-file<span class="w"> </span>-p<span class="w"> </
 <span class="kd">const</span><span class="w"> </span><span class="nx">listing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">lsTree</span><span class="p">({</span><span class="w"> </span><span class="nx">r</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">treeHash</span><span class="p">);</span>
 
 <span class="c1">// Diff two composed trees</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">diff</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">diffTree</span><span class="p">({</span><span class="w"> </span><span class="nx">r</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;name-only&#39;</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">oldTreeHash</span><span class="p">,</span><span class="w"> </span><span class="nx">newTreeHash</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">diff</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">git</span><span class="p">.</span><span class="nx">diffTree</span><span class="p">({</span><span class="w"> </span><span class="nx">r</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="s1">'name-only'</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">oldTreeHash</span><span class="p">,</span><span class="w"> </span><span class="nx">newTreeHash</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="full-example">Full Example<a class="headerlink" href="#full-example" title="Permanent link"> ¶</a></h2>
 <p>Compose a framework layer with an application layer, where the application overrides specific files:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="p">,</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">,</span><span class="w"> </span><span class="nx">Branch</span><span class="p">,</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hologit&#39;</span><span class="p">);</span>
-<span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;child_process&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Repo</span><span class="p">,</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">,</span><span class="w"> </span><span class="nx">Branch</span><span class="p">,</span><span class="w"> </span><span class="nx">Projection</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'hologit'</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'child_process'</span><span class="p">);</span>
 
 <span class="c1">// Set up a git repo for object storage</span>
-<span class="nx">execSync</span><span class="p">(</span><span class="s1">&#39;git init --bare /tmp/my-store&#39;</span><span class="p">);</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/tmp/my-store&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;HEAD&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="nx">execSync</span><span class="p">(</span><span class="s1">'git init --bare /tmp/my-store'</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Repo</span><span class="p">({</span><span class="w"> </span><span class="nx">gitDir</span><span class="o">:</span><span class="w"> </span><span class="s1">'/tmp/my-store'</span><span class="p">,</span><span class="w"> </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'HEAD'</span><span class="w"> </span><span class="p">});</span>
 
 <span class="c1">// Build the workspace with two sources</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">rootTree</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">createTree</span><span class="p">();</span>
-<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">&#39;.holo/config.toml&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[holospace]\nname = &quot;my-app&quot;\n&#39;</span><span class="p">);</span>
+<span class="k">await</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">.</span><span class="nx">writeChild</span><span class="p">(</span><span class="s1">'.holo/config.toml'</span><span class="p">,</span><span class="w"> </span><span class="s1">'[holospace]\nname = "my-app"\n'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">workspace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Workspace</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">root</span><span class="o">:</span><span class="w"> </span><span class="nx">rootTree</span><span class="p">,</span>
 <span class="w">  </span><span class="nx">sources</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="s1">&#39;framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/framework-repo&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/tags/v2.0.0&#39;</span>
+<span class="w">    </span><span class="s1">'framework'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'/path/to/framework-repo'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'refs/tags/v2.0.0'</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/path/to/app-repo&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;refs/heads/main&#39;</span>
+<span class="w">    </span><span class="s1">'app'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s1">'/path/to/app-repo'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">ref</span><span class="o">:</span><span class="w"> </span><span class="s1">'refs/heads/main'</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">});</span>
@@ -1426,24 +1426,24 @@ git<span class="w"> </span>cat-file<span class="w"> </span>-p<span class="w"> </
 <span class="c1">// Define the composition — app overlays framework</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Branch</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">workspace</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;production&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'production'</span><span class="p">,</span>
 <span class="w">  </span><span class="nx">phantom</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span>
 <span class="w">  </span><span class="nx">mappings</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="s1">&#39;_framework&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;framework&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">]</span>
+<span class="w">    </span><span class="s1">'_framework'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">'framework'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**'</span><span class="p">]</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="s1">&#39;_app&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">],</span>
-<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;framework&#39;</span><span class="p">]</span><span class="w">  </span><span class="c1">// app files override framework files at same paths</span>
+<span class="w">    </span><span class="s1">'_app'</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">holosource</span><span class="o">:</span><span class="w"> </span><span class="s1">'app'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**'</span><span class="p">],</span>
+<span class="w">      </span><span class="nx">after</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'framework'</span><span class="p">]</span><span class="w">  </span><span class="c1">// app files override framework files at same paths</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">});</span>
 
 <span class="c1">// Compose</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">treeHash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Projection</span><span class="p">.</span><span class="nx">projectBranch</span><span class="p">(</span><span class="nx">branch</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">lens</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">});</span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Composed tree:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">treeHash</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'Composed tree:'</span><span class="p">,</span><span class="w"> </span><span class="nx">treeHash</span><span class="p">);</span>
 
 <span class="c1">// Check out to a directory</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">git</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">getGit</span><span class="p">();</span>
@@ -1507,7 +1507,7 @@ git<span class="w"> </span>cat-file<span class="w"> </span>-p<span class="w"> </
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="https://unpkg.com/mermaid@8.5.0/dist/mermaid.min.js"></script>
       
