@@ -11,7 +11,7 @@
     "@iarna/toml": "^2.2.5",
     "async-exit-hook": "^2.0.1",
     "axios": "^1.14.0",
-    "chokidar": "^5.0.0",
+    "chokidar": "^6.0.0",
     "debounce": "^3.0.0",
     "fb-watchman": "^2.0.2",
     "git-client": "^1.12.0",
